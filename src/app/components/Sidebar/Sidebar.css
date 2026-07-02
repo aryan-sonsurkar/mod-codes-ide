@@ -1,0 +1,11 @@
+.sidebar{
+  display: flex;
+  background-color: var(--sidebar-bg);
+  width: 250px;
+  border-right: solid 2px #f8f8f8;
+  text-align: left;
+  flex-direction: column;
+  color: var(--primary-text);
+  padding: 10px;
+  gap: 10px;
+}

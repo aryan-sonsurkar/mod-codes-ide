@@ -1,0 +1,20 @@
+.quick-actions{
+    color: var(--primary-text);
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+.action-buttons{
+    display: flex;
+    flex-direction: row;
+    padding: 10px;
+    gap: 15px;
+}
+
+.action-button{
+    color: var(--primary-text);
+    background-color: var(--surface-bg);
+    border:solid 2px var(--accent-color);
+    border-radius: 5px;
+    cursor: pointer;
+}

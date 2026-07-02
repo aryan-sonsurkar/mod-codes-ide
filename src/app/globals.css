@@ -1,6 +1,17 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --sidebar-bg: #18122B;
+--workspace-bg: #22183A;
+--surface-bg: #2A1F4D;
+
+--accent-color: #8B5CF6;
+
+--primary-text: #F8FAFC;
+--secondary-text: #B8B5C5;
+
+--border-color: #3B2E5A;
+
+--success-color: #22C55E;
+--danger-color: #EF4444;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,24 +35,7 @@ body {
   display: flex;
   height: 100vh;
 }
-.sidebar{
-  display: flex;
-  background-color: rgb(42, 2, 42);
-  width: 250px;
-  border-right: solid 2px #f8f8f8;
-  text-align: left;
-  flex-direction: column;
-  color: whitesmoke;
-  padding: 10px;
-  gap: 10px;
-}
-  .workspace{
-    flex-grow: 1;
-    padding: 20px;
-    background-color: rgb(81, 5, 81);
-    text-align: center;
-    gap: 10px;
-}
+
 
 * {
   box-sizing: border-box;

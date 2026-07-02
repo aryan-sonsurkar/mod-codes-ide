@@ -1,0 +1,10 @@
+  .workspace{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+    padding: 20px;
+    background-color: var(--workspace-bg);
+    text-align: left;
+    gap: 10px;
+}
