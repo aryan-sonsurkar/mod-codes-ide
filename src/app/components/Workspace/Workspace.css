@@ -3,8 +3,16 @@
     flex-direction: column;
     justify-content: space-between;
     flex-grow: 1;
-    padding: 20px;
+    padding: 48px;
     background-color: var(--workspace-bg);
+    color: var(--primary-text);
     text-align: left;
     gap: 10px;
 }
+  .workspace-content{
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    text-align: left;
+    gap: 10px;
+  }

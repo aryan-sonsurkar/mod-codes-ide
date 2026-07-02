@@ -12,6 +12,8 @@
 
 --success-color: #22C55E;
 --danger-color: #EF4444;
+--hover-color: #4a21aa;
+--active-color: #100232;
 }
 
 @media (prefers-color-scheme: dark) {

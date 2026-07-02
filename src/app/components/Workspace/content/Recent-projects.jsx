@@ -4,7 +4,7 @@ export default function Recentprojects() {
 <div>
 <h3>Recent Projects</h3>
       <ul>
-        <li>None</li>
+        <li><p>No recent projects yet.<br />Create your first project to get started.</p></li>
       </ul>
 </div>
   );

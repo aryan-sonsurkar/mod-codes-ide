@@ -13,8 +13,17 @@
 
 .action-button{
     color: var(--primary-text);
-    background-color: var(--surface-bg);
-    border:solid 2px var(--accent-color);
+    background-color: var(--accent-color);
+    border:solid 2px var(--border-color);
     border-radius: 5px;
+    padding: 10px;
     cursor: pointer;
+}
+
+.action-button:hover{
+    background-color: var(--hover-color);
+}
+
+.action-button:active{
+    background-color: var(--active-color);
 }

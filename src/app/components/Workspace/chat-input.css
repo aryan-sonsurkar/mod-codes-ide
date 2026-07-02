@@ -1,0 +1,32 @@
+.chat-input{
+    background-color: var(--surface-bg);
+    color: var(--primary-text);
+    border: 2px solid var(--border-color);
+    padding: 15px;
+    display: flex;
+    flex-direction: row;
+}
+
+.input{
+    display: flex;    
+    flex-grow: 1;
+}
+
+.chat-button{
+    display: flex;
+    color: var(--primary-text);
+    background-color: var(--accent-color);
+    border:solid 2px var(--border-color);
+    border-radius: 5px;
+    padding: 10px;
+    cursor: pointer;
+    gap: 10px;
+}
+
+.chat-button:hover{
+    background-color: var(--hover-color);
+}
+
+.chat-button:active{
+    background-color: var(--active-color);
+}
