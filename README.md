@@ -1,73 +1,80 @@
 # MODCODES
 
-> An AI-powered development environment built completely from scratch.
+<p align="center">
+  <h3 align="center">An AI-Powered Development Environment Built Completely From Scratch</h3>
+  <p align="center">
+    Learning Software Engineering by Building a Modern IDE.
+  </p>
+</p>
 
-MODCODES is my long-term software engineering project where I am building a modern AI IDE from first principles without relying on templates or boilerplate implementations.
+---
 
-The purpose of this project is not only to build an IDE but also to deeply understand how professional development tools like VS Code, Cursor, Windsurf and other modern editors are engineered.
+## About
+
+MODCODES is my flagship software engineering project where I am building a modern AI-powered Integrated Development Environment (IDE) completely from scratch.
+
+This project is not intended to clone existing editors. Instead, it serves as a practical journey to understand how professional development tools are architected, designed, and engineered.
+
+Every feature is implemented incrementally while learning the underlying computer science and software engineering principles.
 
 ---
 
 ## Vision
 
-Build an IDE that provides:
+The long-term vision for MODCODES is to become a fully featured AI IDE capable of assisting developers throughout the complete software development lifecycle.
 
-- AI-assisted development
-- Workspace management
-- File explorer
-- Monaco code editor
-- Integrated terminal
-- Git integration
-- Plugin system
-- Theme engine
-- Local AI support (Ollama)
-- Command palette
-- Workspace search
+Planned capabilities include:
+
+- AI Chat Assistant
+- Monaco Code Editor
+- Workspace Management
+- Project Creation Wizard
+- File Explorer
+- Integrated Terminal
+- Git Integration
+- Local AI (Ollama)
+- Plugin & Extension System
+- Theme Engine
+- Command Palette
+- Search
+- Workspace Tabs
+- Code Runner
 - Debugger
 - Settings
-- Project management
-
-Everything will be implemented incrementally while learning software engineering concepts.
+- AI Code Explanation
+- Multi-language Support
 
 ---
 
 ## Current Progress
 
-###  Completed
+### Application Foundation
 
-- Project initialization using Next.js
-- Global layout setup
-- Responsive workspace layout
-- Sidebar component
-- Workspace component
-- Welcome section
-- Quick Actions section
-- Recent Projects section
-- Chat input section
-- Modular component architecture
-- Global design system using CSS variables
-- Dark IDE theme
+- Next.js project setup
+- Global application layout
+- Responsive workspace
+- Component-based architecture
+
+### User Interface
+
+- Modern IDE-inspired layout
+- Sidebar navigation
+- Workspace
+- Welcome screen
+- Quick Actions
+- Recent Projects
+- Chat Composer
 - Lucide React icons
-- Modern chat composer UI
-- Interactive buttons with hover and active states
+- Interactive buttons
+- Empty state design
 
----
+### Engineering
 
-## Upcoming Features
-
-- Project Creation Wizard
-- Recent Projects Persistence
-- File Explorer
-- Monaco Editor
-- Terminal Integration
-- Workspace Tabs
-- AI Chat
-- Ollama Integration
-- Git Integration
-- Extensions
-- Theme Engine
-- Settings
-- Command Palette
+- Modular folder structure
+- Reusable components
+- CSS Design System
+- Global color variables
+- Responsive Flexbox layouts
 
 ---
 
@@ -79,6 +86,15 @@ Everything will be implemented incrementally while learning software engineering
 - CSS
 - Lucide React
 
+Future additions:
+
+- Monaco Editor
+- Node.js
+- Electron / Tauri
+- Ollama
+- Git
+- SQLite / PostgreSQL
+
 ---
 
 ## Folder Structure
@@ -88,9 +104,8 @@ src/
 └── app/
     ├── components/
     │   ├── Sidebar/
-    │   └── Workspace/
-    │       ├── content/
-    │       └── chat-input.jsx
+    │   ├── Workspace/
+    │   └── CreateProjectModal/
     ├── globals.css
     ├── layout.js
     └── page.js
@@ -98,22 +113,59 @@ src/
 
 ---
 
-## Goals
+## Learning Goals
 
-This project exists to help me master:
+This project is helping me master:
 
 - React
 - Next.js
-- Component Architecture
+- JavaScript
 - CSS
+- Component Architecture
+- UI Engineering
 - Software Engineering
-- UI/UX
-- State Management
 - System Design
+- Developer Tooling
 - IDE Architecture
 
 ---
 
-## Long-Term Goal
+## Project Philosophy
 
-The ultimate goal of MODCODES is to become a complete AI-powered development environment capable of competing with modern developer tools while serving as a project-based journey to master software engineering.
+This project is intentionally built without relying on AI-generated implementations.
+
+The objective is to understand every architectural decision, design pattern, and engineering concept while building a production-quality software system.
+
+Learning is prioritized over speed.
+
+Understanding is prioritized over copying.
+
+---
+
+## Roadmap
+
+Current Sprint
+
+- Create Project Workflow
+- Modal System
+- Project Management
+
+Upcoming
+
+- File Explorer
+- Monaco Editor
+- Workspace Tabs
+- Terminal
+- AI Chat
+- Local AI Integration
+- Git Integration
+- Theme Engine
+- Plugin System
+
+---
+
+## Author
+
+**Aryan Sonsurkar**
+
+Building MODCODES as a long-term software engineering project to master full-stack development, systems engineering, and developer tooling.

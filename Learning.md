@@ -1,221 +1,195 @@
 # MODCODES Learning Journal
 
-This document records my daily engineering progress while building MODCODES.
+This journal documents my engineering journey while building MODCODES.
 
-The goal is not just to track features but also to document the concepts I learn and the architectural decisions I make.
+Instead of only tracking completed features, it records the concepts learned, architectural decisions made, mistakes encountered, and engineering principles discovered throughout the development process.
 
 ---
 
 # Day 1
 
-## Focus
+## Sprint
 
-UI Foundation & Component Refactoring
-
----
-
-## What I Built
-
-- Created a dedicated Sidebar component.
-- Created a dedicated Workspace component.
-- Split the workspace into smaller reusable components:
-  - Welcome
-  - Quick Actions
-  - Recent Projects
-  - Chat Input
-- Improved project folder organization.
+Project Foundation
 
 ---
 
-## What I Learned
+## Built
 
-### React Components
-
-- Components should have a single responsibility.
-- UI becomes easier to maintain when split into reusable parts.
-- Importing and exporting components correctly.
-
----
-
-### CSS Organization
-
-- Keeping component-specific CSS close to its component.
-- Importance of reusable class names.
-- Global styling vs component styling.
+- Initial Next.js application
+- Sidebar component
+- Workspace component
+- Welcome component
+- Quick Actions component
+- Recent Projects component
+- Chat Input component
 
 ---
 
-### Flexbox
+## Learned
 
-Learned:
+### React
 
-- display: flex
-- flex-direction
-- gap
-- flex-grow
-- justify-content
-- align-items
+- Functional Components
+- Component Composition
+- Import / Export
+- Project Structure
 
-Understood how parent containers control child layouts.
+### CSS
 
----
+- Flexbox
+- Flex Direction
+- Gap
+- Flex Grow
+- Justify Content
+- Padding
+- Responsive Layout
 
-### Design System
+### Architecture
 
-Created reusable global variables including:
-
-- workspace background
-- sidebar background
-- accent colors
-- borders
-- hover colors
-- text colors
-
-Instead of hardcoding colors everywhere.
+- Single Responsibility Principle
+- Breaking UI into reusable components
+- Organizing components by feature
 
 ---
 
-### Engineering Lessons
+## Biggest Takeaway
 
-- Small commits make progress easier to track.
-- Component architecture scales better than large files.
-- Think about ownership of UI responsibilities.
-
----
-
-## Challenges Faced
-
-- Incorrect component imports.
-- CSS not loading correctly.
-- Understanding relative import paths.
-- Debugging Flexbox layouts.
-
----
-
-## Outcome
-
-By the end of the day, MODCODES had a clean modular structure that will make future feature development much easier.
+A clean architecture makes future development significantly easier than keeping everything inside one file.
 
 ---
 
 # Day 2
 
-## Focus
+## Sprint
 
-UI Polish & IDE Experience
-
----
-
-## What I Built
-
-- Redesigned sidebar.
-- Added Quick Action buttons.
-- Added Recent Projects section.
-- Redesigned chat composer.
-- Installed Lucide React.
-- Added navigation icons.
-- Added Send and Attach icons.
-- Implemented hover and active button states.
-- Improved spacing and layout hierarchy.
-- Improved empty state messaging.
-- Refined workspace styling.
+UI Engineering
 
 ---
 
-## What I Learned
+## Built
 
-### Lucide React
-
-Learned:
-
-- Installing packages using npm.
-- Importing icon components.
-- Icons are React components.
-- Rendering icons inside JSX.
-
----
-
-### CSS Pseudo Classes
-
-Learned:
-
-- :hover
-- :active
-
-Used them to build interactive UI.
+- Complete sidebar redesign
+- IDE inspired workspace
+- Modern chat composer
+- Lucide React integration
+- Button system
+- Design System
+- Interactive hover & active states
 
 ---
 
-### Reusable Styling
+## Learned
 
-Instead of creating separate styles for every button, I learned to create reusable button classes.
+### React
 
----
+- Third-party library integration
+- React components can represent icons
+
+### CSS
+
+- Pseudo classes
+- Hover effects
+- Active states
+- Visual hierarchy
+- Design consistency
 
 ### UI Engineering
 
-Learned that:
-
-- Containers should own borders.
-- Inputs should blend into containers.
-- Visual hierarchy matters.
-- Consistent spacing creates a professional interface.
-
----
-
-### Product Thinking
-
-Started thinking beyond code by asking:
-
-- Should this feel like one component?
-- Who owns this border?
-- Can this style be reused?
-- How will this scale in the future?
+- Layout vs Appearance
+- Component ownership
+- Design Tokens
+- Reusable button styles
+- Modern IDE design principles
 
 ---
 
-## Challenges Faced
+## Biggest Takeaway
 
-- JSX hierarchy issues.
-- Buttons accidentally rendered incorrectly.
-- Chat input layout.
-- Sidebar spacing.
-- Icon alignment.
+Frontend engineering is not about writing CSS.
+
+It is about designing reusable, scalable user interfaces with clear responsibilities.
 
 ---
 
-## Biggest Learning
+# Day 3
 
-Professional frontend engineering is less about writing CSS and more about designing reusable, scalable interfaces with clear responsibilities.
+## Sprint
+
+Planning Interactive Features
 
 ---
 
-## Current State
+## Built
 
-MODCODES now includes:
+- Planned Create Project modal
+- Created initial modal UI
+- Learned semantic HTML for forms
 
-- Modern Sidebar
-- Modular Workspace
-- Professional Chat Composer
-- Interactive Buttons
+---
+
+## Learned
+
+### HTML
+
+- form
+- label
+- input
+- select
+- option
+- checkbox
+- button types
+
+### React
+
+- Introduction to useState
+- Understanding component state
+- Why state belongs to the lowest common parent
+- React component communication
+
+### Software Engineering
+
+Before writing functionality, design the architecture.
+
+Understand:
+
+- Who owns the state?
+- Who triggers the action?
+- Who consumes the result?
+
+---
+
+## Biggest Takeaway
+
+React state is not just a variable.
+
+It is information that changes over time and automatically updates the UI.
+
+---
+
+## Current Project Status
+
+Completed
+
+- Modern IDE UI
+- Component Architecture
 - Design System
+- Sidebar
+- Workspace
+- Chat Composer
+- Quick Actions
+- Recent Projects
 - Lucide Icons
-- Component-Based Architecture
 
-The project now resembles the early UI of a real IDE instead of a simple React application.
+Currently Working On
 
----
+- Create Project Workflow
 
-## Next Goal
+Upcoming
 
-Sprint 6
-
-Implement the Create New Project workflow.
-
-Planned tasks:
-
-- Project creation modal/page
-- Project name input
-- Folder selection
-- Workspace creation
-- Recent projects management
+- Modal State Management
+- Project Creation
+- File Explorer
+- Monaco Editor
+- Terminal
+- AI Chat

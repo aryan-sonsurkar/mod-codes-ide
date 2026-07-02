@@ -3,7 +3,7 @@ import {House} from "lucide-react";
 import {FolderKanban} from "lucide-react";
 import {Settings} from "lucide-react";
 
-export default function Sidebar() {
+export default function Sidebar(){
   return (
 <div className="sidebar">
       <h4>MODCODES</h4>
@@ -11,5 +11,5 @@ export default function Sidebar() {
       <a href="/Projects" className="projectsbtn"><FolderKanban />  Projects</a>
       <a href="/Settings" className="settingsbtn"><Settings />  Settings</a>
 </div>
-  );
+);
 }
