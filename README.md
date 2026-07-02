@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MODCODES
 
-## Getting Started
+> An AI-powered development environment built completely from scratch.
 
-First, run the development server:
+MODCODES is my long-term software engineering project where I am building a modern AI IDE from first principles without relying on templates or boilerplate implementations.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+The purpose of this project is not only to build an IDE but also to deeply understand how professional development tools like VS Code, Cursor, Windsurf and other modern editors are engineered.
+
+---
+
+## Vision
+
+Build an IDE that provides:
+
+- AI-assisted development
+- Workspace management
+- File explorer
+- Monaco code editor
+- Integrated terminal
+- Git integration
+- Plugin system
+- Theme engine
+- Local AI support (Ollama)
+- Command palette
+- Workspace search
+- Debugger
+- Settings
+- Project management
+
+Everything will be implemented incrementally while learning software engineering concepts.
+
+---
+
+## Current Progress
+
+###  Completed
+
+- Project initialization using Next.js
+- Global layout setup
+- Responsive workspace layout
+- Sidebar component
+- Workspace component
+- Welcome section
+- Quick Actions section
+- Recent Projects section
+- Chat input section
+- Modular component architecture
+- Global design system using CSS variables
+- Dark IDE theme
+- Lucide React icons
+- Modern chat composer UI
+- Interactive buttons with hover and active states
+
+---
+
+## Upcoming Features
+
+- Project Creation Wizard
+- Recent Projects Persistence
+- File Explorer
+- Monaco Editor
+- Terminal Integration
+- Workspace Tabs
+- AI Chat
+- Ollama Integration
+- Git Integration
+- Extensions
+- Theme Engine
+- Settings
+- Command Palette
+
+---
+
+## Tech Stack
+
+- Next.js
+- React
+- JavaScript
+- CSS
+- Lucide React
+
+---
+
+## Folder Structure
+
+```
+src/
+└── app/
+    ├── components/
+    │   ├── Sidebar/
+    │   └── Workspace/
+    │       ├── content/
+    │       └── chat-input.jsx
+    ├── globals.css
+    ├── layout.js
+    └── page.js
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Goals
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project exists to help me master:
 
-## Learn More
+- React
+- Next.js
+- Component Architecture
+- CSS
+- Software Engineering
+- UI/UX
+- State Management
+- System Design
+- IDE Architecture
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Long-Term Goal
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The ultimate goal of MODCODES is to become a complete AI-powered development environment capable of competing with modern developer tools while serving as a project-based journey to master software engineering.
