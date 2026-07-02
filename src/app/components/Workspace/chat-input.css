@@ -1,6 +1,4 @@
 .chat-input{
-    background-color: var(--surface-bg);
-    color: var(--primary-text);
     border: 2px solid var(--border-color);
     padding: 15px;
     display: flex;
@@ -8,6 +6,9 @@
 }
 
 .input{
+    color: var(--primary-text);
+    
+    background-color: var(--surface-bg);
     display: flex;    
     flex-grow: 1;
 }

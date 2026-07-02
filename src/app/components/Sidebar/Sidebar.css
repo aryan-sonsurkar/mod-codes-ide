@@ -9,3 +9,30 @@
   padding: 10px;
   gap: 10px;
 }
+
+.homebtn{
+  display: flex;
+  flex-direction: row;
+  padding: 10px;
+  gap: 20px;
+  background-color: var(--surface-bg);
+  color: var(--primary-text)
+}
+
+.projectsbtn{
+  display: flex;
+  flex-direction: row;
+  padding: 10px;
+  gap: 20px;
+  background-color: var(--surface-bg);
+  color: var(--primary-text)  
+}
+
+.settingsbtn{
+  display: flex;
+  flex-direction: row;
+  padding: 10px;
+  gap: 20px;
+  background-color: var(--surface-bg);
+  color: var(--primary-text)
+}
