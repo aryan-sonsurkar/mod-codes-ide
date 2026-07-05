@@ -167,6 +167,56 @@ It is information that changes over time and automatically updates the UI.
 
 ---
 
+# Day 4
+
+## Focus
+
+Implemented the first complete React feature in MODCODES.
+
+## What I Built
+
+- Create Project modal
+- Modal backdrop
+- Modal open/close using useState
+- Controlled form inputs
+- Project creation workflow
+- Recent Projects list
+- Dynamic rendering using map()
+
+## What I Learned
+
+### React State
+
+- useState
+- State updates
+- Controlled components
+
+### Forms
+
+- value
+- checked
+- onChange
+- onSubmit
+- preventDefault()
+
+### React Data Flow
+
+- Parent owns state
+- Child receives props
+- Child sends data back using callback functions
+
+### Rendering
+
+- Conditional rendering
+- map()
+- key prop
+
+## Biggest Learning
+
+React applications are built by moving data through components rather than manipulating the DOM directly.
+
+---
+
 ## Current Project Status
 
 Completed

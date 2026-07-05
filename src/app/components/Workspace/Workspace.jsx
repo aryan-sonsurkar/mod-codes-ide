@@ -5,7 +5,7 @@ import Quickactions from "./content/Quick-actions";
 import Recentprojects from "./content/Recent-projects";
 import CreateProjectModal from "../CreateProjectModal/CreateProjectModal";
 import Welcome from "./content/Welcome";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 
 export default function Workspace() {
   const [projects,setProjects] = useState([]);
@@ -21,10 +21,21 @@ export default function Workspace() {
         ...projects,
         project
     ];
-
+    const localProjects = JSON.stringify(updatedProjects);
+    localStorage.setItem("modcodes-projects",localProjects);
     setProjects(updatedProjects);
     closeModal();
   };
+  useEffect(() => {
+    const savedProjects = localStorage.getItem("modcodes-projects");
+    if (savedProjects === null){
+      
+    }
+    else {
+      const loadedprojects = JSON.parse(savedProjects);
+      setProjects(loadedprojects);
+    }
+  }, []);
   return (
 <div className="workspace">
   <section className="workspace-content">
