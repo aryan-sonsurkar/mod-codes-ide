@@ -1,10 +1,27 @@
 import "./Recent-projects.css";
-export default function Recentprojects() {
+
+export default function Recentprojects({projects}) {
+  if (projects.length === 0){
+    return(
+    <div>
+      <h3>Recent Projects</h3>
+      <ul>
+        <p>No recent projects.</p>
+      </ul>
+    </div>
+    );
+  }
   return (
 <div>
 <h3>Recent Projects</h3>
       <ul>
-        <li><p>No recent projects yet.<br />Create your first project to get started.</p></li>
+        {projects.map((project,index) => {
+          return (
+            <li key={index}>
+            {project.name} -  {project.type}
+            </li>
+          );
+        })}
       </ul>
 </div>
   );
