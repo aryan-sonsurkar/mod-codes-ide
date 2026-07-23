@@ -217,9 +217,120 @@ React applications are built by moving data through components rather than manip
 
 ---
 
+# Day 5
+
+## Focus
+
+Implemented the complete project creation workflow and local persistence.
+
+## What I Built
+
+- Create Project modal with controlled form inputs
+- Project creation using React state
+- Parent-child communication with props and callbacks
+- Dynamic Recent Projects list
+- Project persistence using localStorage
+- Automatic project loading on application startup using useEffect
+
+## What I Learned
+
+### React Hooks
+
+- useState
+- useEffect
+
+### Forms
+
+- Controlled components
+- value vs checked
+- onChange
+- onSubmit
+- preventDefault()
+
+### State Management
+
+- Parent owns shared state
+- Child sends data through callback props
+- Immutable array updates using the spread operator
+
+### Rendering
+
+- Conditional rendering
+- Rendering lists with map()
+- Importance of the key prop
+
+### Browser APIs
+
+- localStorage.setItem()
+- localStorage.getItem()
+- JSON.stringify()
+- JSON.parse()
+
+## Biggest Learning
+
+React state is temporary. localStorage allows applications to persist data across page refreshes by serializing JavaScript objects into JSON strings.
+
+---
+
+# Day 6
+
+## Focus
+
+Implemented project deletion, improved project list UI, and strengthened understanding of React event handling and immutable state updates.
+
+## What I Built
+
+- Project deletion functionality
+- Delete button for each project
+- Dynamic project removal using filter()
+- Automatic localStorage updates after deletion
+- React state synchronization after deletion
+- Improved Recent Projects UI using Flexbox
+- Styled Delete button with hover and active states
+
+## What I Learned
+
+### React
+
+- filter()
+- Event handlers
+- onClick
+- Passing callback functions as props
+- Difference between passing a function and calling a function
+- Arrow functions inside event handlers
+
+### State Management
+
+- Immutable array updates using filter()
+- Synchronizing React state with localStorage
+- React automatically re-renders after state updates
+
+### CSS
+
+- Flexbox layouts
+- justify-content
+- align-items
+- gap
+- Component-specific class naming
+- Building reusable UI cards
+
+### Software Engineering
+
+- Parent components own shared state.
+- Child components trigger actions through callback props.
+- Features should be functional first, then refactored for readability.
+- Consider edge cases early, such as duplicate project names.
+- Component responsibilities should remain focused and maintainable.
+
+## Biggest Learning
+
+A complete feature is more than just business logic. It includes user interaction, state management, persistence, UI design, and thinking about future scalability.
+
+---
+
 ## Current Project Status
 
-Completed
+### Completed
 
 - Modern IDE UI
 - Component Architecture
@@ -230,15 +341,23 @@ Completed
 - Quick Actions
 - Recent Projects
 - Lucide Icons
-
-Currently Working On
-
 - Create Project Workflow
+- Project Persistence using localStorage
+- Project Deletion
+- Delete Button UI
 
-Upcoming
+### Currently Working On
 
-- Modal State Management
-- Project Creation
+- Project List UI Improvements
+- Component Refactoring
+- Preparing for Unique Project IDs
+
+### Upcoming
+
+- Unique Project IDs
+- ProjectItem Component
+- Edit Project
+- Search Projects
 - File Explorer
 - Monaco Editor
 - Terminal

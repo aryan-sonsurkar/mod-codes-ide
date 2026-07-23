@@ -36,16 +36,24 @@ export default function Workspace() {
       setProjects(loadedprojects);
     }
   }, []);
+  function deleteProject(project) {
+    const updatedProjects = projects.filter((currentProject) => {
+        return currentProject.name!==project.name;
+    });
+    const localProjects = JSON.stringify(updatedProjects);
+    localStorage.setItem("modcodes-projects",localProjects);
+    setProjects(updatedProjects);
+  }
   return (
 <div className="workspace">
   <section className="workspace-content">
     <Welcome />
     <Quickactions openModal={openModal}/>
-    <Recentprojects projects={projects}/>
+    <Recentprojects projects={projects} deleteProject={deleteProject} />
   </section>
     <ChatInput />
 
-  {isModalOpen && <CreateProjectModal closeModal={closeModal} addProject={addProject}/>}
+  {isModalOpen && <CreateProjectModal closeModal={closeModal} addProject={addProject} />}
 </div>
   );
 }

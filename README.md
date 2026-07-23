@@ -1,9 +1,14 @@
 # MODCODES
 
 <p align="center">
-  <h3 align="center">An AI-Powered Development Environment Built Completely From Scratch</h3>
+  <h1 align="center">MODCODES</h1>
+
   <p align="center">
-    Learning Software Engineering by Building a Modern IDE.
+    An AI-Powered Development Environment Built Completely From Scratch
+  </p>
+
+  <p align="center">
+    Learning Software Engineering by Engineering a Modern IDE
   </p>
 </p>
 
@@ -13,72 +18,98 @@
 
 MODCODES is my flagship software engineering project where I am building a modern AI-powered Integrated Development Environment (IDE) completely from scratch.
 
-This project is not intended to clone existing editors. Instead, it serves as a practical journey to understand how professional development tools are architected, designed, and engineered.
+The objective is not to clone existing editors but to understand how professional developer tools are architected, engineered, and scaled.
 
-Every feature is implemented incrementally while learning the underlying computer science and software engineering principles.
+Every feature is built incrementally while learning the underlying computer science, software engineering, frontend architecture, and system design concepts.
 
 ---
 
-## Vision
+# Current Progress
 
-The long-term vision for MODCODES is to become a fully featured AI IDE capable of assisting developers throughout the complete software development lifecycle.
+## Application Foundation
 
-Planned capabilities include:
+- ✅ Next.js application
+- ✅ Component-based architecture
+- ✅ Responsive workspace layout
 
-- AI Chat Assistant
-- Monaco Code Editor
-- Workspace Management
-- Project Creation Wizard
+---
+
+## User Interface
+
+- ✅ Sidebar
+- ✅ Workspace
+- ✅ Welcome Screen
+- ✅ Quick Actions
+- ✅ Recent Projects
+- ✅ Chat Composer
+- ✅ Create Project Modal
+- ✅ Modern IDE-inspired UI
+- ✅ Lucide React Icons
+- ✅ Design System
+- ✅ Interactive Buttons
+
+---
+
+## Project Management
+
+- ✅ Create Project
+- ✅ View Projects
+- ✅ Delete Projects
+- ✅ Local Project Persistence
+- ✅ Automatic Project Loading
+- 🚧 Preparing Project IDs
+
+---
+
+## Engineering Concepts Practiced
+
+- React Components
+- Props
+- State Management
+- useState
+- useEffect
+- Controlled Components
+- Parent → Child Communication
+- Child → Parent Callback Props
+- Conditional Rendering
+- map()
+- filter()
+- localStorage
+- JSON
+- Component Architecture
+- Flexbox
+- UI Engineering
+
+---
+
+# Vision
+
+The long-term goal is to build a complete AI-powered development environment capable of assisting developers throughout the software development lifecycle.
+
+Planned features include:
+
+- Monaco Editor
 - File Explorer
+- Workspace Tabs
 - Integrated Terminal
 - Git Integration
-- Local AI (Ollama)
-- Plugin & Extension System
+- AI Chat Assistant
+- Ollama Integration
+- Plugin System
 - Theme Engine
 - Command Palette
 - Search
-- Workspace Tabs
-- Code Runner
-- Debugger
 - Settings
+- Debugger
+- Code Runner
 - AI Code Explanation
 - Multi-language Support
 
 ---
 
-## Current Progress
+# Tech Stack
 
-### Application Foundation
-
-- Next.js project setup
-- Global application layout
-- Responsive workspace
-- Component-based architecture
-
-### User Interface
-
-- Modern IDE-inspired layout
-- Sidebar navigation
-- Workspace
-- Welcome screen
-- Quick Actions
-- Recent Projects
-- Chat Composer
-- Lucide React icons
-- Interactive buttons
-- Empty state design
-
-### Engineering
-
-- Modular folder structure
-- Reusable components
-- CSS Design System
-- Global color variables
-- Responsive Flexbox layouts
-
----
-
-## Tech Stack
+Current
 
 - Next.js
 - React
@@ -86,20 +117,21 @@ Planned capabilities include:
 - CSS
 - Lucide React
 
-Future additions:
+Planned
 
-- Monaco Editor
+- TypeScript
 - Node.js
 - Electron / Tauri
+- Monaco Editor
 - Ollama
 - Git
 - SQLite / PostgreSQL
 
 ---
 
-## Folder Structure
+# Folder Structure
 
-```
+```text
 src/
 └── app/
     ├── components/
@@ -113,28 +145,34 @@ src/
 
 ---
 
-## Learning Goals
+# Learning Goals
 
-This project is helping me master:
+Building MODCODES is helping me develop skills in:
 
 - React
 - Next.js
 - JavaScript
 - CSS
-- Component Architecture
 - UI Engineering
+- Component Architecture
 - Software Engineering
 - System Design
 - Developer Tooling
 - IDE Architecture
+- Product Engineering
 
 ---
 
-## Project Philosophy
+# Development Philosophy
 
 This project is intentionally built without relying on AI-generated implementations.
 
-The objective is to understand every architectural decision, design pattern, and engineering concept while building a production-quality software system.
+The goal is to understand:
+
+- Why systems are designed a certain way.
+- How software evolves over time.
+- How scalable architectures are created.
+- How professional engineering teams build software.
 
 Learning is prioritized over speed.
 
@@ -142,30 +180,67 @@ Understanding is prioritized over copying.
 
 ---
 
-## Roadmap
+# Roadmap
 
-Current Sprint
+## Phase 1 — Project Management
 
-- Create Project Workflow
-- Modal System
-- Project Management
-
-Upcoming
-
-- File Explorer
-- Monaco Editor
-- Workspace Tabs
-- Terminal
-- AI Chat
-- Local AI Integration
-- Git Integration
-- Theme Engine
-- Plugin System
+- ✅ Create Project
+- ✅ View Projects
+- ✅ Delete Projects
+- 🚧 Unique Project IDs
+- ⏳ Edit Project
+- ⏳ Search Projects
 
 ---
 
-## Author
+## Phase 2 — IDE Core
+
+- File Explorer
+- Workspace Tabs
+- Monaco Editor
+- Integrated Terminal
+
+---
+
+## Phase 3 — AI Features
+
+- AI Chat
+- Local AI (Ollama)
+- AI Code Explanation
+- AI Project Assistant
+
+---
+
+## Phase 4 — Professional Features
+
+- Git Integration
+- Theme Engine
+- Plugin System
+- Settings
+- Command Palette
+- Debugger
+- Code Runner
+
+---
+
+# Learning Journal
+
+Every development session is documented inside **LEARNING.md**, where I record:
+
+- Features built
+- Engineering concepts learned
+- Architectural decisions
+- Mistakes encountered
+- Key takeaways
+
+This repository serves as both a software project and a public engineering journal.
+
+---
+
+# Author
 
 **Aryan Sonsurkar**
 
-Building MODCODES as a long-term software engineering project to master full-stack development, systems engineering, and developer tooling.
+Diploma in Computer Engineering (MSBTE)
+
+Building MODCODES to master software engineering, full-stack development, systems programming, compiler engineering, and developer tooling by building everything from first principles.

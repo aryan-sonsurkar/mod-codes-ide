@@ -1,6 +1,6 @@
 import "./Recent-projects.css";
 
-export default function Recentprojects({projects}) {
+export default function Recentprojects({projects,deleteProject}) {
   if (projects.length === 0){
     return(
     <div>
@@ -17,8 +17,9 @@ export default function Recentprojects({projects}) {
       <ul>
         {projects.map((project,index) => {
           return (
-            <li key={index}>
+            <li className="project-item" key={index}>
             {project.name} -  {project.type}
+            <button className="delete-button" onClick={()=>deleteProject(project)} >Delete</button>
             </li>
           );
         })}
