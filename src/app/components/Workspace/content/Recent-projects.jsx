@@ -15,11 +15,11 @@ export default function Recentprojects({projects,deleteProject}) {
 <div>
 <h3>Recent Projects</h3>
       <ul>
-        {projects.map((project,index) => {
+        {projects.map((project) => {
           return (
-            <li className="project-item" key={index}>
+            <li className="project-item" key={project.id}>
             {project.name} -  {project.type}
-            <button className="delete-button" onClick={()=>deleteProject(project)} >Delete</button>
+            <button className="delete-button" onClick={()=>deleteProject(project.id)} >Delete</button>
             </li>
           );
         })}

@@ -1,17 +1,24 @@
 import "./CreateProjectModal.css";
 import { useState } from "react";
 
+
 export default function CreateProjectModal({closeModal,addProject}) {
   const [projectName, setProjectName] = useState("");
   const [projectLocation, setProjectLocation] = useState("");
   const [projectType, setProjectType] = useState("");
   const [projectGit, setProjectGit] = useState(false);
+
   function handleSubmit(event){
+    const currentTime = Date.now();
     const project = {
+      id: crypto.randomUUID(),
       name: projectName,
       location: projectLocation,
       type: projectType,
-      git: projectGit
+      git: projectGit,
+      createdAt: currentTime,
+      lastOpened: currentTime,
+      favorite: false
     };
     event.preventDefault();
     addProject(project);

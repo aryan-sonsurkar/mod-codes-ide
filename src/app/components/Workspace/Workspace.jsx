@@ -36,9 +36,9 @@ export default function Workspace() {
       setProjects(loadedprojects);
     }
   }, []);
-  function deleteProject(project) {
+  function deleteProject(id) {
     const updatedProjects = projects.filter((currentProject) => {
-        return currentProject.name!==project.name;
+        return currentProject.id!==id;
     });
     const localProjects = JSON.stringify(updatedProjects);
     localStorage.setItem("modcodes-projects",localProjects);
