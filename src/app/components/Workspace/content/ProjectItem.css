@@ -21,10 +21,27 @@
     cursor: pointer;
 }
 
+.open-button{
+    color: var(--primary-text);
+    background-color: rgb(28, 4, 114);
+    border:solid 2px var(--border-color);
+    border-radius: 5px;
+    padding: 5px;
+    cursor: pointer;
+}
+
 .delete-button:hover{
     background-color: var(--danger-color);
 }
 
+.open-button:hover{
+    background-color: rgb(59, 59, 139);
+}
+
 .delete-button:active{
     background-color: rgb(67, 4, 4);
+}
+
+.open-button:active{
+    background-color: rgb(10, 3, 46);
 }

@@ -1,6 +1,6 @@
 import "./Recent-projects.css";
 import ProjectItem from "./ProjectItem";
-export default function Recentprojects({projects,deleteProject}) {
+export default function Recentprojects({projects,deleteProject,openProject}) {
   if (projects.length === 0){
     return(
     <div>
@@ -17,7 +17,7 @@ export default function Recentprojects({projects,deleteProject}) {
       <ul>
         {projects.map((project) => {
           return (
-            <ProjectItem key={project.id} project={project} deleteProject={deleteProject}/>
+            <ProjectItem key={project.id} project={project} deleteProject={deleteProject} openProject={openProject}/>
           );
         })}
       </ul>
