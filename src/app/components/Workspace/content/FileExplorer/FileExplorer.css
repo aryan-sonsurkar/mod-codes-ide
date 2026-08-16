@@ -1,0 +1,86 @@
+.file-explorer {
+  width: 280px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  background-color: var(--sidebar-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  color: var(--primary-text);
+  padding: 8px;
+}
+
+.explorer-header {
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: var(--secondary-text);
+  padding: 4px 8px 8px;
+  margin-bottom: 8px;
+  border-bottom: solid 1px var(--border-color);
+}
+
+.explorer-tree {
+  display: flex;
+  flex-direction: column;
+}
+
+.explorer-empty {
+  color: var(--secondary-text);
+  padding: 8px;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 3px;
+  padding-right: 8px;
+  padding-bottom: 3px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.tree-row-directory {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+.tree-row-directory:hover {
+  background-color: var(--hover-color);
+}
+
+.tree-row-file {
+  color: var(--primary-text);
+  cursor: pointer;
+}
+
+.tree-row-selected {
+  background-color: var(--accent-color);
+  color: #ffffff;
+}
+
+.tree-row-selected:hover {
+  background-color: var(--hover-color);
+}
+
+.tree-indicator {
+  display: inline-block;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-empty {
+  color: var(--secondary-text);
+  font-style: italic;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}

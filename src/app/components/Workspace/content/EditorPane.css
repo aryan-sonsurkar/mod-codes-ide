@@ -1,0 +1,99 @@
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  min-height: 42px;
+  border-bottom: solid 1px var(--border-color);
+}
+
+.editor-toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.editor-filename {
+  color: var(--primary-text);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-dirty {
+  color: #fbbf24;
+  font-size: 13px;
+}
+
+.editor-save-hint {
+  color: var(--success-color);
+  font-size: 13px;
+}
+
+.editor-save-error {
+  color: var(--danger-color);
+}
+
+.editor-save-button {
+  color: var(--primary-text);
+  background-color: rgb(28, 4, 114);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 6px 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.editor-save-button:hover:not(:disabled) {
+  background-color: rgb(59, 59, 139);
+}
+
+.editor-save-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.editor-message {
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary-text);
+  padding: 12px;
+}
+
+.editor-placeholder {
+  color: var(--secondary-text);
+}
+
+.editor-body {
+  position: relative;
+  display: flex;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.editor-body-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary-text);
+  background-color: var(--surface-bg);
+  pointer-events: none;
+}

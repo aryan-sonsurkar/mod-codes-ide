@@ -1,0 +1,112 @@
+.ide-workspace {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+  gap: 12px;
+  position: relative;
+}
+
+.ide-header h1 {
+  font-size: 24px;
+  color: var(--primary-text);
+}
+
+.ide-header p {
+  color: var(--secondary-text);
+}
+
+.ide-layout {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+.editor-region {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
+  gap: 8px;
+}
+
+.ide-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--secondary-text);
+  padding: 12px;
+}
+
+.ide-retry-button {
+  color: var(--primary-text);
+  background-color: var(--accent-color);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.ide-retry-button:hover {
+  background-color: var(--hover-color);
+}
+
+.ide-retry-button:active {
+  background-color: var(--active-color);
+}
+
+.unsaved-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 10;
+}
+
+.unsaved-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 380px;
+  padding: 16px;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  color: var(--primary-text);
+}
+
+.unsaved-title {
+  font-weight: 700;
+}
+
+.unsaved-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.unsaved-button {
+  color: var(--primary-text);
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.unsaved-button:hover {
+  background-color: var(--hover-color);
+}
+
+.unsaved-button-primary {
+  background-color: var(--accent-color);
+}
+
+.unsaved-button-danger {
+  background-color: rgb(189, 24, 24);
+}

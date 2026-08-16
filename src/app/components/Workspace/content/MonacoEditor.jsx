@@ -1,0 +1,140 @@
+"use client";
+import { useCallback, useEffect, useRef } from "react";
+import "./MonacoEditor.css";
+import { loadMonaco } from "../../../lib/monaco/monaco";
+
+function modelUriForPath(monaco, path) {
+  return monaco.Uri.parse("modcodes://model/" + encodeURIComponent(path));
+}
+
+export default function MonacoEditor({
+  file,
+  content,
+  language,
+  readStatus,
+  openPaths,
+  onChange,
+}) {
+  const containerRef = useRef(null);
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const modelsRef = useRef(new Map());
+  const currentPathRef = useRef(null);
+
+  const fileRef = useRef(file);
+  const contentRef = useRef(content);
+  const readStatusRef = useRef(readStatus);
+  const languageRef = useRef(language);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    fileRef.current = file;
+    contentRef.current = content;
+    readStatusRef.current = readStatus;
+    languageRef.current = language;
+    onChangeRef.current = onChange;
+  });
+
+  const openPathsKey = Array.isArray(openPaths) ? openPaths.join("\n") : "";
+
+  const syncActiveModel = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor || !monacoRef.current) {
+      return;
+    }
+
+    const path = fileRef.current?.path || null;
+    const ready = Boolean(path) && readStatusRef.current === "ready";
+
+    if (!ready) {
+      editor.setModel(null);
+      currentPathRef.current = null;
+      return;
+    }
+
+    let model = modelsRef.current.get(path);
+
+    if (!model) {
+      model = monacoRef.current.editor.createModel(
+        contentRef.current,
+        languageRef.current,
+        modelUriForPath(monacoRef.current, path)
+      );
+      modelsRef.current.set(path, model);
+    } else if (model.getLanguageId() !== languageRef.current) {
+      monacoRef.current.editor.setModelLanguage(model, languageRef.current);
+    }
+
+    editor.setModel(model);
+    currentPathRef.current = path;
+  }, []);
+
+  useEffect(() => {
+    const models = modelsRef.current;
+    let disposed = false;
+    let editor = null;
+
+    loadMonaco().then((monaco) => {
+      if (disposed) {
+        return;
+      }
+
+      monacoRef.current = monaco;
+
+      if (!editor && containerRef.current) {
+        editor = monaco.editor.create(containerRef.current, {
+          value: "",
+          language: "plaintext",
+          theme: "vs-dark",
+          automaticLayout: true,
+          minimap: { enabled: false },
+          fontSize: 13,
+          tabSize: 2,
+          scrollBeyondLastLine: false,
+        });
+        editorRef.current = editor;
+
+        editor.onDidChangeModelContent(() => {
+          const path = currentPathRef.current;
+          if (!path) {
+            return;
+          }
+          onChangeRef.current(path, editor.getValue());
+        });
+      }
+
+      syncActiveModel();
+    });
+
+    return () => {
+      disposed = true;
+      if (editor) {
+        editor.dispose();
+        editorRef.current = null;
+      }
+      for (const [, model] of models) {
+        model.dispose();
+      }
+      models.clear();
+      currentPathRef.current = null;
+      monacoRef.current = null;
+    };
+  }, [syncActiveModel]);
+
+  useEffect(() => {
+    syncActiveModel();
+  }, [file?.path, readStatus, syncActiveModel]);
+
+  useEffect(() => {
+    const openSet = new Set(openPathsKey === "" ? [] : openPathsKey.split("\n"));
+
+    for (const [path, model] of modelsRef.current) {
+      if (!openSet.has(path) && currentPathRef.current !== path) {
+        model.dispose();
+        modelsRef.current.delete(path);
+      }
+    }
+  }, [openPathsKey]);
+
+  return <div className="monaco-editor-host" ref={containerRef} />;
+}
