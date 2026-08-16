@@ -45,6 +45,9 @@ export default function Workspace() {
     const localProjects = JSON.stringify(updatedProjects);
     localStorage.setItem("modcodes-projects",localProjects);
     setProjects(updatedProjects);
+    if (id === selectedProjectId) {
+      setSelectedProjectId(null);
+    }
   }
   function openProject(id){
     const selectedProject = projects.find((currentProject) => {
