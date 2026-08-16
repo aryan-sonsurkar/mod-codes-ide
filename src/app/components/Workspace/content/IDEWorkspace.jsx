@@ -8,6 +8,11 @@ import {
   openProjectDirectory,
   readFile,
   writeFile,
+  createFile,
+  createDirectory,
+  renameEntry,
+  deleteEntry,
+  rescanProjectTree,
 } from "../../../lib/filesystem/filesystem";
 
 const STATUS_MESSAGES = {
@@ -244,6 +249,102 @@ export default function IdeWorkspace({ selectedProject }) {
     setPendingClosePath(null);
   }
 
+  function nameFromPath(path) {
+    const index = path.lastIndexOf("/");
+    return index === -1 ? path : path.slice(index + 1);
+  }
+
+  async function refreshProjectTree() {
+    const result = await rescanProjectTree();
+    if (result.ok) {
+      setTree(result.tree);
+    }
+    return result;
+  }
+
+  async function handleCreateFile(parentPath, name) {
+    const result = await createFile(parentPath, name);
+    if (result.ok) {
+      await refreshProjectTree();
+    }
+    return result;
+  }
+
+  async function handleCreateFolder(parentPath, name) {
+    const result = await createDirectory(parentPath, name);
+    if (result.ok) {
+      await refreshProjectTree();
+    }
+    return result;
+  }
+
+  function remapOpenTabs(oldPath, newPath) {
+    const prefix = oldPath + "/";
+
+    setTabs((current) =>
+      current.map((tab) => {
+        if (tab.path === oldPath) {
+          return { ...tab, path: newPath, name: nameFromPath(newPath) };
+        }
+        if (tab.path.startsWith(prefix)) {
+          const nextPath = newPath + tab.path.slice(oldPath.length);
+          return { ...tab, path: nextPath, name: nameFromPath(nextPath) };
+        }
+        return tab;
+      })
+    );
+
+    setActivePath((current) => {
+      if (current === oldPath) {
+        return newPath;
+      }
+      if (current && current.startsWith(prefix)) {
+        return newPath + current.slice(oldPath.length);
+      }
+      return current;
+    });
+  }
+
+  async function handleRenameEntry(path, newName) {
+    const result = await renameEntry(path, newName);
+    if (result.ok) {
+      remapOpenTabs(path, result.path);
+      await refreshProjectTree();
+    }
+    return result;
+  }
+
+  function dropTabsForPath(path) {
+    const prefix = path + "/";
+    const removed = tabs.filter(
+      (tab) => tab.path === path || tab.path.startsWith(prefix)
+    );
+
+    if (removed.length === 0) {
+      return;
+    }
+
+    const removedSet = new Set(removed.map((tab) => tab.path));
+    const remaining = tabs.filter((tab) => !removedSet.has(tab.path));
+
+    if (activePath && removedSet.has(activePath)) {
+      const index = tabs.findIndex((tab) => tab.path === activePath);
+      const neighbor = remaining[Math.min(index, remaining.length - 1)];
+      setActivePath(neighbor ? neighbor.path : null);
+    }
+
+    setTabs(remaining);
+  }
+
+  async function handleDeleteEntry(path) {
+    const result = await deleteEntry(path);
+    if (result.ok) {
+      dropTabsForPath(path);
+      await refreshProjectTree();
+    }
+    return result;
+  }
+
   function switchToRelativeTab(direction) {
     if (!tabs.length) {
       setActivePath(null);
@@ -334,6 +435,10 @@ export default function IdeWorkspace({ selectedProject }) {
               root={tree}
               onFileSelect={openFile}
               selectedFilePath={activePath}
+              onCreateFile={handleCreateFile}
+              onCreateFolder={handleCreateFolder}
+              onRename={handleRenameEntry}
+              onDelete={handleDeleteEntry}
             />
             <div className="editor-region">
               <TabBar

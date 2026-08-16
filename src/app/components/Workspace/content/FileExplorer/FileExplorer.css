@@ -10,12 +10,149 @@
 }
 
 .explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-weight: bold;
   letter-spacing: 1px;
   color: var(--secondary-text);
   padding: 4px 8px 8px;
   margin-bottom: 8px;
   border-bottom: solid 1px var(--border-color);
+}
+
+.explorer-title {
+  flex-shrink: 0;
+}
+
+.explorer-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.explorer-action-button {
+  background: transparent;
+  color: var(--secondary-text);
+  border: solid 1px var(--border-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.explorer-action-button:hover {
+  background-color: var(--hover-color);
+  color: var(--primary-text);
+}
+
+.explorer-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.explorer-context-menu {
+  position: fixed;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 4px;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.explorer-menu-item {
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--primary-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.explorer-menu-item:hover {
+  background-color: var(--hover-color);
+}
+
+.explorer-menu-danger {
+  color: rgb(240, 82, 82);
+}
+
+.explorer-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 30;
+}
+
+.explorer-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 380px;
+  padding: 16px;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  color: var(--primary-text);
+}
+
+.explorer-dialog-title {
+  font-weight: 700;
+}
+
+.explorer-dialog-input {
+  padding: 6px 8px;
+  background-color: var(--workspace-bg);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 4px;
+  outline: none;
+}
+
+.explorer-dialog-input:focus {
+  border-color: var(--accent-color);
+}
+
+.explorer-dialog-error {
+  color: rgb(240, 82, 82);
+  font-size: 13px;
+}
+
+.explorer-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.explorer-dialog-button {
+  color: var(--primary-text);
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.explorer-dialog-button:hover {
+  background-color: var(--hover-color);
+}
+
+.explorer-dialog-primary {
+  background-color: var(--accent-color);
+}
+
+.explorer-dialog-danger {
+  background-color: rgb(189, 24, 24);
 }
 
 .explorer-tree {

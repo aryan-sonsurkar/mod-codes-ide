@@ -4,6 +4,7 @@ export default function FileTreeNode({
   onToggle,
   onFileSelect,
   selectedFilePath,
+  onContextMenu,
   depth = 0,
 }) {
   const isDirectory = node.kind === "directory";
@@ -27,6 +28,7 @@ export default function FileTreeNode({
         }${isSelected ? " tree-row-selected" : ""}`}
         style={{ paddingLeft: 8 + depth * 16 }}
         onClick={handleActivate}
+        onContextMenu={(event) => onContextMenu?.(event, node)}
         role="button"
         aria-expanded={isDirectory ? isExpanded : undefined}
         tabIndex={0}
@@ -53,6 +55,7 @@ export default function FileTreeNode({
               onToggle={onToggle}
               onFileSelect={onFileSelect}
               selectedFilePath={selectedFilePath}
+              onContextMenu={onContextMenu}
               depth={depth + 1}
             />
           ))}
