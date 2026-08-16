@@ -30,6 +30,11 @@
   background-color: var(--surface-bg);
 }
 
+.tab:focus-visible {
+  outline: solid 2px var(--accent-color);
+  outline-offset: -2px;
+}
+
 .tab-active {
   color: var(--primary-text);
   background-color: var(--surface-bg);

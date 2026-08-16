@@ -244,6 +244,77 @@ export default function IdeWorkspace({ selectedProject }) {
     setPendingClosePath(null);
   }
 
+  function switchToRelativeTab(direction) {
+    if (!tabs.length) {
+      setActivePath(null);
+      return;
+    }
+
+    const index = tabs.findIndex((tab) => tab.path === activePath);
+    const nextIndex = (index + direction + tabs.length) % tabs.length;
+    setActivePath(tabs[nextIndex].path);
+  }
+
+  function handleCloseTabFromKeyboard() {
+    if (activePath) {
+      handleCloseTab(activePath);
+    }
+  }
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (status !== "ready" || pendingClosePath) {
+        return;
+      }
+
+      const mod = event.ctrlKey || event.metaKey;
+
+      if (mod && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (activePath) {
+          saveTab(activePath);
+        }
+        return;
+      }
+
+      if (mod && event.key.toLowerCase() === "w") {
+        event.preventDefault();
+        handleCloseTabFromKeyboard();
+        return;
+      }
+
+      if (mod && event.altKey && event.key === "ArrowLeft") {
+        event.preventDefault();
+        switchToRelativeTab(-1);
+        return;
+      }
+
+      if (mod && event.altKey && event.key === "ArrowRight") {
+        event.preventDefault();
+        switchToRelativeTab(1);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        handlePendingCancel();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [
+    status,
+    activePath,
+    tabs,
+    pendingClosePath,
+    saveTab,
+    handleCloseTabFromKeyboard,
+    switchToRelativeTab,
+    handlePendingCancel,
+  ]);
+
   const openPaths = tabs.map((tab) => tab.path);
   const activeTab = tabs.find((tab) => tab.path === activePath) || null;
   const pendingTab = tabs.find((tab) => tab.path === pendingClosePath) || null;

@@ -66,6 +66,7 @@ export default function MonacoEditor({
     }
 
     editor.setModel(model);
+    editor.focus();
     currentPathRef.current = path;
   }, []);
 
