@@ -14,6 +14,10 @@ import {
   deleteEntry,
   rescanProjectTree,
 } from "../../../lib/filesystem/filesystem";
+import {
+  loadWorkspace,
+  saveWorkspace,
+} from "../../../lib/workspace/workspaceStorage";
 
 const STATUS_MESSAGES = {
   requesting: "Requesting access to this project's folder...",
@@ -49,6 +53,8 @@ export default function IdeWorkspace({ selectedProject }) {
   const [refreshing, setRefreshing] = useState(false);
 
   const saveResetTimer = useRef(null);
+  const persistTimer = useRef(null);
+  const restoreAttemptedRef = useRef(false);
 
   useEffect(() => {
     if (status !== "requesting") {
@@ -79,6 +85,101 @@ export default function IdeWorkspace({ selectedProject }) {
       ignore = true;
     };
   }, [status]);
+
+  useEffect(() => {
+    if (status !== "ready" || restoreAttemptedRef.current) {
+      return;
+    }
+
+    restoreAttemptedRef.current = true;
+
+    let ignore = false;
+
+    async function restore() {
+      const saved = loadWorkspace();
+      if (!saved || saved.projectId !== selectedProject?.id) {
+        return;
+      }
+
+      const savedTabs = Array.isArray(saved.openTabs) ? saved.openTabs : [];
+      const paths = savedTabs
+        .map((entry) => (typeof entry?.path === "string" ? entry.path : null))
+        .filter(Boolean);
+
+      if (paths.length === 0) {
+        return;
+      }
+
+      setTabs((current) => {
+        const existing = new Set(current.map((tab) => tab.path));
+        const added = paths
+          .filter((path) => !existing.has(path))
+          .map((path) => ({
+            ...EMPTY_TAB,
+            path,
+            name: nameFromPath(path),
+            readStatus: "reading",
+          }));
+        return [...current, ...added];
+      });
+
+      setActivePath((current) => {
+        if (current) {
+          return current;
+        }
+        return paths.includes(saved.activePath) ? saved.activePath : paths[0];
+      });
+
+      for (const path of paths) {
+        const result = await readFile(path);
+        if (ignore) {
+          return;
+        }
+
+        if (!result.ok) {
+          updateTab(path, { readStatus: "error", readError: result.status });
+          continue;
+        }
+
+        updateTab(path, (tab) => ({
+          content: result.content,
+          savedContent: result.content,
+          readStatus: "ready",
+          dirty: false,
+        }));
+      }
+    }
+
+    restore();
+
+    return () => {
+      ignore = true;
+    };
+  }, [status, selectedProject?.id, updateTab, nameFromPath]);
+
+  useEffect(() => {
+    if (status !== "ready" || !selectedProject?.id) {
+      return;
+    }
+
+    if (persistTimer.current) {
+      window.clearTimeout(persistTimer.current);
+    }
+
+    persistTimer.current = window.setTimeout(() => {
+      saveWorkspace({
+        projectId: selectedProject.id,
+        openTabs: tabs.map((tab) => ({ path: tab.path, name: tab.name })),
+        activePath,
+      });
+    }, 300);
+
+    return () => {
+      if (persistTimer.current) {
+        window.clearTimeout(persistTimer.current);
+      }
+    };
+  }, [status, tabs, activePath, selectedProject?.id]);
 
   function updateTab(path, changes) {
     setTabs((current) =>

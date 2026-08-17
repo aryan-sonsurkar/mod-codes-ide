@@ -7,15 +7,18 @@ import CreateProjectModal from "../CreateProjectModal/CreateProjectModal";
 import Welcome from "./content/Welcome";
 import IdeWorkspace from "./content/IDEWorkspace";
 import { useState,useEffect } from "react";
+import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
 
 export default function Workspace() {
   const [projects,setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    () => loadWorkspace()?.projectId || null
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   function openModal(){
     setIsModalOpen(true);
   };
-  function closeModal(){
+  function closeModal(){ 
     setIsModalOpen(false);
   };
   function addProject(project){
@@ -73,18 +76,18 @@ export default function Workspace() {
     localStorage.setItem("modcodes-projects", JSON.stringify(updatedProjects));
   }
 
-  const selectedProject = projects.find((project) => project.id === selectedProjectId);
+  const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
 
   return (
 <div className="workspace">
-  {selectedProjectId === null ? (
+  {selectedProject ? (
+    <IdeWorkspace selectedProject={selectedProject} />
+  ) : (
     <section className="workspace-content">
       <Welcome />
       <Quickactions openModal={openModal}/>
       <Recentprojects projects={projects} deleteProject={deleteProject} openProject={openProject}/>
     </section>
-  ) : (
-    <IdeWorkspace selectedProject={selectedProject} />
   )}
 
   <ChatInput />
