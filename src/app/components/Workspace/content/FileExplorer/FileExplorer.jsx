@@ -19,6 +19,7 @@ export default function FileExplorer({
   onCreateFolder,
   onRename,
   onDelete,
+  onRefresh,
 }) {
   const [expanded, setExpanded] = useState(() =>
     new Set(root ? [root.path] : [])
@@ -28,6 +29,20 @@ export default function FileExplorer({
   const [nameInput, setNameInput] = useState("");
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [dialogError, setDialogError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    if (refreshing) {
+      return;
+    }
+
+    setRefreshing(true);
+    try {
+      await onRefresh?.();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   function toggleDirectory(path) {
     setExpanded((current) => {
@@ -148,6 +163,14 @@ export default function FileExplorer({
       <header className="explorer-header">
         <span className="explorer-title">EXPLORER</span>
         <div className="explorer-actions">
+          <button
+            className="explorer-action-button"
+            title="Refresh Explorer"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            {refreshing ? "..." : "↻"}
+          </button>
           <button
             className="explorer-action-button"
             title="New File"

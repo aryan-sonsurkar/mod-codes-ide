@@ -52,6 +52,11 @@
   font-size: 12px;
 }
 
+.tab-status-warning {
+  color: #fbbf24;
+  font-size: 12px;
+}
+
 .tab-close {
   display: flex;
   align-items: center;

@@ -26,6 +26,7 @@ export default function MonacoEditor({
   const readStatusRef = useRef(readStatus);
   const languageRef = useRef(language);
   const onChangeRef = useRef(onChange);
+  const contentTokenRef = useRef(0);
 
   useEffect(() => {
     fileRef.current = file;
@@ -33,6 +34,7 @@ export default function MonacoEditor({
     readStatusRef.current = readStatus;
     languageRef.current = language;
     onChangeRef.current = onChange;
+    contentTokenRef.current = file?.contentToken || 0;
   });
 
   const openPathsKey = Array.isArray(openPaths) ? openPaths.join("\n") : "";
@@ -125,6 +127,22 @@ export default function MonacoEditor({
   useEffect(() => {
     syncActiveModel();
   }, [file?.path, readStatus, syncActiveModel]);
+
+  useEffect(() => {
+    const token = fileRef.current?.contentToken || 0;
+    const path = fileRef.current?.path;
+
+    if (!token || !path) {
+      return;
+    }
+
+    const model = modelsRef.current.get(path);
+    const editor = editorRef.current;
+
+    if (model && editor && editor.getModel() === model) {
+      model.setValue(contentRef.current);
+    }
+  }, [file?.contentToken]);
 
   useEffect(() => {
     const openSet = new Set(openPathsKey === "" ? [] : openPathsKey.split("\n"));

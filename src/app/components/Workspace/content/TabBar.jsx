@@ -70,8 +70,13 @@ export default function TabBar({ tabs, activePath, onActivate, onClose }) {
           >
             <span className="tab-name">{tab.name}</span>
             {tab.dirty && (
-              <span className="tab-dirty-dot" title="Unsaved changes">
+              <span className="tab-dirty-dot" aria-label="Unsaved changes">
                 ●
+              </span>
+            )}
+            {tab.fileStatus && tab.fileStatus !== "ok" && (
+              <span className="tab-status-warning" aria-label="File status warning">
+                ⚠
               </span>
             )}
             <button

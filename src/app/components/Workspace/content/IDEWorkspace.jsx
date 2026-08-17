@@ -35,6 +35,8 @@ const EMPTY_TAB = {
   readError: "",
   saveStatus: "idle",
   saveError: "",
+  fileStatus: "ok",
+  contentToken: 0,
 };
 
 export default function IdeWorkspace({ selectedProject }) {
@@ -44,6 +46,7 @@ export default function IdeWorkspace({ selectedProject }) {
   const [tabs, setTabs] = useState([]);
   const [activePath, setActivePath] = useState(null);
   const [pendingClosePath, setPendingClosePath] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const saveResetTimer = useRef(null);
 
@@ -172,6 +175,10 @@ export default function IdeWorkspace({ selectedProject }) {
       return Promise.resolve(false);
     }
 
+    if (tab.fileStatus === "missing") {
+      return Promise.resolve(false);
+    }
+
     const contentToSave = tab.content;
     updateTab(path, { saveStatus: "saving", saveError: "" });
 
@@ -259,6 +266,48 @@ export default function IdeWorkspace({ selectedProject }) {
     if (result.ok) {
       setTree(result.tree);
     }
+    return result;
+  }
+
+  async function syncTabsWithDisk() {
+    const open = tabs.map((tab) => tab.path);
+    const results = await Promise.all(
+      open.map(async (path) => ({ path, result: await readFile(path) }))
+    );
+
+    for (const { path, result } of results) {
+      if (!result.ok) {
+        updateTab(path, { fileStatus: result.status });
+        continue;
+      }
+
+      updateTab(path, (tab) => {
+        if (tab.dirty) {
+          return {
+            fileStatus: result.content === tab.savedContent ? "ok" : "changed",
+          };
+        }
+        return {
+          content: result.content,
+          savedContent: result.content,
+          fileStatus: "ok",
+          contentToken: (tab.contentToken || 0) + 1,
+        };
+      });
+    }
+  }
+
+  async function handleRefresh() {
+    if (refreshing) {
+      return;
+    }
+
+    setRefreshing(true);
+    const result = await refreshProjectTree();
+    if (result.ok) {
+      await syncTabsWithDisk();
+    }
+    setRefreshing(false);
     return result;
   }
 
@@ -439,6 +488,7 @@ export default function IdeWorkspace({ selectedProject }) {
               onCreateFolder={handleCreateFolder}
               onRename={handleRenameEntry}
               onDelete={handleDeleteEntry}
+              onRefresh={handleRefresh}
             />
             <div className="editor-region">
               <TabBar

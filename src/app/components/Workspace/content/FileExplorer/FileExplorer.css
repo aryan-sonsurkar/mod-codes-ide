@@ -46,6 +46,11 @@
   color: var(--primary-text);
 }
 
+.explorer-action-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .explorer-menu-backdrop {
   position: fixed;
   inset: 0;

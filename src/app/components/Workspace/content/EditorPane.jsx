@@ -16,6 +16,13 @@ const SAVE_ERROR_MESSAGES = {
   error: "ModCodes could not save this file.",
 };
 
+const FILE_STATUS_MESSAGES = {
+  missing: "This file is no longer available on disk. Your changes are preserved.",
+  denied: "Access to this file is no longer available. Your changes are preserved.",
+  changed: "This file was changed outside ModCodes. Your unsaved changes are preserved.",
+  error: "ModCodes could not check this file on disk.",
+};
+
 export default function EditorPane({ tab, openPaths, onChange, onSave }) {
   if (!tab) {
     return (
@@ -36,10 +43,15 @@ export default function EditorPane({ tab, openPaths, onChange, onSave }) {
     readError,
     saveStatus,
     saveError,
+    fileStatus,
   } = tab;
 
   const language = getLanguageFromPath(path);
   const saving = saveStatus === "saving";
+  const unavailable =
+    fileStatus === "missing" ||
+    fileStatus === "denied" ||
+    fileStatus === "error";
 
   let overlayMessage = null;
   if (readStatus === "reading") {
@@ -47,6 +59,14 @@ export default function EditorPane({ tab, openPaths, onChange, onSave }) {
   } else if (readStatus === "error") {
     overlayMessage =
       READ_ERROR_MESSAGES[readError] || "ModCodes could not read this file.";
+  }
+
+  let fileStatusMessage = null;
+  if (fileStatus === "changed" && dirty) {
+    fileStatusMessage = FILE_STATUS_MESSAGES.changed;
+  } else if (unavailable) {
+    fileStatusMessage =
+      FILE_STATUS_MESSAGES[fileStatus] || FILE_STATUS_MESSAGES.error;
   }
 
   return (
@@ -67,11 +87,15 @@ export default function EditorPane({ tab, openPaths, onChange, onSave }) {
         <button
           className="editor-save-button"
           onClick={onSave}
-          disabled={saving || !dirty || readStatus !== "ready"}
+          disabled={saving || !dirty || readStatus !== "ready" || unavailable}
         >
           {saving ? "Saving..." : "Save"}
         </button>
       </div>
+
+      {fileStatusMessage && (
+        <div className="editor-warning">{fileStatusMessage}</div>
+      )}
 
       <div className="editor-body">
         <MonacoEditor
