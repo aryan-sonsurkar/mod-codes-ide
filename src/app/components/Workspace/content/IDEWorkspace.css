@@ -7,6 +7,13 @@
   position: relative;
 }
 
+.ide-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .ide-header h1 {
   font-size: 24px;
   color: var(--primary-text);
@@ -14,6 +21,24 @@
 
 .ide-header p {
   color: var(--secondary-text);
+}
+
+.ide-header-button {
+  color: var(--primary-text);
+  background-color: var(--accent-color);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ide-header-button:hover {
+  background-color: var(--hover-color);
+}
+
+.ide-header-button:active {
+  background-color: var(--active-color);
 }
 
 .ide-layout {

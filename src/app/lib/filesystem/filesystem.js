@@ -1,5 +1,6 @@
 const DEFAULT_MAX_DEPTH = 8;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const SEARCH_MAX_RESULTS = 500;
 
 const SKIPPED_DIRECTORIES = new Set([
   "node_modules",
@@ -497,4 +498,89 @@ export async function rescanProjectTree() {
 
   const tree = await readDirectoryNode(rootHandle, rootPath, 1);
   return { ok: true, tree };
+}
+
+function searchNameFromPath(path) {
+  const index = path.lastIndexOf("/");
+  return index === -1 ? path : path.slice(index + 1);
+}
+
+function searchText(text, path, query, matches) {
+  const lines = text.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    if (matches.length >= SEARCH_MAX_RESULTS) {
+      return;
+    }
+    if (lines[i].toLowerCase().includes(query)) {
+      matches.push({
+        path,
+        name: searchNameFromPath(path),
+        line: i + 1,
+        text: lines[i].trim(),
+      });
+    }
+  }
+}
+
+async function searchDirectory(handle, path, query, matches) {
+  for await (const child of handle.values()) {
+    if (matches.length >= SEARCH_MAX_RESULTS) {
+      return;
+    }
+
+    if (child.kind === "directory") {
+      if (SKIPPED_DIRECTORIES.has(child.name)) {
+        continue;
+      }
+      await searchDirectory(child, `${path}/${child.name}`, query, matches);
+      continue;
+    }
+
+    if (child.kind !== "file") {
+      continue;
+    }
+
+    const filePath = `${path}/${child.name}`;
+
+    try {
+      const file = await child.getFile();
+      if (file.size === 0 || file.size > MAX_FILE_SIZE) {
+        continue;
+      }
+      const text = await file.text();
+      if (looksBinary(text)) {
+        continue;
+      }
+      searchText(text, filePath, query, matches);
+    } catch (error) {
+      // skip unreadable files
+    }
+  }
+}
+
+export async function searchWorkspace(query) {
+  const trimmed = typeof query === "string" ? query.trim() : "";
+
+  if (!trimmed) {
+    return { ok: true, matches: [] };
+  }
+
+  if (!rootPath) {
+    return { ok: false, status: "missing" };
+  }
+
+  const rootHandle = directoryHandles.get(rootPath);
+  if (!rootHandle) {
+    return { ok: false, status: "missing" };
+  }
+
+  const hasPermission = await ensurePermission(rootHandle, "read");
+  if (!hasPermission) {
+    return { ok: false, status: "denied" };
+  }
+
+  const matches = [];
+  await searchDirectory(rootHandle, rootPath, trimmed.toLowerCase(), matches);
+  return { ok: true, matches };
 }

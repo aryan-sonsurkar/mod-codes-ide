@@ -14,12 +14,14 @@ export default function MonacoEditor({
   readStatus,
   openPaths,
   onChange,
+  revealRequest,
 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const modelsRef = useRef(new Map());
   const currentPathRef = useRef(null);
+  const pendingRevealRef = useRef(null);
 
   const fileRef = useRef(file);
   const contentRef = useRef(content);
@@ -27,6 +29,7 @@ export default function MonacoEditor({
   const languageRef = useRef(language);
   const onChangeRef = useRef(onChange);
   const contentTokenRef = useRef(0);
+  const revealRef = useRef(null);
 
   useEffect(() => {
     fileRef.current = file;
@@ -35,9 +38,28 @@ export default function MonacoEditor({
     languageRef.current = language;
     onChangeRef.current = onChange;
     contentTokenRef.current = file?.contentToken || 0;
+    revealRef.current = revealRequest;
   });
 
   const openPathsKey = Array.isArray(openPaths) ? openPaths.join("\n") : "";
+
+  function applyReveal() {
+    const editor = editorRef.current;
+    const pending = pendingRevealRef.current;
+
+    if (!editor || !pending) {
+      return;
+    }
+
+    if (currentPathRef.current !== pending.path) {
+      return;
+    }
+
+    editor.revealLineInCenter(pending.line);
+    editor.setPosition({ lineNumber: pending.line, column: 1 });
+    editor.focus();
+    pendingRevealRef.current = null;
+  }
 
   const syncActiveModel = useCallback(() => {
     const editor = editorRef.current;
@@ -70,6 +92,7 @@ export default function MonacoEditor({
     editor.setModel(model);
     editor.focus();
     currentPathRef.current = path;
+    applyReveal();
   }, []);
 
   useEffect(() => {
@@ -143,6 +166,19 @@ export default function MonacoEditor({
       model.setValue(contentRef.current);
     }
   }, [file?.contentToken]);
+
+  useEffect(() => {
+    const request = revealRef.current;
+    if (!request) {
+      return;
+    }
+
+    pendingRevealRef.current = {
+      path: request.path,
+      line: request.line,
+    };
+    applyReveal();
+  }, [revealRequest?.token]);
 
   useEffect(() => {
     const openSet = new Set(openPathsKey === "" ? [] : openPathsKey.split("\n"));

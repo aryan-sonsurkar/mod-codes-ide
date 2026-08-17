@@ -23,7 +23,7 @@ const FILE_STATUS_MESSAGES = {
   error: "ModCodes could not check this file on disk.",
 };
 
-export default function EditorPane({ tab, openPaths, onChange, onSave }) {
+export default function EditorPane({ tab, openPaths, onChange, onSave, revealRequest }) {
   if (!tab) {
     return (
       <div className="editor-pane">
@@ -105,6 +105,7 @@ export default function EditorPane({ tab, openPaths, onChange, onSave }) {
           readStatus={readStatus}
           openPaths={openPaths}
           onChange={onChange}
+          revealRequest={revealRequest}
         />
         {overlayMessage && (
           <div className="editor-body-overlay">{overlayMessage}</div>

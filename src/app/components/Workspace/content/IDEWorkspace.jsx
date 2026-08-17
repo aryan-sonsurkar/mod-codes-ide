@@ -4,6 +4,7 @@ import "./IDEWorkspace.css";
 import FileExplorer from "./FileExplorer/FileExplorer";
 import EditorPane from "./EditorPane";
 import TabBar from "./TabBar";
+import SearchPanel from "./SearchPanel";
 import {
   openProjectDirectory,
   readFile,
@@ -51,6 +52,8 @@ export default function IdeWorkspace({ selectedProject }) {
   const [activePath, setActivePath] = useState(null);
   const [pendingClosePath, setPendingClosePath] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [revealRequest, setRevealRequest] = useState(null);
 
   const saveResetTimer = useRef(null);
   const persistTimer = useRef(null);
@@ -495,6 +498,15 @@ export default function IdeWorkspace({ selectedProject }) {
     return result;
   }
 
+  function handleSearchSelect(match) {
+    openFile({ path: match.path, name: match.name });
+    setRevealRequest((current) => ({
+      token: (current?.token || 0) + 1,
+      path: match.path,
+      line: match.line,
+    }));
+  }
+
   function switchToRelativeTab(direction) {
     if (!tabs.length) {
       setActivePath(null);
@@ -574,8 +586,16 @@ export default function IdeWorkspace({ selectedProject }) {
   return (
     <section className="ide-workspace">
       <header className="ide-header">
-        <h1>MODCODES IDE</h1>
-        <p>Project: {selectedProject?.name || "Untitled Project"}</p>
+        <div>
+          <h1>MODCODES IDE</h1>
+          <p>Project: {selectedProject?.name || "Untitled Project"}</p>
+        </div>
+        <button
+          className="ide-header-button"
+          onClick={() => setSearchOpen((current) => !current)}
+        >
+          {searchOpen ? "Close Search" : "Search"}
+        </button>
       </header>
 
       {status === "ready" && tree ? (
@@ -603,8 +623,15 @@ export default function IdeWorkspace({ selectedProject }) {
                 openPaths={openPaths}
                 onChange={handleContentChange}
                 onSave={handleSave}
+                revealRequest={revealRequest}
               />
             </div>
+            {searchOpen && (
+              <SearchPanel
+                onSelect={handleSearchSelect}
+                onClose={() => setSearchOpen(false)}
+              />
+            )}
           </div>
 
           {pendingTab && (
