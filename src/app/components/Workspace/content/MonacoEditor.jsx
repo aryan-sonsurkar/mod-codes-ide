@@ -15,6 +15,7 @@ export default function MonacoEditor({
   openPaths,
   onChange,
   revealRequest,
+  focusHandleRef,
 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -179,6 +180,20 @@ export default function MonacoEditor({
     };
     applyReveal();
   }, [revealRequest?.token]);
+
+  useEffect(() => {
+    if (!focusHandleRef) {
+      return;
+    }
+
+    focusHandleRef.current = {
+      focus: () => editorRef.current?.focus(),
+    };
+
+    return () => {
+      focusHandleRef.current = null;
+    };
+  }, [focusHandleRef]);
 
   useEffect(() => {
     const openSet = new Set(openPathsKey === "" ? [] : openPathsKey.split("\n"));

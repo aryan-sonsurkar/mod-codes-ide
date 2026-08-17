@@ -5,6 +5,7 @@ import FileExplorer from "./FileExplorer/FileExplorer";
 import EditorPane from "./EditorPane";
 import TabBar from "./TabBar";
 import SearchPanel from "./SearchPanel";
+import CommandPalette from "./CommandPalette";
 import {
   openProjectDirectory,
   readFile,
@@ -54,6 +55,11 @@ export default function IdeWorkspace({ selectedProject }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [revealRequest, setRevealRequest] = useState(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [explorerVisible, setExplorerVisible] = useState(true);
+  const [newFileRequest, setNewFileRequest] = useState(null);
+  const [newFolderRequest, setNewFolderRequest] = useState(null);
+  const monacoFocusRef = useRef(null);
 
   const saveResetTimer = useRef(null);
   const persistTimer = useRef(null);
@@ -524,13 +530,139 @@ export default function IdeWorkspace({ selectedProject }) {
     }
   }
 
+  function closeAllTabs() {
+    const clean = tabs.filter((tab) => !tab.dirty);
+
+    if (clean.length === tabs.length) {
+      setTabs([]);
+      setActivePath(null);
+      return;
+    }
+
+    const remainingPaths = new Set(
+      tabs.filter((tab) => tab.dirty).map((tab) => tab.path)
+    );
+
+    setTabs((current) =>
+      current.filter((tab) => tab.dirty || remainingPaths.has(tab.path))
+    );
+
+    if (activePath && !remainingPaths.has(activePath)) {
+      const index = tabs.findIndex((tab) => tab.path === activePath);
+      const remaining = tabs.filter(
+        (tab) => tab.dirty || remainingPaths.has(tab.path)
+      );
+      const neighbor = remaining[Math.min(index, remaining.length - 1)];
+      setActivePath(neighbor ? neighbor.path : null);
+    }
+  }
+
+  function closePalette() {
+    setPaletteOpen(false);
+    monacoFocusRef.current?.focus();
+  }
+
+  const commands = [
+    {
+      id: "save-file",
+      title: "Save File",
+      shortcut: "Ctrl+S",
+      execute: () => {
+        handleSave();
+      },
+    },
+    {
+      id: "close-active-tab",
+      title: "Close Active Tab",
+      shortcut: "Ctrl+W",
+      execute: () => {
+        handleCloseTabFromKeyboard();
+      },
+    },
+    {
+      id: "close-all-tabs",
+      title: "Close All Tabs",
+      shortcut: "",
+      execute: () => {
+        closeAllTabs();
+      },
+    },
+    {
+      id: "refresh-explorer",
+      title: "Refresh Explorer",
+      shortcut: "",
+      execute: () => {
+        handleRefresh();
+      },
+    },
+    {
+      id: "search-workspace",
+      title: "Search Workspace",
+      shortcut: "",
+      execute: () => {
+        setSearchOpen(true);
+      },
+    },
+    {
+      id: "toggle-file-explorer",
+      title: "Toggle File Explorer",
+      shortcut: "",
+      execute: () => {
+        setExplorerVisible((current) => !current);
+      },
+    },
+    {
+      id: "new-file",
+      title: "New File",
+      shortcut: "",
+      opensDialog: true,
+      execute: () => {
+        setNewFileRequest((current) => ({
+          token: (current?.token || 0) + 1,
+        }));
+      },
+    },
+    {
+      id: "new-folder",
+      title: "New Folder",
+      shortcut: "",
+      opensDialog: true,
+      execute: () => {
+        setNewFolderRequest((current) => ({
+          token: (current?.token || 0) + 1,
+        }));
+      },
+    },
+  ];
+
+  function handleCommandSelect(command) {
+    command.execute();
+    setPaletteOpen(false);
+    if (!command.opensDialog) {
+      monacoFocusRef.current?.focus();
+    }
+  }
+
   useEffect(() => {
     function onKeyDown(event) {
-      if (status !== "ready" || pendingClosePath) {
+      const mod = event.ctrlKey || event.metaKey;
+
+      if (mod && event.shiftKey && event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        setPaletteOpen((current) => !current);
         return;
       }
 
-      const mod = event.ctrlKey || event.metaKey;
+      if (paletteOpen) {
+        if (event.key === "Escape") {
+          closePalette();
+        }
+        return;
+      }
+
+      if (status !== "ready" || pendingClosePath) {
+        return;
+      }
 
       if (mod && event.key.toLowerCase() === "s") {
         event.preventDefault();
@@ -572,10 +704,12 @@ export default function IdeWorkspace({ selectedProject }) {
     activePath,
     tabs,
     pendingClosePath,
+    paletteOpen,
     saveTab,
     handleCloseTabFromKeyboard,
     switchToRelativeTab,
     handlePendingCancel,
+    closePalette,
   ]);
 
   const openPaths = tabs.map((tab) => tab.path);
@@ -601,16 +735,20 @@ export default function IdeWorkspace({ selectedProject }) {
       {status === "ready" && tree ? (
         <>
           <div className="ide-layout">
-            <FileExplorer
-              root={tree}
-              onFileSelect={openFile}
-              selectedFilePath={activePath}
-              onCreateFile={handleCreateFile}
-              onCreateFolder={handleCreateFolder}
-              onRename={handleRenameEntry}
-              onDelete={handleDeleteEntry}
-              onRefresh={handleRefresh}
-            />
+            {explorerVisible && (
+              <FileExplorer
+                root={tree}
+                onFileSelect={openFile}
+                selectedFilePath={activePath}
+                onCreateFile={handleCreateFile}
+                onCreateFolder={handleCreateFolder}
+                onRename={handleRenameEntry}
+                onDelete={handleDeleteEntry}
+                onRefresh={handleRefresh}
+                newFileRequest={newFileRequest}
+                newFolderRequest={newFolderRequest}
+              />
+            )}
             <div className="editor-region">
               <TabBar
                 tabs={tabs}
@@ -624,6 +762,7 @@ export default function IdeWorkspace({ selectedProject }) {
                 onChange={handleContentChange}
                 onSave={handleSave}
                 revealRequest={revealRequest}
+                focusHandleRef={monacoFocusRef}
               />
             </div>
             {searchOpen && (
@@ -633,6 +772,14 @@ export default function IdeWorkspace({ selectedProject }) {
               />
             )}
           </div>
+
+          {paletteOpen && (
+            <CommandPalette
+              commands={commands}
+              onSelect={handleCommandSelect}
+              onClose={closePalette}
+            />
+          )}
 
           {pendingTab && (
             <div className="unsaved-overlay">

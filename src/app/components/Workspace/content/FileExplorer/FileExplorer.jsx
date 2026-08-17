@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./FileExplorer.css";
 import FileTreeNode from "./FileTreeNode";
 
@@ -20,6 +20,8 @@ export default function FileExplorer({
   onRename,
   onDelete,
   onRefresh,
+  newFileRequest,
+  newFolderRequest,
 }) {
   const [expanded, setExpanded] = useState(() =>
     new Set(root ? [root.path] : [])
@@ -43,6 +45,18 @@ export default function FileExplorer({
       setRefreshing(false);
     }
   }
+
+  useEffect(() => {
+    if (newFileRequest?.token && root) {
+      startCreate("create-file", root);
+    }
+  }, [newFileRequest?.token, root]);
+
+  useEffect(() => {
+    if (newFolderRequest?.token && root) {
+      startCreate("create-folder", root);
+    }
+  }, [newFolderRequest?.token, root]);
 
   function toggleDirectory(path) {
     setExpanded((current) => {
