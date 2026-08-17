@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./IDEWorkspace.css";
 import FileExplorer from "./FileExplorer/FileExplorer";
 import EditorPane from "./EditorPane";
 import TabBar from "./TabBar";
 import SearchPanel from "./SearchPanel";
 import CommandPalette from "./CommandPalette";
+import TerminalPanel from "./TerminalPanel";
+import { createSimulatedTerminalProvider } from "../../../lib/terminal/TerminalProvider";
 import {
   openProjectDirectory,
   readFile,
@@ -59,7 +61,15 @@ export default function IdeWorkspace({ selectedProject }) {
   const [explorerVisible, setExplorerVisible] = useState(true);
   const [newFileRequest, setNewFileRequest] = useState(null);
   const [newFolderRequest, setNewFolderRequest] = useState(null);
+  const [terminalOpen, setTerminalOpen] = useState(false);
   const monacoFocusRef = useRef(null);
+  const terminalProvider = useMemo(() => createSimulatedTerminalProvider(), []);
+
+  useEffect(() => {
+    return () => {
+      terminalProvider.dispose();
+    };
+  }, [terminalProvider]);
 
   const saveResetTimer = useRef(null);
   const persistTimer = useRef(null);
@@ -724,12 +734,20 @@ export default function IdeWorkspace({ selectedProject }) {
           <h1>MODCODES IDE</h1>
           <p>Project: {selectedProject?.name || "Untitled Project"}</p>
         </div>
-        <button
-          className="ide-header-button"
-          onClick={() => setSearchOpen((current) => !current)}
-        >
-          {searchOpen ? "Close Search" : "Search"}
-        </button>
+        <div className="ide-header-actions">
+          <button
+            className="ide-header-button"
+            onClick={() => setSearchOpen((current) => !current)}
+          >
+            {searchOpen ? "Close Search" : "Search"}
+          </button>
+          <button
+            className="ide-header-button"
+            onClick={() => setTerminalOpen((current) => !current)}
+          >
+            {terminalOpen ? "Close Terminal" : "Terminal"}
+          </button>
+        </div>
       </header>
 
       {status === "ready" && tree ? (
@@ -772,6 +790,13 @@ export default function IdeWorkspace({ selectedProject }) {
               />
             )}
           </div>
+
+          {terminalOpen && (
+            <TerminalPanel
+              provider={terminalProvider}
+              onClose={() => setTerminalOpen(false)}
+            />
+          )}
 
           {paletteOpen && (
             <CommandPalette
