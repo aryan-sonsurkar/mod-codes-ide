@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import "./TerminalPanel.css";
+import { useSettings } from "../../../contexts/SettingsContext";
 
 export default function TerminalPanel({ provider, onClose }) {
   const [lines, setLines] = useState([]);
@@ -10,6 +11,8 @@ export default function TerminalPanel({ provider, onClose }) {
   const [busy, setBusy] = useState(false);
   const inputRef = useRef(null);
   const bodyRef = useRef(null);
+
+  const { settings } = useSettings();
 
   useEffect(() => {
     setLines([
@@ -100,7 +103,10 @@ export default function TerminalPanel({ provider, onClose }) {
   }
 
   return (
-    <section className="terminal-panel">
+    <section
+      className="terminal-panel"
+      style={{ "--terminal-font-size": `${settings.terminal.fontSize}px` }}
+    >
       <header className="terminal-header">
         <span className="terminal-title">
           TERMINAL <span className="terminal-badge">Browser simulation</span>

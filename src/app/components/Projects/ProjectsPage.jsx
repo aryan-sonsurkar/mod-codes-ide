@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useSettings } from "../../contexts/SettingsContext";
 import "./ProjectsPage.css";
 
 function formatLastOpened(timestamp) {
@@ -47,6 +48,8 @@ export default function ProjectsPage({
   const [sort, setSort] = useState("recently-opened");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
+
+  const { settings } = useSettings();
 
   const trimmed = query.trim().toLowerCase();
 
@@ -165,7 +168,13 @@ export default function ProjectsPage({
                 </button>
                 <button
                   className="projects-delete-button"
-                  onClick={() => setConfirmId(project.id)}
+                  onClick={() => {
+                    if (settings.projects.confirmBeforeDelete) {
+                      setConfirmId(project.id);
+                    } else {
+                      onDelete(project.id);
+                    }
+                  }}
                 >
                   Delete
                 </button>

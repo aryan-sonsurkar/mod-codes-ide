@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import "./MonacoEditor.css";
 import { loadMonaco } from "../../../lib/monaco/monaco";
+import { useSettings } from "../../../contexts/SettingsContext";
 
 function modelUriForPath(monaco, path) {
   return monaco.Uri.parse("modcodes://model/" + encodeURIComponent(path));
@@ -23,6 +24,14 @@ export default function MonacoEditor({
   const modelsRef = useRef(new Map());
   const currentPathRef = useRef(null);
   const pendingRevealRef = useRef(null);
+
+  const { settings } = useSettings();
+
+  const settingsRef = useRef(settings);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  });
 
   const fileRef = useRef(file);
   const contentRef = useRef(content);
@@ -109,14 +118,17 @@ export default function MonacoEditor({
       monacoRef.current = monaco;
 
       if (!editor && containerRef.current) {
+        const editorSettings = settingsRef.current.editor;
         editor = monaco.editor.create(containerRef.current, {
           value: "",
           language: "plaintext",
           theme: "vs-dark",
           automaticLayout: true,
-          minimap: { enabled: false },
-          fontSize: 13,
-          tabSize: 2,
+          minimap: { enabled: editorSettings.minimap },
+          fontSize: editorSettings.fontSize,
+          tabSize: editorSettings.tabSize,
+          wordWrap: editorSettings.wordWrap ? "on" : "off",
+          lineNumbers: editorSettings.lineNumbers ? "on" : "off",
           scrollBeyondLastLine: false,
         });
         editorRef.current = editor;
@@ -151,6 +163,26 @@ export default function MonacoEditor({
   useEffect(() => {
     syncActiveModel();
   }, [file?.path, readStatus, syncActiveModel]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    editor.updateOptions({
+      minimap: { enabled: settings.editor.minimap },
+      fontSize: settings.editor.fontSize,
+      tabSize: settings.editor.tabSize,
+      wordWrap: settings.editor.wordWrap ? "on" : "off",
+      lineNumbers: settings.editor.lineNumbers ? "on" : "off",
+    });
+  }, [
+    settings.editor.fontSize,
+    settings.editor.tabSize,
+    settings.editor.wordWrap,
+    settings.editor.minimap,
+    settings.editor.lineNumbers,
+  ]);
 
   useEffect(() => {
     const token = fileRef.current?.contentToken || 0;

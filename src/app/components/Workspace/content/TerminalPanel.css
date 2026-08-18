@@ -60,7 +60,7 @@
   overflow-y: auto;
   padding: 8px 10px;
   font-family: "Consolas", "Menlo", monospace;
-  font-size: 13px;
+  font-size: var(--terminal-font-size, 13px);
   line-height: 1.5;
 }
 
@@ -88,7 +88,7 @@
 .terminal-prompt {
   color: var(--accent-color);
   font-family: "Consolas", "Menlo", monospace;
-  font-size: 13px;
+  font-size: var(--terminal-font-size, 13px);
   flex-shrink: 0;
 }
 
@@ -100,5 +100,5 @@
   outline: none;
   color: var(--primary-text);
   font-family: "Consolas", "Menlo", monospace;
-  font-size: 13px;
+  font-size: var(--terminal-font-size, 13px);
 }

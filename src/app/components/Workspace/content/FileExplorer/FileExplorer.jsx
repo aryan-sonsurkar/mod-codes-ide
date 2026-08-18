@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import "./FileExplorer.css";
 import FileTreeNode from "./FileTreeNode";
+import { useSettings } from "../../../../contexts/SettingsContext";
 
 const ERROR_MESSAGES = {
   "invalid-name": "That name is not allowed.",
@@ -32,6 +33,8 @@ export default function FileExplorer({
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [dialogError, setDialogError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  const { settings } = useSettings();
 
   async function handleRefresh() {
     if (refreshing) {
@@ -106,6 +109,10 @@ export default function FileExplorer({
   function startDelete(node) {
     setDialogError("");
     setContextMenu(null);
+    if (!settings.files.confirmBeforeDelete) {
+      onDelete(node.path);
+      return;
+    }
     setConfirmDialog({ node });
   }
 
