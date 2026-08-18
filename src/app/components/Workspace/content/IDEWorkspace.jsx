@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import "./IDEWorkspace.css";
 import FileExplorer from "./FileExplorer/FileExplorer";
 import EditorPane from "./EditorPane";
@@ -48,6 +49,7 @@ const EMPTY_TAB = {
 };
 
 export default function IdeWorkspace({ selectedProject }) {
+  const router = useRouter();
   const [status, setStatus] = useState("requesting");
   const [tree, setTree] = useState(null);
 
@@ -735,6 +737,13 @@ export default function IdeWorkspace({ selectedProject }) {
           <p>Project: {selectedProject?.name || "Untitled Project"}</p>
         </div>
         <div className="ide-header-actions">
+          <button
+            className="ide-header-button"
+            title="Back to Projects"
+            onClick={() => router.push("/projects")}
+          >
+            Projects
+          </button>
           <button
             className="ide-header-button"
             onClick={() => setSearchOpen((current) => !current)}

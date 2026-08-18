@@ -1,11 +1,10 @@
 import Sidebar from "../components/Sidebar/Sidebar";
-import Workspace from "../components/Workspace/Workspace";
 
-export default function ProjectsPage() {
+export default function AppLayout({ children }) {
   return (
     <div className="app">
       <Sidebar />
-      <Workspace />
+      {children}
     </div>
   );
 }
