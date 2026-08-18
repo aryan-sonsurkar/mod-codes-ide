@@ -1,11 +1,5 @@
-import Sidebar from "./components/Sidebar/Sidebar";
-import Workspace from "./components/Workspace/Workspace";
+import Landing from "./components/Landing/Landing";
 
 export default function Home() {
-  return (
-    <div className="app">
-    <Sidebar />
-    <Workspace />
-    </div>
-  );
+  return <Landing />;
 }
