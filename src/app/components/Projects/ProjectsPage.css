@@ -1,0 +1,241 @@
+.projects-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.projects-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.projects-title {
+  font-size: 26px;
+  color: var(--primary-text);
+}
+
+.projects-new-button {
+  color: var(--primary-text);
+  background-color: var(--accent-color);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.projects-new-button:hover {
+  background-color: var(--hover-color);
+}
+
+.projects-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.projects-search {
+  flex-grow: 1;
+  min-width: 200px;
+  padding: 8px 10px;
+  background-color: var(--surface-bg);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  outline: none;
+}
+
+.projects-search:focus {
+  border-color: var(--accent-color);
+}
+
+.projects-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.projects-sort-label {
+  color: var(--secondary-text);
+  font-size: 13px;
+}
+
+.projects-sort-select {
+  padding: 8px 10px;
+  background-color: var(--surface-bg);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+}
+
+.projects-favorites {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--secondary-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 6px;
+}
+
+.project-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.project-favorite {
+  background: transparent;
+  border: none;
+  color: #fbbf24;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.project-card-info {
+  min-width: 0;
+}
+
+.project-card-name {
+  font-size: 18px;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.project-card-meta {
+  color: var(--secondary-text);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.project-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.projects-open-button {
+  color: var(--primary-text);
+  background-color: var(--accent-color);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.projects-open-button:hover {
+  background-color: var(--hover-color);
+}
+
+.projects-delete-button {
+  color: var(--primary-text);
+  background-color: rgb(189, 24, 24);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.projects-delete-button:hover {
+  background-color: rgb(140, 20, 20);
+}
+
+.projects-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  text-align: center;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 6px;
+}
+
+.projects-empty-title {
+  font-size: 18px;
+  color: var(--primary-text);
+}
+
+.projects-empty-text {
+  color: var(--secondary-text);
+  margin-bottom: 8px;
+}
+
+.projects-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 30;
+}
+
+.projects-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 380px;
+  padding: 16px;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  color: var(--primary-text);
+}
+
+.projects-dialog-title {
+  font-weight: 700;
+}
+
+.projects-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.projects-dialog-button {
+  color: var(--primary-text);
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.projects-dialog-button:hover {
+  background-color: var(--hover-color);
+}
+
+.projects-dialog-danger {
+  background-color: rgb(189, 24, 24);
+}

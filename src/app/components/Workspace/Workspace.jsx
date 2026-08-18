@@ -1,11 +1,9 @@
 "use client";
 import "./Workspace.css";
 import ChatInput from "./chat-input";
-import Quickactions from "./content/Quick-actions";
-import Recentprojects from "./content/Recent-projects";
 import CreateProjectModal from "../CreateProjectModal/CreateProjectModal";
-import Welcome from "./content/Welcome";
 import IdeWorkspace from "./content/IDEWorkspace";
+import ProjectsPage from "../Projects/ProjectsPage";
 import { useState,useEffect } from "react";
 import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
 
@@ -76,6 +74,20 @@ export default function Workspace() {
     localStorage.setItem("modcodes-projects", JSON.stringify(updatedProjects));
   }
 
+  function toggleFavorite(id) {
+    const updatedProjects = projects.map((currentProject) => {
+      if (currentProject.id === id) {
+        return {
+          ...currentProject,
+          favorite: !currentProject.favorite,
+        };
+      }
+      return currentProject;
+    });
+    setProjects(updatedProjects);
+    localStorage.setItem("modcodes-projects", JSON.stringify(updatedProjects));
+  }
+
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
 
   return (
@@ -84,9 +96,13 @@ export default function Workspace() {
     <IdeWorkspace selectedProject={selectedProject} />
   ) : (
     <section className="workspace-content">
-      <Welcome />
-      <Quickactions openModal={openModal}/>
-      <Recentprojects projects={projects} deleteProject={deleteProject} openProject={openProject}/>
+      <ProjectsPage
+        projects={projects}
+        onOpen={openProject}
+        onDelete={deleteProject}
+        onCreate={openModal}
+        onToggleFavorite={toggleFavorite}
+      />
     </section>
   )}
 
