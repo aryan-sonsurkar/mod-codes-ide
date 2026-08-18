@@ -4,11 +4,20 @@ import ChatInput from "./chat-input";
 import CreateProjectModal from "../CreateProjectModal/CreateProjectModal";
 import IdeWorkspace from "./content/IDEWorkspace";
 import ProjectsPage from "../Projects/ProjectsPage";
-import { useState,useEffect } from "react";
+import { useState } from "react";
 import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
 
+function loadProjects() {
+  try {
+    const savedProjects = localStorage.getItem("modcodes-projects");
+    return savedProjects === null ? [] : JSON.parse(savedProjects);
+  } catch (error) {
+    return [];
+  }
+}
+
 export default function Workspace() {
-  const [projects,setProjects] = useState([]);
+  const [projects, setProjects] = useState(loadProjects);
   const [selectedProjectId, setSelectedProjectId] = useState(
     () => loadWorkspace()?.projectId || null
   );
@@ -29,16 +38,6 @@ export default function Workspace() {
     setProjects(updatedProjects);
     closeModal();
   };
-  useEffect(() => {
-    const savedProjects = localStorage.getItem("modcodes-projects");
-    if (savedProjects === null){
-      
-    }
-    else {
-      const loadedprojects = JSON.parse(savedProjects);
-      setProjects(loadedprojects);
-    }
-  }, []);
   function deleteProject(id) {
     const updatedProjects = projects.filter((currentProject) => {
         return currentProject.id!==id;

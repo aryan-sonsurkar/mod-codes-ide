@@ -40,3 +40,24 @@
   background-color: var(--accent-color);
   color: #ffffff;
 }
+
+@media (max-width: 768px) {
+  .sidebar {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    border-right: none;
+    border-bottom: solid 2px var(--border-color);
+    gap: 8px;
+  }
+
+  .sidebar-brand {
+    margin-right: auto;
+    padding-bottom: 4px;
+  }
+
+  .projectsbtn,
+  .settingsbtn {
+    gap: 8px;
+  }
+}

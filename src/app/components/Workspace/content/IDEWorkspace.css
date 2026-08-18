@@ -141,3 +141,18 @@
 .unsaved-button-danger {
   background-color: rgb(189, 24, 24);
 }
+
+@media (max-width: 768px) {
+  .ide-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ide-header-actions {
+    flex-wrap: wrap;
+  }
+
+  .ide-layout {
+    flex-wrap: wrap;
+  }
+}

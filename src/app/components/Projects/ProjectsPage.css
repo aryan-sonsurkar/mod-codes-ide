@@ -239,3 +239,28 @@
 .projects-dialog-danger {
   background-color: rgb(189, 24, 24);
 }
+
+@media (max-width: 768px) {
+  .projects-page {
+    padding: 0 4px;
+  }
+
+  .projects-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .project-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .project-card-actions {
+    width: 100%;
+  }
+
+  .project-card-actions .projects-open-button,
+  .project-card-actions .projects-delete-button {
+    flex-grow: 1;
+  }
+}

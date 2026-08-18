@@ -169,3 +169,24 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+@media (max-width: 768px) {
+  .settings-page {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .settings-sidebar {
+    width: 100%;
+  }
+
+  .settings-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

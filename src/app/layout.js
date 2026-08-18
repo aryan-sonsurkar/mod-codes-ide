@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "ModCodes",
-  description: "Develeloped by ARS",
+  title: "MODCODES",
+  description:
+    "MODCODES — a local-first development environment built for the browser. Developed by ARS.",
 };
 
 export default function RootLayout({ children }) {

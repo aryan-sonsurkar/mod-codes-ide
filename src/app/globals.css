@@ -38,6 +38,14 @@ body {
   height: 100vh;
 }
 
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+}
+
 
 * {
   box-sizing: border-box;
