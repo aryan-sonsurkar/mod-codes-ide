@@ -1,0 +1,253 @@
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+  height: 100%;
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
+  color: var(--primary-text);
+}
+
+.ai-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: solid 1px var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: var(--background-color);
+}
+
+.ai-status-ok {
+  color: rgb(80, 190, 120);
+}
+
+.ai-status-error {
+  color: rgb(240, 82, 82);
+}
+
+.ai-status-text {
+  font-weight: 600;
+}
+
+.ai-status-version {
+  margin-left: auto;
+  color: var(--secondary-text);
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 11px;
+}
+
+.ai-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ai-retry:hover {
+  background-color: var(--hover-color);
+}
+
+.ai-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 2px;
+}
+
+.ai-label {
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.ai-model-select {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--background-color);
+  color: var(--primary-text);
+  font-size: 13px;
+}
+
+.ai-model-select:disabled {
+  opacity: 0.6;
+}
+
+.ai-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--secondary-text);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-hint code {
+  font-family: "Consolas", "Menlo", monospace;
+  color: var(--accent-color);
+}
+
+.ai-context {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: dashed 1px var(--border-color);
+  border-radius: 4px;
+  background-color: var(--background-color);
+  font-size: 11px;
+}
+
+.ai-context-count {
+  font-weight: 600;
+  color: var(--primary-text);
+}
+
+.ai-context-detail {
+  color: var(--secondary-text);
+  line-height: 1.4;
+}
+
+.ai-tools {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--secondary-text);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-tools-active {
+  color: var(--accent-color);
+  font-family: "Consolas", "Menlo", monospace;
+}
+
+.ai-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: auto;
+  color: var(--secondary-text);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ai-message {
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-message-user {
+  align-self: flex-end;
+  background-color: var(--accent-color);
+  color: #ffffff;
+}
+
+.ai-message-assistant {
+  align-self: flex-start;
+  background-color: var(--background-color);
+  border: solid 1px var(--border-color);
+}
+
+.ai-message-error {
+  align-self: stretch;
+  color: rgb(240, 82, 82);
+  font-size: 12px;
+}
+
+.ai-message-thinking {
+  color: var(--secondary-text);
+}
+
+.ai-caret {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background-color: var(--primary-text);
+  animation: ai-caret-blink 1s steps(1) infinite;
+}
+
+@keyframes ai-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.ai-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ai-input {
+  flex-grow: 1;
+  resize: none;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--background-color);
+  color: var(--primary-text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ai-input:disabled {
+  opacity: 0.6;
+}
+
+.ai-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--accent-color);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-send:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.ai-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

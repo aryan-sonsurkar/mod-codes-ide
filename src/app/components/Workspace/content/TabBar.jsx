@@ -1,9 +1,21 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./TabBar.css";
 
-export default function TabBar({ tabs, activePath, onActivate, onClose }) {
+export default function TabBar({
+  tabs,
+  activePath,
+  onActivate,
+  onClose,
+  onMenuAction,
+}) {
   const tabRefs = useRef({});
+  const [menu, setMenu] = useState(null);
+
+  useEffect(() => {
+    const active = tabRefs.current[activePath];
+    active?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activePath, tabs.length]);
 
   if (tabs.length === 0) {
     return null;
@@ -48,6 +60,33 @@ export default function TabBar({ tabs, activePath, onActivate, onClose }) {
     }
   }
 
+  function openMenu(event, path) {
+    event.preventDefault();
+    event.stopPropagation();
+    setMenu({ path, x: event.clientX, y: event.clientY });
+  }
+
+  function handleMenuAction(action) {
+    const target = menu?.path;
+    setMenu(null);
+
+    if (!target) {
+      return;
+    }
+
+    if (action === "close") {
+      onClose(target);
+    } else if (action === "others") {
+      onMenuAction("others", target);
+    } else if (action === "right") {
+      onMenuAction("right", target);
+    } else if (action === "clean") {
+      onMenuAction("clean");
+    } else if (action === "all") {
+      onMenuAction("all");
+    }
+  }
+
   return (
     <div className="tab-bar" role="tablist" aria-label="Open editors">
       {tabs.map((tab, index) => {
@@ -67,6 +106,13 @@ export default function TabBar({ tabs, activePath, onActivate, onClose }) {
             tabIndex={isActive ? 0 : -1}
             onClick={() => onActivate(tab.path)}
             onKeyDown={(event) => handleTabKeyDown(event, index)}
+            onContextMenu={(event) => openMenu(event, tab.path)}
+            onMouseDown={(event) => {
+              if (event.button === 1) {
+                event.preventDefault();
+                onClose(tab.path);
+              }
+            }}
           >
             <span className="tab-name">{tab.name}</span>
             {tab.dirty && (
@@ -92,6 +138,60 @@ export default function TabBar({ tabs, activePath, onActivate, onClose }) {
           </div>
         );
       })}
+
+      {menu && (
+        <>
+          <div
+            className="tab-menu-backdrop"
+            onClick={() => setMenu(null)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setMenu(null);
+            }}
+          />
+          <div
+            className="tab-menu"
+            role="menu"
+            style={{ left: menu.x, top: menu.y }}
+          >
+            <button
+              className="tab-menu-item"
+              role="menuitem"
+              onClick={() => handleMenuAction("close")}
+            >
+              Close
+            </button>
+            <button
+              className="tab-menu-item"
+              role="menuitem"
+              onClick={() => handleMenuAction("others")}
+            >
+              Close Others
+            </button>
+            <button
+              className="tab-menu-item"
+              role="menuitem"
+              onClick={() => handleMenuAction("right")}
+            >
+              Close to the Right
+            </button>
+            <button
+              className="tab-menu-item"
+              role="menuitem"
+              onClick={() => handleMenuAction("clean")}
+            >
+              Close All Clean Tabs
+            </button>
+            <button
+              className="tab-menu-item"
+              role="menuitem"
+              onClick={() => handleMenuAction("all")}
+            >
+              Close All
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

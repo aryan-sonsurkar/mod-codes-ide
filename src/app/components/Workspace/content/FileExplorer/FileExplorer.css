@@ -26,6 +26,20 @@
   flex-shrink: 0;
 }
 
+.explorer-filter-input {
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  background-color: var(--workspace-bg);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 4px;
+  outline: none;
+}
+
+.explorer-filter-input:focus {
+  border-color: var(--accent-color);
+}
+
 .explorer-actions {
   display: flex;
   gap: 4px;
@@ -182,6 +196,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: default;
+}
+
+.tree-row:focus-visible {
+  outline: solid 2px var(--accent-color);
+  outline-offset: -2px;
+}
+
+.tree-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--secondary-text);
+}
+
+.tree-row-directory .tree-icon {
+  color: #fbbf24;
+}
+
+.tree-row-selected .tree-icon {
+  color: #ffffff;
 }
 
 .tree-row-directory {

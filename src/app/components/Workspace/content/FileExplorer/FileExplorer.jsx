@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./FileExplorer.css";
 import FileTreeNode from "./FileTreeNode";
 import { useSettings } from "../../../../contexts/SettingsContext";
+import { useToast } from "../../../../contexts/ToastContext";
+import ConfirmDialog from "../../../Dialogs/ConfirmDialog";
 
 const ERROR_MESSAGES = {
   "invalid-name": "That name is not allowed.",
@@ -11,6 +13,40 @@ const ERROR_MESSAGES = {
   missing: "This item is no longer available.",
   error: "The operation failed.",
 };
+
+function applyFilter(node, filter) {
+  const matches = !filter || node.name.toLowerCase().includes(filter);
+
+  if (node.kind === "file") {
+    return matches ? node : null;
+  }
+
+  const kids = node.children
+    .map((child) => applyFilter(child, filter))
+    .filter(Boolean);
+
+  if (matches) {
+    return { ...node, children: kids.length ? kids : node.children };
+  }
+
+  return kids.length ? { ...node, children: kids } : null;
+}
+
+function flattenVisible(node, expanded, forceExpanded, out = []) {
+  if (!node) {
+    return out;
+  }
+
+  out.push(node);
+
+  if (node.kind === "directory" && (forceExpanded || expanded.has(node.path))) {
+    for (const child of node.children) {
+      flattenVisible(child, expanded, forceExpanded, out);
+    }
+  }
+
+  return out;
+}
 
 export default function FileExplorer({
   root,
@@ -23,6 +59,7 @@ export default function FileExplorer({
   onRefresh,
   newFileRequest,
   newFolderRequest,
+  revealRequest,
 }) {
   const [expanded, setExpanded] = useState(() =>
     new Set(root ? [root.path] : [])
@@ -33,8 +70,26 @@ export default function FileExplorer({
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [dialogError, setDialogError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState("");
 
   const { settings } = useSettings();
+  const { toast } = useToast();
+
+  const trimmedFilter = filter.trim().toLowerCase();
+
+  const filteredRoot = useMemo(() => {
+    if (!trimmedFilter) {
+      return root;
+    }
+    return applyFilter(root, trimmedFilter);
+  }, [root, trimmedFilter]);
+
+  const forceExpanded = Boolean(trimmedFilter);
+
+  const visibleNodes = useMemo(
+    () => flattenVisible(filteredRoot, expanded, forceExpanded),
+    [filteredRoot, expanded, forceExpanded]
+  );
 
   async function handleRefresh() {
     if (refreshing) {
@@ -60,6 +115,110 @@ export default function FileExplorer({
       startCreate("create-folder", root);
     }
   }, [newFolderRequest?.token, root]);
+
+  const expandPath = useCallback((path) => {
+    if (!path) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const parts = path.split("/").filter(Boolean);
+      const dirs = [];
+      let acc = "";
+
+      for (const part of parts) {
+        acc = acc ? `${acc}/${part}` : part;
+        dirs.push(acc);
+      }
+
+      setExpanded((current) => new Set([...current, ...dirs]));
+
+      const rows = document.querySelectorAll(".tree-row[data-path]");
+      let target = null;
+
+      for (const row of rows) {
+        if (row.getAttribute("data-path") === path) {
+          target = row;
+          break;
+        }
+      }
+
+      target?.scrollIntoView({ block: "nearest" });
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (revealRequest?.token) {
+      expandPath(revealRequest.path);
+    }
+  }, [revealRequest, expandPath]);
+
+  useEffect(() => {
+    if (selectedFilePath) {
+      expandPath(selectedFilePath);
+    }
+  }, [selectedFilePath, expandPath]);
+
+  function activateNode(node) {
+    if (!node) {
+      return;
+    }
+    if (node.kind === "directory") {
+      toggleDirectory(node.path);
+    } else {
+      onFileSelect?.(node);
+    }
+  }
+
+  function handleExplorerKeyDown(event) {
+    const rows = Array.from(
+      document.querySelectorAll(".tree-row[data-path]")
+    );
+
+    if (rows.length === 0) {
+      return;
+    }
+
+    let index = rows.indexOf(document.activeElement);
+
+    if (index === -1) {
+      index = rows.findIndex(
+        (row) => row.getAttribute("data-path") === selectedFilePath
+      );
+    }
+
+    const node = index >= 0 ? visibleNodes[index] : null;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      const next = rows[Math.min(index + 1, rows.length - 1)];
+      next?.focus();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      const next = rows[Math.max(index - 1, 0)];
+      next?.focus();
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      if (node?.kind === "directory" && !expanded.has(node.path)) {
+        toggleDirectory(node.path);
+      }
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      if (node?.kind === "directory" && expanded.has(node.path)) {
+        toggleDirectory(node.path);
+      } else if (node?.kind === "file") {
+        const parentPath =
+          index > 0 ? visibleNodes[index - 1]?.path : null;
+        const parentRow = rows.find(
+          (row) => row.getAttribute("data-path") === parentPath
+        );
+        parentRow?.focus();
+      }
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      activateNode(node);
+    }
+  }
 
   function toggleDirectory(path) {
     setExpanded((current) => {
@@ -155,6 +314,11 @@ export default function FileExplorer({
       return;
     }
 
+    toast(
+      mode === "rename" ? `Renamed to ${trimmed}` : `Created ${trimmed}`,
+      "success"
+    );
+
     setNameDialog(null);
     setNameInput("");
     setDialogError("");
@@ -172,6 +336,8 @@ export default function FileExplorer({
       setDialogError(ERROR_MESSAGES[result.status] || "The operation failed.");
       return;
     }
+
+    toast(`Deleted ${node.name}`, "info");
 
     setConfirmDialog(null);
     setDialogError("");
@@ -208,18 +374,33 @@ export default function FileExplorer({
           </button>
         </div>
       </header>
-      <div className="explorer-tree">
-        {root ? (
+      <input
+        className="explorer-filter-input"
+        value={filter}
+        onChange={(event) => setFilter(event.target.value)}
+        placeholder="Filter files..."
+        aria-label="Filter files"
+      />
+      <div
+        className="explorer-tree"
+        tabIndex={0}
+        onKeyDown={handleExplorerKeyDown}
+      >
+        {filteredRoot ? (
           <FileTreeNode
-            node={root}
+            node={filteredRoot}
             expanded={expanded}
             onToggle={toggleDirectory}
             onFileSelect={onFileSelect}
             selectedFilePath={selectedFilePath}
             onContextMenu={openContextMenu}
+            forceExpanded={forceExpanded}
           />
         ) : (
           <p className="explorer-empty">No files.</p>
+        )}
+        {trimmedFilter && visibleNodes.length === 1 && (
+          <p className="explorer-empty">No files match the filter.</p>
         )}
       </div>
 
@@ -317,42 +498,29 @@ export default function FileExplorer({
         </div>
       )}
 
-      {confirmDialog && (
-        <div className="explorer-overlay">
-          <div
-            className="explorer-dialog"
-            role="dialog"
-            aria-modal="true"
-          >
-            <p className="explorer-dialog-title">
-              Delete{" "}
-              {confirmDialog.node.kind === "directory" ? "folder" : "file"}
-            </p>
-            <p>
-              Delete <strong>{confirmDialog.node.name}</strong>?
-              {confirmDialog.node.kind === "directory" &&
-                " Everything inside it will be deleted."}
-            </p>
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={`Delete ${
+          confirmDialog?.node.kind === "directory" ? "folder" : "file"
+        }`}
+        message={
+          <>
+            Delete <strong>{confirmDialog?.node.name}</strong>?
+            {confirmDialog?.node.kind === "directory" &&
+              " Everything inside it will be deleted."}
             {dialogError && (
-              <p className="explorer-dialog-error">{dialogError}</p>
+              <span className="explorer-dialog-error">{dialogError}</span>
             )}
-            <div className="explorer-dialog-actions">
-              <button
-                className="explorer-dialog-button"
-                onClick={() => setConfirmDialog(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="explorer-dialog-button explorer-dialog-danger"
-                onClick={handleDeleteConfirm}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        confirmLabel="Delete"
+        danger
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          setConfirmDialog(null);
+          setDialogError("");
+        }}
+      />
     </aside>
   );
 }

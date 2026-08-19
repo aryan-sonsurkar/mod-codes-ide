@@ -153,7 +153,7 @@ export async function readFile(filePath) {
   }
 
   if (file.size === 0) {
-    return { ok: true, content: "" };
+    return { ok: true, content: "", lastModified: file.lastModified };
   }
 
   const text = await file.text();
@@ -162,7 +162,7 @@ export async function readFile(filePath) {
     return { ok: false, status: "binary" };
   }
 
-  return { ok: true, content: text };
+  return { ok: true, content: text, lastModified: file.lastModified };
 }
 
 export async function writeFile(filePath, content) {
@@ -196,10 +196,22 @@ export async function writeFile(filePath, content) {
     return { ok: false, status: "error", error };
   }
 
-  return { ok: true };
+  try {
+    const file = await handle.getFile();
+    return { ok: true, lastModified: file.lastModified };
+  } catch (error) {
+    return { ok: true };
+  }
 }
 
 export { isDirectoryAccessSupported };
+
+export function getRootHandle() {
+  if (!rootPath) {
+    return null;
+  }
+  return directoryHandles.get(rootPath) || null;
+}
 
 function parentPathOf(path) {
   const index = typeof path === "string" ? path.lastIndexOf("/") : -1;
@@ -505,25 +517,102 @@ function searchNameFromPath(path) {
   return index === -1 ? path : path.slice(index + 1);
 }
 
-function searchText(text, path, query, matches) {
+function isWordChar(char) {
+  return char ? /[A-Za-z0-9_]/.test(char) : false;
+}
+
+function isWholeWord(text, start, length) {
+  const before = start > 0 ? text[start - 1] : "";
+  const after = start + length < text.length ? text[start + length] : "";
+  return !isWordChar(before) && !isWordChar(after);
+}
+
+function findMatchesInText(text, query, opts) {
+  const options = opts || {};
+  const matchCase = Boolean(options.matchCase);
+  const wholeWord = Boolean(options.wholeWord);
+
+  const needle = matchCase ? query : query.toLowerCase();
   const lines = text.split("\n");
+  const matches = [];
 
   for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const haystack = matchCase ? line : line.toLowerCase();
+    let index = haystack.indexOf(needle);
+
+    while (index !== -1) {
+      if (!wholeWord || isWholeWord(haystack, index, needle.length)) {
+        matches.push({
+          line: i + 1,
+          column: index + 1,
+          length: needle.length,
+          text: line.trim(),
+        });
+      }
+      index = haystack.indexOf(needle, index + needle.length);
+    }
+  }
+
+  return matches;
+}
+
+function replaceOccurrence(text, match, replacement) {
+  const lineIndex = match.line - 1;
+  const lines = text.split("\n");
+
+  if (lineIndex < 0 || lineIndex >= lines.length) {
+    return text;
+  }
+
+  const line = lines[lineIndex];
+  const start = match.column - 1;
+
+  if (start < 0 || start + match.length > line.length) {
+    return text;
+  }
+
+  lines[lineIndex] =
+    line.slice(0, start) + replacement + line.slice(start + match.length);
+
+  return lines.join("\n");
+}
+
+function replaceAllInText(text, query, replacement, opts) {
+  const matches = findMatchesInText(text, query, opts);
+
+  if (matches.length === 0) {
+    return { text, count: 0 };
+  }
+
+  let next = text;
+
+  for (let i = matches.length - 1; i >= 0; i--) {
+    next = replaceOccurrence(next, matches[i], replacement);
+  }
+
+  return { text: next, count: matches.length };
+}
+
+function searchText(text, path, query, opts, matches) {
+  const found = findMatchesInText(text, query, opts);
+
+  for (const match of found) {
     if (matches.length >= SEARCH_MAX_RESULTS) {
       return;
     }
-    if (lines[i].toLowerCase().includes(query)) {
-      matches.push({
-        path,
-        name: searchNameFromPath(path),
-        line: i + 1,
-        text: lines[i].trim(),
-      });
-    }
+    matches.push({
+      path,
+      name: searchNameFromPath(path),
+      line: match.line,
+      column: match.column,
+      length: match.length,
+      text: match.text,
+    });
   }
 }
 
-async function searchDirectory(handle, path, query, matches) {
+async function searchDirectory(handle, path, query, opts, matches) {
   for await (const child of handle.values()) {
     if (matches.length >= SEARCH_MAX_RESULTS) {
       return;
@@ -533,7 +622,7 @@ async function searchDirectory(handle, path, query, matches) {
       if (SKIPPED_DIRECTORIES.has(child.name)) {
         continue;
       }
-      await searchDirectory(child, `${path}/${child.name}`, query, matches);
+      await searchDirectory(child, `${path}/${child.name}`, query, opts, matches);
       continue;
     }
 
@@ -552,14 +641,14 @@ async function searchDirectory(handle, path, query, matches) {
       if (looksBinary(text)) {
         continue;
       }
-      searchText(text, filePath, query, matches);
+      searchText(text, filePath, query, opts, matches);
     } catch (error) {
       // skip unreadable files
     }
   }
 }
 
-export async function searchWorkspace(query) {
+export async function searchWorkspace(query, opts) {
   const trimmed = typeof query === "string" ? query.trim() : "";
 
   if (!trimmed) {
@@ -581,6 +670,84 @@ export async function searchWorkspace(query) {
   }
 
   const matches = [];
-  await searchDirectory(rootHandle, rootPath, trimmed.toLowerCase(), matches);
+  await searchDirectory(rootHandle, rootPath, trimmed, opts, matches);
   return { ok: true, matches };
 }
+
+async function scanReplaceDirectory(handle, path, query, opts, files) {
+  for await (const child of handle.values()) {
+    if (child.kind === "directory") {
+      if (SKIPPED_DIRECTORIES.has(child.name)) {
+        continue;
+      }
+      await scanReplaceDirectory(
+        child,
+        `${path}/${child.name}`,
+        query,
+        opts,
+        files
+      );
+      continue;
+    }
+
+    if (child.kind !== "file") {
+      continue;
+    }
+
+    const filePath = `${path}/${child.name}`;
+
+    try {
+      const file = await child.getFile();
+      if (file.size === 0 || file.size > MAX_FILE_SIZE) {
+        continue;
+      }
+      const text = await file.text();
+      if (looksBinary(text)) {
+        continue;
+      }
+      const matches = findMatchesInText(text, query, opts);
+      if (matches.length > 0) {
+        files.push({
+          path: filePath,
+          name: searchNameFromPath(filePath),
+          matchCount: matches.length,
+        });
+      }
+    } catch (error) {
+      // skip unreadable files
+    }
+  }
+}
+
+export async function previewWorkspaceReplace(query, opts) {
+  const trimmed = typeof query === "string" ? query.trim() : "";
+
+  if (!trimmed) {
+    return { ok: true, files: [], totalMatches: 0, totalFiles: 0 };
+  }
+
+  if (!rootPath) {
+    return { ok: false, status: "missing" };
+  }
+
+  const rootHandle = directoryHandles.get(rootPath);
+  if (!rootHandle) {
+    return { ok: false, status: "missing" };
+  }
+
+  const hasPermission = await ensurePermission(rootHandle, "read");
+  if (!hasPermission) {
+    return { ok: false, status: "denied" };
+  }
+
+  const files = [];
+  await scanReplaceDirectory(rootHandle, rootPath, trimmed, opts, files);
+
+  const totalMatches = files.reduce(
+    (sum, file) => sum + file.matchCount,
+    0
+  );
+
+  return { ok: true, files, totalMatches, totalFiles: files.length };
+}
+export { replaceAllInText, replaceOccurrence };

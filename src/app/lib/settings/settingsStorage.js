@@ -1,5 +1,7 @@
 const SETTINGS_KEY = "modcodes-settings";
 
+export const DEFAULT_AI_BASE_URL = "http://127.0.0.1:11434";
+
 export const DEFAULT_SETTINGS = {
   editor: {
     fontSize: 13,
@@ -16,6 +18,12 @@ export const DEFAULT_SETTINGS = {
   },
   terminal: {
     fontSize: 13,
+  },
+  ai: {
+    baseUrl: DEFAULT_AI_BASE_URL,
+    defaultModel: "",
+    contextBudget: 24000,
+    maxToolRounds: 2,
   },
 };
 
@@ -44,10 +52,37 @@ export function loadSettings() {
     }
 
     const parsed = JSON.parse(raw);
-    return mergeSettings(DEFAULT_SETTINGS, parsed);
+    return sanitizeSettings(mergeSettings(DEFAULT_SETTINGS, parsed));
   } catch (error) {
     return DEFAULT_SETTINGS;
   }
+}
+
+function sanitizeSettings(settings) {
+  const ai = settings.ai || {};
+  const baseUrl =
+    typeof ai.baseUrl === "string" && /^https?:\/\//i.test(ai.baseUrl.trim())
+      ? ai.baseUrl.trim()
+      : DEFAULT_AI_BASE_URL;
+  const contextBudget = Number.isFinite(ai.contextBudget)
+    ? Math.min(200000, Math.max(2000, Math.round(ai.contextBudget)))
+    : DEFAULT_SETTINGS.ai.contextBudget;
+  const maxToolRounds =
+    Number.isFinite(ai.maxToolRounds)
+      ? Math.max(0, Math.min(4, Math.round(ai.maxToolRounds)))
+      : DEFAULT_SETTINGS.ai.maxToolRounds;
+  const defaultModel =
+    typeof ai.defaultModel === "string" ? ai.defaultModel : "";
+
+  return {
+    ...settings,
+    ai: {
+      baseUrl,
+      defaultModel,
+      contextBudget,
+      maxToolRounds,
+    },
+  };
 }
 
 export function saveSettings(settings) {

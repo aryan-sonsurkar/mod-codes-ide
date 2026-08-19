@@ -1,0 +1,114 @@
+.git-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+  color: var(--primary-text);
+  padding: 8px;
+}
+
+.git-empty,
+.git-error {
+  color: var(--secondary-text);
+  font-size: 13px;
+  padding: 4px;
+}
+
+.git-error {
+  color: rgb(240, 82, 82);
+}
+
+.git-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 4px;
+  color: var(--secondary-text);
+}
+
+.git-state-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-text);
+}
+
+.git-state-body {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.git-state-body code,
+.git-repo-note code {
+  font-family: "Consolas", "Menlo", monospace;
+  color: var(--accent-color);
+}
+
+.git-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+}
+
+.git-branch {
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.git-commit {
+  margin-left: auto;
+  color: var(--secondary-text);
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 12px;
+}
+
+.git-repo-note {
+  color: var(--secondary-text);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 4px;
+}
+
+.git-section-header {
+  padding: 8px 4px 4px;
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.git-capabilities {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.git-capability {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background-color: var(--background-color);
+  border: solid 2px var(--border-color);
+}
+
+.git-capability-disabled {
+  opacity: 0.6;
+}
+
+.git-capability-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.git-capability-detail {
+  color: var(--secondary-text);
+  font-size: 12px;
+  line-height: 1.4;
+}

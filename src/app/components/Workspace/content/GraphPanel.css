@@ -1,0 +1,148 @@
+.graph-panel {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+  color: var(--primary-text);
+  padding: 4px 8px 8px;
+  gap: 12px;
+}
+
+.graph-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-section-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 4px 4px;
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.graph-empty {
+  color: var(--secondary-text);
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.graph-analyze {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 4px 8px;
+}
+
+.graph-analyze-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 5px 10px;
+  background-color: var(--accent-color);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.graph-analyze-button:hover:not(:disabled) {
+  background-color: var(--hover-color);
+}
+
+.graph-analyze-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.graph-spin {
+  animation: graph-rotate 0.8s linear infinite;
+}
+
+@keyframes graph-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.graph-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.graph-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary-text);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.graph-item:hover:not(:disabled) {
+  background-color: var(--hover-color);
+}
+
+.graph-item:disabled {
+  cursor: default;
+}
+
+.graph-item-name {
+  font-family: "Consolas", "Menlo", monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.graph-item-path {
+  margin-left: auto;
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-family: "Consolas", "Menlo", monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+
+.graph-item-status {
+  margin-left: auto;
+  color: #fbbf24;
+  font-size: 11px;
+  font-family: "Consolas", "Menlo", monospace;
+  flex-shrink: 0;
+}
+
+.graph-item-missing {
+  opacity: 0.6;
+}
+
+.graph-summary {
+  color: var(--secondary-text);
+  font-size: 12px;
+  padding: 8px 4px 0;
+}
+
+.graph-error {
+  color: rgb(240, 82, 82);
+  font-size: 12px;
+  padding: 8px 4px 0;
+}

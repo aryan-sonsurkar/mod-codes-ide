@@ -1,0 +1,125 @@
+.gotosymbol-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 40px;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 25;
+}
+
+.gotosymbol-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 60vh;
+  padding: 10px;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  color: var(--primary-text);
+}
+
+.gotosymbol-input {
+  padding: 7px 9px;
+  background-color: var(--workspace-bg);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 4px;
+  outline: none;
+}
+
+.gotosymbol-input:focus {
+  border-color: var(--accent-color);
+}
+
+.gotosymbol-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.gotosymbol-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.gotosymbol-item-selected {
+  background-color: var(--accent-color);
+  color: #ffffff;
+}
+
+.gotosymbol-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.gotosymbol-function {
+  color: #60a5fa;
+}
+
+.gotosymbol-class {
+  color: #fbbf24;
+}
+
+.gotosymbol-variable {
+  color: #a78bfa;
+}
+
+.gotosymbol-item-selected .gotosymbol-function,
+.gotosymbol-item-selected .gotosymbol-class,
+.gotosymbol-item-selected .gotosymbol-variable {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.gotosymbol-name {
+  font-family: "Consolas", "Menlo", monospace;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gotosymbol-path {
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 11px;
+  color: var(--secondary-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+  margin-left: auto;
+}
+
+.gotosymbol-item-selected .gotosymbol-path {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.gotosymbol-line {
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 11px;
+  color: var(--secondary-text);
+  flex-shrink: 0;
+}
+
+.gotosymbol-item-selected .gotosymbol-line {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.gotosymbol-empty {
+  color: var(--secondary-text);
+  padding: 10px 8px;
+}

@@ -1,0 +1,86 @@
+.gotofile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 40px;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 25;
+}
+
+.gotofile-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 60vh;
+  padding: 10px;
+  background-color: var(--surface-bg);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  color: var(--primary-text);
+}
+
+.gotofile-input {
+  padding: 7px 9px;
+  background-color: var(--workspace-bg);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 4px;
+  outline: none;
+}
+
+.gotofile-input:focus {
+  border-color: var(--accent-color);
+}
+
+.gotofile-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.gotofile-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.gotofile-item-selected {
+  background-color: var(--accent-color);
+  color: #ffffff;
+}
+
+.gotofile-name {
+  font-weight: 600;
+}
+
+.gotofile-path {
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 11px;
+  color: var(--secondary-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.gotofile-item-selected .gotofile-path {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.gotofile-empty {
+  color: var(--secondary-text);
+  padding: 10px 8px;
+}

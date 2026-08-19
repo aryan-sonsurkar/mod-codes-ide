@@ -6,6 +6,7 @@ import IdeWorkspace from "./content/IDEWorkspace";
 import ProjectsPage from "../Projects/ProjectsPage";
 import { useState } from "react";
 import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
+import { useToast } from "../../contexts/ToastContext";
 
 function loadProjects() {
   try {
@@ -22,6 +23,9 @@ export default function Workspace() {
     () => loadWorkspace()?.projectId || null
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const { toast } = useToast();
+
   function openModal(){
     setIsModalOpen(true);
   };
@@ -36,9 +40,11 @@ export default function Workspace() {
     const localProjects = JSON.stringify(updatedProjects);
     localStorage.setItem("modcodes-projects",localProjects);
     setProjects(updatedProjects);
+    toast(`Project "${project.name}" created`, "success");
     closeModal();
   };
   function deleteProject(id) {
+    const deleted = projects.find((currentProject) => currentProject.id === id);
     const updatedProjects = projects.filter((currentProject) => {
         return currentProject.id!==id;
     });
@@ -47,6 +53,9 @@ export default function Workspace() {
     setProjects(updatedProjects);
     if (id === selectedProjectId) {
       setSelectedProjectId(null);
+    }
+    if (deleted) {
+      toast(`Deleted "${deleted.name}"`, "info");
     }
   }
   function openProject(id){

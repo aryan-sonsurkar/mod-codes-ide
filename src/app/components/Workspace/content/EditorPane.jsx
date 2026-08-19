@@ -1,5 +1,6 @@
 import "./EditorPane.css";
 import MonacoEditor from "./MonacoEditor";
+import Breadcrumbs from "./Breadcrumbs";
 import { getLanguageFromPath } from "../../../lib/monaco/monaco";
 
 const READ_ERROR_MESSAGES = {
@@ -23,7 +24,7 @@ const FILE_STATUS_MESSAGES = {
   error: "ModCodes could not check this file on disk.",
 };
 
-export default function EditorPane({ tab, openPaths, onChange, onSave, revealRequest, focusHandleRef }) {
+export default function EditorPane({ tab, openPaths, onChange, onSave, revealRequest, focusHandleRef, findHandleRef, onNavigateDirectory }) {
   if (!tab) {
     return (
       <div className="editor-pane">
@@ -71,6 +72,10 @@ export default function EditorPane({ tab, openPaths, onChange, onSave, revealReq
 
   return (
     <div className="editor-pane">
+      <Breadcrumbs
+        path={tab.path}
+        onNavigateDirectory={onNavigateDirectory}
+      />
       <div className="editor-toolbar">
         <div className="editor-toolbar-info">
           <span className="editor-filename">{name}</span>
@@ -91,6 +96,13 @@ export default function EditorPane({ tab, openPaths, onChange, onSave, revealReq
         >
           {saving ? "Saving..." : "Save"}
         </button>
+        <button
+          className="editor-save-button"
+          title="Find and replace in this file"
+          onClick={() => findHandleRef?.current?.find()}
+        >
+          Find
+        </button>
       </div>
 
       {fileStatusMessage && (
@@ -107,6 +119,7 @@ export default function EditorPane({ tab, openPaths, onChange, onSave, revealReq
           onChange={onChange}
           revealRequest={revealRequest}
           focusHandleRef={focusHandleRef}
+          findHandleRef={findHandleRef}
         />
         {overlayMessage && (
           <div className="editor-body-overlay">{overlayMessage}</div>

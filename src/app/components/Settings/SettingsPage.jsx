@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
+import { createOllamaProvider } from "../../lib/ai";
 import "./SettingsPage.css";
 
 const CATEGORIES = [
@@ -55,6 +56,83 @@ function NumberRow({ label, description, value, min, max, onChange, suffix }) {
           }}
         />
         {suffix && <span className="settings-number-suffix">{suffix}</span>}
+      </div>
+    </div>
+  );
+}
+
+function StringRow({ label, description, value, onChange }) {
+  return (
+    <div className="settings-row">
+      <div className="settings-row-info">
+        <span className="settings-row-label">{label}</span>
+        {description && (
+          <span className="settings-row-description">{description}</span>
+        )}
+      </div>
+      <input
+        className="settings-text-input"
+        type="text"
+        spellCheck="false"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  );
+}
+
+function ConnectionRow({ value }) {
+  const [state, setState] = useState({ kind: "idle" });
+
+  const handleTest = async () => {
+    setState({ kind: "checking" });
+    let provider;
+    try {
+      provider = createOllamaProvider({ baseUrl: value });
+    } catch {
+      setState({ kind: "error", message: "Invalid URL. Use http://…" });
+      return;
+    }
+    const result = await provider.testConnection();
+    if (result.ok) {
+      setState({
+        kind: "ok",
+        message: result.version ? `Connected · v${result.version}` : "Connected",
+      });
+    } else {
+      setState({
+        kind: "error",
+        message:
+          result.error && typeof result.error.message === "string"
+            ? result.error.message
+            : "Ollama is not reachable.",
+      });
+    }
+  };
+
+  return (
+    <div className="settings-row">
+      <div className="settings-row-info">
+        <span className="settings-row-label">Test connection</span>
+        <span className="settings-row-description">
+          Checks that Ollama is reachable at the configured URL.
+        </span>
+      </div>
+      <div className="settings-connection-control">
+        {state.kind === "ok" && (
+          <span className="settings-connection-ok">{state.message}</span>
+        )}
+        {state.kind === "error" && (
+          <span className="settings-connection-error">{state.message}</span>
+        )}
+        <button
+          type="button"
+          className="settings-connection-button"
+          onClick={handleTest}
+          disabled={state.kind === "checking"}
+        >
+          {state.kind === "checking" ? "Testing…" : "Test"}
+        </button>
       </div>
     </div>
   );
@@ -191,13 +269,43 @@ export default function SettingsPage() {
           <>
             <h3 className="settings-category-title">AI & Coder</h3>
             <p className="settings-category-description">
-              AI capabilities are planned for MODCODES.
+              Configure the local AI provider. ModCodes talks to Ollama running
+              on this machine — no cloud proxy is used.
             </p>
             <div className="settings-group">
-              <div className="settings-placeholder">
-                This section is reserved for future AI and coding-assistant
-                features. Configuration options will appear here once they
-                become available.
+              <StringRow
+                label="Ollama base URL"
+                description="Where Ollama listens. Leave at the default for local setup."
+                value={settings.ai.baseUrl}
+                onChange={(value) => updateSetting("ai", "baseUrl", value)}
+              />
+              <NumberRow
+                label="Context budget"
+                description="Maximum characters of editor context sent per message."
+                value={settings.ai.contextBudget}
+                min={2000}
+                max={200000}
+                suffix="chars"
+                onChange={(value) =>
+                  updateSetting("ai", "contextBudget", value)
+                }
+              />
+              <NumberRow
+                label="Max tool rounds"
+                description="How many read-only tool requests the model may make per message."
+                value={settings.ai.maxToolRounds}
+                min={0}
+                max={4}
+                onChange={(value) =>
+                  updateSetting("ai", "maxToolRounds", value)
+                }
+              />
+              <ConnectionRow value={settings.ai.baseUrl} />
+              <div className="settings-ai-note">
+                Only read-only tools (current file, diagnostics, open files) are
+                available to the model. The AI never receives the whole project,
+                secrets, or environment variables, and cannot run commands or
+                modify files.
               </div>
             </div>
           </>

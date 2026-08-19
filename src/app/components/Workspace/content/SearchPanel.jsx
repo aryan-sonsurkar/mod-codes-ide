@@ -1,16 +1,26 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./SearchPanel.css";
 import { searchWorkspace } from "../../../lib/filesystem/filesystem";
 
 const MAX_VISIBLE_RESULTS = 200;
 
-export default function SearchPanel({ onSelect, onClose }) {
+export default function SearchPanel({
+  onSelect,
+  onClose,
+  onReplaceMatch,
+  onReplaceAllWorkspace,
+}) {
   const [query, setQuery] = useState("");
+  const [replacement, setReplacement] = useState("");
+  const [matchCase, setMatchCase] = useState(false);
+  const [wholeWord, setWholeWord] = useState(false);
   const [matches, setMatches] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [replacing, setReplacing] = useState(false);
   const requestIdRef = useRef(0);
   const timerRef = useRef(null);
 
@@ -21,6 +31,11 @@ export default function SearchPanel({ onSelect, onClose }) {
       }
     };
   }, []);
+
+  const options = useMemo(
+    () => ({ matchCase, wholeWord }),
+    [matchCase, wholeWord]
+  );
 
   async function runSearch(rawQuery) {
     const requestId = ++requestIdRef.current;
@@ -36,7 +51,7 @@ export default function SearchPanel({ onSelect, onClose }) {
     setSearching(true);
     setError("");
 
-    const result = await searchWorkspace(trimmed);
+    const result = await searchWorkspace(trimmed, options);
 
     if (requestId !== requestIdRef.current) {
       return;
@@ -52,6 +67,7 @@ export default function SearchPanel({ onSelect, onClose }) {
     }
 
     setMatches(result.matches);
+    setSelectedIndex(0);
     setSearched(true);
   }
 
@@ -69,9 +85,72 @@ export default function SearchPanel({ onSelect, onClose }) {
         window.clearTimeout(timerRef.current);
       }
     };
-  }, [query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, matchCase, wholeWord]);
 
   const visibleMatches = matches.slice(0, MAX_VISIBLE_RESULTS);
+
+  const grouped = useMemo(() => {
+    const groups = [];
+    const map = new Map();
+
+    for (const match of visibleMatches) {
+      if (!map.has(match.path)) {
+        const group = { path: match.path, matches: [] };
+        map.set(match.path, group);
+        groups.push(group);
+      }
+      map.get(match.path).matches.push(match);
+    }
+
+    return groups;
+  }, [visibleMatches]);
+
+  async function handleReplaceSelected() {
+    const match = matches[selectedIndex];
+
+    if (!match || replacing) {
+      return;
+    }
+
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setReplacing(true);
+    try {
+      await onReplaceMatch?.(
+        match,
+        trimmed,
+        replacement,
+        options
+      );
+      await runSearch(query);
+    } finally {
+      setReplacing(false);
+    }
+  }
+
+  async function handleReplaceAll() {
+    const trimmed = query.trim();
+
+    if (!trimmed || replacing) {
+      return;
+    }
+
+    setReplacing(true);
+    try {
+      await onReplaceAllWorkspace?.(
+        trimmed,
+        replacement,
+        options
+      );
+      await runSearch(query);
+    } finally {
+      setReplacing(false);
+    }
+  }
 
   return (
     <aside className="search-panel">
@@ -86,21 +165,69 @@ export default function SearchPanel({ onSelect, onClose }) {
         </button>
       </header>
 
-      <input
-        className="search-input"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            runSearch(query);
-          }
-          if (event.key === "Escape") {
-            onClose();
-          }
-        }}
-        placeholder="Search workspace..."
-        autoFocus
-      />
+      <div className="search-inputs">
+        <input
+          className="search-input"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              runSearch(query);
+            }
+            if (event.key === "Escape") {
+              onClose();
+            }
+          }}
+          placeholder="Search workspace..."
+        />
+        <input
+          className="search-input search-input-replace"
+          value={replacement}
+          onChange={(event) => setReplacement(event.target.value)}
+          placeholder="Replace with..."
+        />
+        <div className="search-options">
+          <label className="search-option">
+            <input
+              type="checkbox"
+              checked={matchCase}
+              onChange={(event) => setMatchCase(event.target.checked)}
+            />
+            Match case
+          </label>
+          <label className="search-option">
+            <input
+              type="checkbox"
+              checked={wholeWord}
+              onChange={(event) => setWholeWord(event.target.checked)}
+            />
+            Whole word
+          </label>
+        </div>
+        <div className="search-actions">
+          <button
+            className="search-action-button"
+            onClick={() => runSearch(query)}
+            disabled={searching}
+          >
+            {searching ? "Searching..." : "Search"}
+          </button>
+          <button
+            className="search-action-button"
+            onClick={handleReplaceSelected}
+            disabled={replacing || matches.length === 0}
+          >
+            Replace
+          </button>
+          <button
+            className="search-action-button search-action-danger"
+            onClick={handleReplaceAll}
+            disabled={replacing || matches.length === 0}
+          >
+            Replace All
+          </button>
+        </div>
+      </div>
 
       <div className="search-body">
         {error && <p className="search-status search-error">{error}</p>}
@@ -114,18 +241,34 @@ export default function SearchPanel({ onSelect, onClose }) {
           </p>
         )}
         <div className="search-results">
-          {visibleMatches.map((match, index) => (
-            <button
-              key={`${match.path}:${match.line}:${index}`}
-              className="search-result"
-              onClick={() => onSelect(match)}
-            >
-              <span className="search-result-location">
-                <span className="search-result-path">{match.path}</span>
-                <span className="search-result-line">:{match.line}</span>
-              </span>
-              <span className="search-result-text">{match.text}</span>
-            </button>
+          {grouped.map((group) => (
+            <div className="search-group" key={group.path}>
+              <div className="search-group-header">{group.path}</div>
+              {group.matches.map((match, index) => {
+                const absoluteIndex = visibleMatches.indexOf(match);
+                return (
+                  <button
+                    key={`${match.path}:${match.line}:${match.column}:${absoluteIndex}`}
+                    className={`search-result${
+                      absoluteIndex === selectedIndex
+                        ? " search-result-selected"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedIndex(absoluteIndex);
+                      onSelect(match);
+                    }}
+                  >
+                    <span className="search-result-location">
+                      <span className="search-result-line">
+                        :{match.line}:{match.column}
+                      </span>
+                    </span>
+                    <span className="search-result-text">{match.text}</span>
+                  </button>
+                );
+              })}
+            </div>
           ))}
         </div>
       </div>

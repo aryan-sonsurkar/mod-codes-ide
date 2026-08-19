@@ -1,14 +1,22 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import "./IDEWorkspace.css";
 import FileExplorer from "./FileExplorer/FileExplorer";
 import EditorPane from "./EditorPane";
 import TabBar from "./TabBar";
 import SearchPanel from "./SearchPanel";
+import ProblemsPanel from "./ProblemsPanel";
+import OutlinePanel from "./OutlinePanel";
+import GraphPanel from "./GraphPanel";
+import GitPanel from "./GitPanel";
+import AIPanel from "./AIPanel";
 import CommandPalette from "./CommandPalette";
 import TerminalPanel from "./TerminalPanel";
-import { createSimulatedTerminalProvider } from "../../../lib/terminal/TerminalProvider";
+import GoToLineDialog from "./GoToLineDialog";
+import GoToFileDialog from "./GoToFileDialog";
+import GoToSymbolDialog from "./GoToSymbolDialog";
+import { createTerminalService, createBrowserSimulationBackend } from "../../../lib/terminal";
 import {
   openProjectDirectory,
   readFile,
@@ -18,11 +26,26 @@ import {
   renameEntry,
   deleteEntry,
   rescanProjectTree,
+  previewWorkspaceReplace,
 } from "../../../lib/filesystem/filesystem";
 import {
   loadWorkspace,
   saveWorkspace,
 } from "../../../lib/workspace/workspaceStorage";
+import { buildRecoveryPlan } from "../../../lib/workspace/workspaceRecovery";
+import { collectFilePaths } from "../../../lib/diagnostics/resolve";
+import { useTabs } from "../../../hooks/useTabs";
+import { useDiagnostics } from "../../../hooks/useDiagnostics";
+import { nameFromPath, parentPathOf } from "../../../lib/editor/tabUtils";
+import {
+  replaceSingleMatch,
+  applyWorkspaceReplaceCore,
+} from "../../../lib/editor/searchReplace";
+import ConfirmDialog from "../../Dialogs/ConfirmDialog";
+import { friendlyError } from "../../../lib/errors/messages";
+import { useToast } from "../../../contexts/ToastContext";
+import { useSettings } from "../../../contexts/SettingsContext";
+import { clampBudget } from "../../../lib/ai/context/budget";
 
 const STATUS_MESSAGES = {
   requesting: "Requesting access to this project's folder...",
@@ -34,38 +57,141 @@ const STATUS_MESSAGES = {
   error: "ModCodes could not read this project's folder.",
 };
 
-const EMPTY_TAB = {
-  path: "",
-  name: "",
-  content: "",
-  savedContent: "",
-  dirty: false,
-  readStatus: "idle",
-  readError: "",
-  saveStatus: "idle",
-  saveError: "",
-  fileStatus: "ok",
-  contentToken: 0,
+const DEFAULT_LAYOUT = {
+  leftOpen: true,
+  leftTab: "explorer",
+  terminalOpen: false,
+  rightOpen: false,
+  rightTab: "problems",
+  leftWidth: 280,
+  rightWidth: 300,
+  terminalHeight: 220,
 };
+
+const LAYOUT_STORAGE_KEY = "modcodes.ide.layout.v1";
+
+function loadLayoutState() {
+  try {
+    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (!raw) {
+      return DEFAULT_LAYOUT;
+    }
+    return { ...DEFAULT_LAYOUT, ...JSON.parse(raw) };
+  } catch (error) {
+    return DEFAULT_LAYOUT;
+  }
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
 
 export default function IdeWorkspace({ selectedProject }) {
   const router = useRouter();
   const [status, setStatus] = useState("requesting");
   const [tree, setTree] = useState(null);
-
-  const [tabs, setTabs] = useState([]);
-  const [activePath, setActivePath] = useState(null);
-  const [pendingClosePath, setPendingClosePath] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [layout, setLayout] = useState(loadLayoutState);
   const [revealRequest, setRevealRequest] = useState(null);
+  const [explorerRevealRequest, setExplorerRevealRequest] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [explorerVisible, setExplorerVisible] = useState(true);
   const [newFileRequest, setNewFileRequest] = useState(null);
   const [newFolderRequest, setNewFolderRequest] = useState(null);
-  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [goToLineOpen, setGoToLineOpen] = useState(false);
+  const [goToFileOpen, setGoToFileOpen] = useState(false);
+  const [symbolSearch, setSymbolSearch] = useState(null);
+  const [replaceConfirm, setReplaceConfirm] = useState(null);
+  const [conflict, setConflict] = useState(null);
   const monacoFocusRef = useRef(null);
-  const terminalProvider = useMemo(() => createSimulatedTerminalProvider(), []);
+  const monacoFindRef = useRef(null);
+  const terminalProvider = useMemo(() => {
+    function findTreeNode(node, segments) {
+      let current = node;
+      for (const segment of segments) {
+        if (!current || current.kind !== "directory") {
+          return null;
+        }
+        current =
+          current.children?.find((child) => child.name === segment) || null;
+      }
+      return current;
+    }
+
+    async function readDirectory(target) {
+      if (!tree) {
+        return { ok: false, reason: "no project open" };
+      }
+      const rootName = tree.name;
+      const targetPath = typeof target === "string" && target.length > 0 ? target : `/${rootName}`;
+      const segments = targetPath
+        .split("/")
+        .filter((part) => part && part !== ".")
+        .filter((part, index, parts) => !(part === ".." && index > 0 && parts[index - 1] !== ".."));
+      if (segments.some((part) => part === "..")) {
+        return { ok: false, reason: "paths outside the project root are not allowed" };
+      }
+      if (segments[0] !== rootName) {
+        return { ok: false, reason: "unknown directory" };
+      }
+      const node = findTreeNode(tree, segments.slice(1));
+      if (!node || node.kind !== "directory") {
+        return { ok: false, reason: "no such directory" };
+      }
+      return {
+        ok: true,
+        entries: (node.children || []).map((child) => ({
+          name: child.name,
+          kind: child.kind,
+        })),
+      };
+    }
+
+    const backend = createBrowserSimulationBackend({
+      readDirectory,
+      getRootPath: () => tree?.name || null,
+    });
+    return createTerminalService({ backend });
+  }, [tree]);
+  const persistTimer = useRef(null);
+  const restoreAttemptedRef = useRef(false);
+
+  const { toast } = useToast();
+  const { settings } = useSettings();
+
+  const {
+    tabs,
+    activePath,
+    pendingClosePath,
+    batchClose,
+    setActivePath,
+    updateTab,
+    addReadingDocs,
+    resetEditor,
+    openFile,
+    switchTab,
+    switchToRecentTab,
+    handleContentChange,
+    saveTab,
+    reloadDocument,
+    handleCloseTab,
+    closeTabNow,
+    handlePendingSave,
+    handlePendingDiscard,
+    handlePendingCancel,
+    remapOpenTabs,
+    dropTabsForPath,
+    setTabContent,
+    syncTabsWithDisk,
+    switchToRelativeTab,
+    handleCloseTabFromKeyboard,
+    handleBatchSaveAll,
+    handleBatchDiscardAll,
+    handleBatchCancel,
+    closeAllTabs,
+    handleTabMenuAction,
+  } = useTabs({ readFile, writeFile });
+
+  const { diagnostics } = useDiagnostics({ tabs, activePath, tree });
 
   useEffect(() => {
     return () => {
@@ -73,9 +199,49 @@ export default function IdeWorkspace({ selectedProject }) {
     };
   }, [terminalProvider]);
 
-  const saveResetTimer = useRef(null);
-  const persistTimer = useRef(null);
-  const restoreAttemptedRef = useRef(false);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+    } catch (error) {
+      // Layout persistence is best-effort only.
+    }
+  }, [layout]);
+
+  const toggleLeftPanel = useCallback((tab) => {
+    setLayout((current) => {
+      if (current.leftOpen && current.leftTab === tab) {
+        return { ...current, leftOpen: false };
+      }
+      return { ...current, leftOpen: true, leftTab: tab };
+    });
+  }, []);
+
+  const startResize = useCallback(({ horizontal, getSize, setSize }) => {
+    return (event) => {
+      event.preventDefault();
+      const startPosition = horizontal ? event.clientY : event.clientX;
+      const startSize = getSize();
+
+      const onMove = (moveEvent) => {
+        const delta = horizontal
+          ? moveEvent.clientY - startPosition
+          : moveEvent.clientX - startPosition;
+        setSize(startSize + delta);
+      };
+
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = horizontal ? "row-resize" : "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    };
+  }, []);
 
   useEffect(() => {
     if (status !== "requesting") {
@@ -122,36 +288,18 @@ export default function IdeWorkspace({ selectedProject }) {
         return;
       }
 
-      const savedTabs = Array.isArray(saved.openTabs) ? saved.openTabs : [];
-      const paths = savedTabs
-        .map((entry) => (typeof entry?.path === "string" ? entry.path : null))
-        .filter(Boolean);
-
-      if (paths.length === 0) {
+      const plan = buildRecoveryPlan(saved, collectFilePaths(tree));
+      if (!plan.shouldRestore) {
         return;
       }
 
-      setTabs((current) => {
-        const existing = new Set(current.map((tab) => tab.path));
-        const added = paths
-          .filter((path) => !existing.has(path))
-          .map((path) => ({
-            ...EMPTY_TAB,
-            path,
-            name: nameFromPath(path),
-            readStatus: "reading",
-          }));
-        return [...current, ...added];
-      });
+      const { openPaths, activePath } = plan;
 
-      setActivePath((current) => {
-        if (current) {
-          return current;
-        }
-        return paths.includes(saved.activePath) ? saved.activePath : paths[0];
-      });
+      addReadingDocs(openPaths);
 
-      for (const path of paths) {
+      setActivePath((current) => (current ? current : activePath));
+
+      for (const path of openPaths) {
         const result = await readFile(path);
         if (ignore) {
           return;
@@ -169,6 +317,10 @@ export default function IdeWorkspace({ selectedProject }) {
           dirty: false,
         }));
       }
+
+      toast({
+        message: `Restored ${openPaths.length} open tab${openPaths.length === 1 ? "" : "s"} from a previous session. Unsaved changes cannot be recovered.`,
+      });
     }
 
     restore();
@@ -176,7 +328,7 @@ export default function IdeWorkspace({ selectedProject }) {
     return () => {
       ignore = true;
     };
-  }, [status, selectedProject?.id, updateTab, nameFromPath]);
+  }, [status, selectedProject?.id, updateTab, setActivePath, addReadingDocs, tree, toast]);
 
   useEffect(() => {
     if (status !== "ready" || !selectedProject?.id) {
@@ -202,185 +354,10 @@ export default function IdeWorkspace({ selectedProject }) {
     };
   }, [status, tabs, activePath, selectedProject?.id]);
 
-  function updateTab(path, changes) {
-    setTabs((current) =>
-      current.map((tab) =>
-        tab.path === path
-          ? {
-              ...tab,
-              ...(typeof changes === "function" ? changes(tab) : changes),
-            }
-          : tab
-      )
-    );
-  }
-
-  function resetEditor() {
-    setTabs([]);
-    setActivePath(null);
-    setPendingClosePath(null);
-    if (saveResetTimer.current) {
-      window.clearTimeout(saveResetTimer.current);
-      saveResetTimer.current = null;
-    }
-  }
-
   function retry() {
     resetEditor();
     setTree(null);
     setStatus("requesting");
-  }
-
-  function openFile(file) {
-    const existing = tabs.find((tab) => tab.path === file.path);
-
-    if (existing) {
-      setActivePath(file.path);
-      return;
-    }
-
-    setTabs((current) => {
-      if (current.some((tab) => tab.path === file.path)) {
-        return current;
-      }
-      return [
-        ...current,
-        {
-          ...EMPTY_TAB,
-          path: file.path,
-          name: file.name,
-          readStatus: "reading",
-        },
-      ];
-    });
-    setActivePath(file.path);
-
-    readFile(file.path).then((result) => {
-      if (!result.ok) {
-        updateTab(file.path, { readStatus: "error", readError: result.status });
-        return;
-      }
-
-      updateTab(file.path, (tab) => ({
-        content: result.content,
-        savedContent: result.content,
-        readStatus: "ready",
-        dirty: false,
-      }));
-    });
-  }
-
-  function switchTab(path) {
-    setActivePath(path);
-  }
-
-  function handleContentChange(path, content) {
-    updateTab(path, (tab) => ({
-      content,
-      dirty: content !== tab.savedContent,
-      saveStatus: "idle",
-      saveError: "",
-    }));
-  }
-
-  function handleSave() {
-    if (!activePath) {
-      return;
-    }
-    saveTab(activePath);
-  }
-
-  function saveTab(path) {
-    const tab = tabs.find((entry) => entry.path === path);
-
-    if (!tab || tab.readStatus !== "ready") {
-      return Promise.resolve(false);
-    }
-
-    if (tab.fileStatus === "missing") {
-      return Promise.resolve(false);
-    }
-
-    const contentToSave = tab.content;
-    updateTab(path, { saveStatus: "saving", saveError: "" });
-
-    return writeFile(path, contentToSave).then((result) => {
-      if (!result.ok) {
-        updateTab(path, { saveStatus: "error", saveError: result.status });
-        return false;
-      }
-
-      updateTab(path, {
-        savedContent: contentToSave,
-        dirty: false,
-        saveStatus: "saved",
-      });
-      scheduleSaveStatusReset(path);
-      return true;
-    });
-  }
-
-  function scheduleSaveStatusReset(path) {
-    if (saveResetTimer.current) {
-      window.clearTimeout(saveResetTimer.current);
-    }
-    saveResetTimer.current = window.setTimeout(() => {
-      updateTab(path, { saveStatus: "idle", saveError: "" });
-    }, 3000);
-  }
-
-  function handleCloseTab(path) {
-    const tab = tabs.find((entry) => entry.path === path);
-
-    if (!tab) {
-      return;
-    }
-
-    if (tab.dirty) {
-      setPendingClosePath(path);
-      return;
-    }
-
-    closeTabNow(path);
-  }
-
-  function closeTabNow(path) {
-    const index = tabs.findIndex((tab) => tab.path === path);
-    if (index === -1) {
-      return;
-    }
-
-    const remaining = tabs.filter((tab) => tab.path !== path);
-
-    if (activePath === path) {
-      const neighbor = remaining[Math.min(index, remaining.length - 1)];
-      setActivePath(neighbor ? neighbor.path : null);
-    }
-
-    setTabs(remaining);
-  }
-
-  function handlePendingSave() {
-    saveTab(pendingClosePath).then((ok) => {
-      if (ok && pendingClosePath) {
-        closeTabNow(pendingClosePath);
-        setPendingClosePath(null);
-      }
-    });
-  }
-
-  function handlePendingDiscard() {
-    closeTabNow(pendingClosePath);
-    setPendingClosePath(null);
-  }
-
-  function handlePendingCancel() {
-    setPendingClosePath(null);
-  }
-
-  function nameFromPath(path) {
-    const index = path.lastIndexOf("/");
-    return index === -1 ? path : path.slice(index + 1);
   }
 
   async function refreshProjectTree() {
@@ -389,34 +366,6 @@ export default function IdeWorkspace({ selectedProject }) {
       setTree(result.tree);
     }
     return result;
-  }
-
-  async function syncTabsWithDisk() {
-    const open = tabs.map((tab) => tab.path);
-    const results = await Promise.all(
-      open.map(async (path) => ({ path, result: await readFile(path) }))
-    );
-
-    for (const { path, result } of results) {
-      if (!result.ok) {
-        updateTab(path, { fileStatus: result.status });
-        continue;
-      }
-
-      updateTab(path, (tab) => {
-        if (tab.dirty) {
-          return {
-            fileStatus: result.content === tab.savedContent ? "ok" : "changed",
-          };
-        }
-        return {
-          content: result.content,
-          savedContent: result.content,
-          fileStatus: "ok",
-          contentToken: (tab.contentToken || 0) + 1,
-        };
-      });
-    }
   }
 
   async function handleRefresh() {
@@ -449,33 +398,6 @@ export default function IdeWorkspace({ selectedProject }) {
     return result;
   }
 
-  function remapOpenTabs(oldPath, newPath) {
-    const prefix = oldPath + "/";
-
-    setTabs((current) =>
-      current.map((tab) => {
-        if (tab.path === oldPath) {
-          return { ...tab, path: newPath, name: nameFromPath(newPath) };
-        }
-        if (tab.path.startsWith(prefix)) {
-          const nextPath = newPath + tab.path.slice(oldPath.length);
-          return { ...tab, path: nextPath, name: nameFromPath(nextPath) };
-        }
-        return tab;
-      })
-    );
-
-    setActivePath((current) => {
-      if (current === oldPath) {
-        return newPath;
-      }
-      if (current && current.startsWith(prefix)) {
-        return newPath + current.slice(oldPath.length);
-      }
-      return current;
-    });
-  }
-
   async function handleRenameEntry(path, newName) {
     const result = await renameEntry(path, newName);
     if (result.ok) {
@@ -483,28 +405,6 @@ export default function IdeWorkspace({ selectedProject }) {
       await refreshProjectTree();
     }
     return result;
-  }
-
-  function dropTabsForPath(path) {
-    const prefix = path + "/";
-    const removed = tabs.filter(
-      (tab) => tab.path === path || tab.path.startsWith(prefix)
-    );
-
-    if (removed.length === 0) {
-      return;
-    }
-
-    const removedSet = new Set(removed.map((tab) => tab.path));
-    const remaining = tabs.filter((tab) => !removedSet.has(tab.path));
-
-    if (activePath && removedSet.has(activePath)) {
-      const index = tabs.findIndex((tab) => tab.path === activePath);
-      const neighbor = remaining[Math.min(index, remaining.length - 1)];
-      setActivePath(neighbor ? neighbor.path : null);
-    }
-
-    setTabs(remaining);
   }
 
   async function handleDeleteEntry(path) {
@@ -516,6 +416,110 @@ export default function IdeWorkspace({ selectedProject }) {
     return result;
   }
 
+  const handleSave = useCallback(() => {
+    if (!activePath) {
+      return;
+    }
+
+    const tab = tabs.find((entry) => entry.path === activePath);
+
+    saveTab(activePath).then((result) => {
+      if (result.ok) {
+        toast(`Saved ${tab?.name || "file"}`, "success");
+        return;
+      }
+
+      if (result.status === "conflict") {
+        setConflict({
+          path: activePath,
+          diskContent: result.diskContent,
+          diskLastModified: result.diskLastModified,
+        });
+        return;
+      }
+
+      if (result.status === "missing") {
+        setConflict({ path: activePath, missing: true });
+        return;
+      }
+
+      toast("Could not save the file.", "error");
+    });
+  }, [activePath, tabs, saveTab, toast]);
+
+  async function handleConflictReload() {
+    if (!conflict) {
+      return;
+    }
+
+    const result = await reloadDocument(conflict.path);
+
+    if (result.ok) {
+      setConflict(null);
+    } else if (result.status === "missing") {
+      setConflict({ path: conflict.path, missing: true });
+    } else {
+      setConflict(null);
+    }
+  }
+
+  function handleConflictOverwrite() {
+    if (!conflict) {
+      return;
+    }
+
+    const name = nameFromPath(conflict.path);
+
+    saveTab(conflict.path, { force: true }).then((result) => {
+      if (result.ok) {
+        toast(`Saved ${name}`, "success");
+      } else {
+        toast("Could not save the file.", "error");
+      }
+      setConflict(null);
+    });
+  }
+
+  async function handleConflictRecreate() {
+    if (!conflict) {
+      return;
+    }
+
+    const parent = parentPathOf(conflict.path);
+
+    if (!parent) {
+      toast("Could not locate the file's folder.", "error");
+      return;
+    }
+
+    const name = nameFromPath(conflict.path);
+    const result = await createFile(parent, name);
+
+    if (!result.ok) {
+      toast(friendlyError(result.status), "error");
+      return;
+    }
+
+    await refreshProjectTree();
+
+    const saved = await saveTab(conflict.path, { force: true });
+
+    if (saved.ok) {
+      toast(`Recreated and saved ${name}`, "success");
+    } else {
+      toast("Could not save the recreated file.", "error");
+    }
+    setConflict(null);
+  }
+
+  function handleConflictClose() {
+    if (!conflict) {
+      return;
+    }
+    closeTabNow(conflict.path);
+    setConflict(null);
+  }
+
   function handleSearchSelect(match) {
     openFile({ path: match.path, name: match.name });
     setRevealRequest((current) => ({
@@ -525,53 +529,128 @@ export default function IdeWorkspace({ selectedProject }) {
     }));
   }
 
-  function switchToRelativeTab(direction) {
-    if (!tabs.length) {
-      setActivePath(null);
+  function handleDiagnosticSelect(diagnostic) {
+    openFile({ path: diagnostic.path, name: nameFromPath(diagnostic.path) });
+    setRevealRequest((current) => ({
+      token: (current?.token || 0) + 1,
+      path: diagnostic.path,
+      line: diagnostic.line,
+    }));
+  }
+
+  function handleOutlineSelect(symbol) {
+    if (!activePath) {
       return;
     }
-
-    const index = tabs.findIndex((tab) => tab.path === activePath);
-    const nextIndex = (index + direction + tabs.length) % tabs.length;
-    setActivePath(tabs[nextIndex].path);
+    setRevealRequest((current) => ({
+      token: (current?.token || 0) + 1,
+      path: activePath,
+      line: symbol.line,
+    }));
+    monacoFocusRef.current?.focus();
   }
 
-  function handleCloseTabFromKeyboard() {
-    if (activePath) {
-      handleCloseTab(activePath);
+  function handleSymbolSelect(symbol) {
+    if (symbol.path !== activePath) {
+      openFile({ path: symbol.path, name: nameFromPath(symbol.path) });
     }
+    setRevealRequest((current) => ({
+      token: (current?.token || 0) + 1,
+      path: symbol.path,
+      line: symbol.line,
+    }));
+    setSymbolSearch(null);
+    monacoFocusRef.current?.focus();
   }
 
-  function closeAllTabs() {
-    const clean = tabs.filter((tab) => !tab.dirty);
-
-    if (clean.length === tabs.length) {
-      setTabs([]);
-      setActivePath(null);
-      return;
-    }
-
-    const remainingPaths = new Set(
-      tabs.filter((tab) => tab.dirty).map((tab) => tab.path)
-    );
-
-    setTabs((current) =>
-      current.filter((tab) => tab.dirty || remainingPaths.has(tab.path))
-    );
-
-    if (activePath && !remainingPaths.has(activePath)) {
-      const index = tabs.findIndex((tab) => tab.path === activePath);
-      const remaining = tabs.filter(
-        (tab) => tab.dirty || remainingPaths.has(tab.path)
-      );
-      const neighbor = remaining[Math.min(index, remaining.length - 1)];
-      setActivePath(neighbor ? neighbor.path : null);
-    }
-  }
-
-  function closePalette() {
+  const closePalette = useCallback(() => {
     setPaletteOpen(false);
     monacoFocusRef.current?.focus();
+  }, []);
+
+  function handleGoToLine(line) {
+    if (!activePath) {
+      return;
+    }
+    setRevealRequest((current) => ({
+      token: (current?.token || 0) + 1,
+      path: activePath,
+      line,
+    }));
+    setGoToLineOpen(false);
+    monacoFocusRef.current?.focus();
+  }
+
+  function handleBreadcrumbNavigate(dirPath) {
+    setLayout((current) => ({ ...current, leftOpen: true }));
+    setExplorerRevealRequest((current) => ({
+      token: (current?.token || 0) + 1,
+      path: dirPath,
+    }));
+  }
+
+  function handleReplaceMatch(match, query, replacement, options) {
+    return replaceSingleMatch({
+      getDocument: (path) => tabs.find((tab) => tab.path === path),
+      read: readFile,
+      setContent: setTabContent,
+      match,
+      replacement,
+    });
+  }
+
+  async function handleReplaceAllWorkspace(query, replacement, options) {
+    const result = await previewWorkspaceReplace(query, options);
+
+    if (!result.ok) {
+      toast(friendlyError(result.status), "error");
+      return;
+    }
+
+    if (result.totalMatches === 0) {
+      toast("No matches found.", "info");
+      return;
+    }
+
+    setReplaceConfirm({
+      query,
+      replacement,
+      options,
+      files: result.files,
+      totalMatches: result.totalMatches,
+      totalFiles: result.totalFiles,
+    });
+  }
+
+  async function applyWorkspaceReplace() {
+    if (!replaceConfirm) {
+      return;
+    }
+
+    const { query, replacement, options, files } = replaceConfirm;
+
+    await applyWorkspaceReplaceCore({
+      files,
+      getDocument: (path) => tabs.find((tab) => tab.path === path),
+      read: readFile,
+      setContent: setTabContent,
+      query,
+      replacement,
+      options,
+    });
+
+    toast(
+      `Replaced matches across ${replaceConfirm.totalFiles} file${
+        replaceConfirm.totalFiles === 1 ? "" : "s"
+      }. Save each edited file to write the changes.`,
+      "success"
+    );
+
+    setReplaceConfirm(null);
+  }
+
+  function handleReplaceCancel() {
+    setReplaceConfirm(null);
   }
 
   const commands = [
@@ -600,6 +679,14 @@ export default function IdeWorkspace({ selectedProject }) {
       },
     },
     {
+      id: "switch-recent-tab",
+      title: "Switch to Recent Tab",
+      shortcut: "Ctrl+Tab",
+      execute: () => {
+        switchToRecentTab();
+      },
+    },
+    {
       id: "refresh-explorer",
       title: "Refresh Explorer",
       shortcut: "",
@@ -612,7 +699,7 @@ export default function IdeWorkspace({ selectedProject }) {
       title: "Search Workspace",
       shortcut: "",
       execute: () => {
-        setSearchOpen(true);
+        toggleLeftPanel("search");
       },
     },
     {
@@ -620,7 +707,33 @@ export default function IdeWorkspace({ selectedProject }) {
       title: "Toggle File Explorer",
       shortcut: "",
       execute: () => {
-        setExplorerVisible((current) => !current);
+        toggleLeftPanel("explorer");
+      },
+    },
+    {
+      id: "open-ai-chat",
+      title: "Open AI Chat",
+      shortcut: "",
+      execute: () => {
+        setLayout((current) => ({ ...current, rightOpen: true, rightTab: "ai" }));
+      },
+    },
+    {
+      id: "go-to-symbol-file",
+      title: "Go to Symbol in File",
+      shortcut: "Ctrl+Shift+O",
+      execute: () => {
+        if (activePath) {
+          setSymbolSearch({ mode: "file" });
+        }
+      },
+    },
+    {
+      id: "go-to-symbol-workspace",
+      title: "Go to Symbol in Workspace",
+      shortcut: "Ctrl+T",
+      execute: () => {
+        setSymbolSearch({ mode: "workspace" });
       },
     },
     {
@@ -643,6 +756,32 @@ export default function IdeWorkspace({ selectedProject }) {
         setNewFolderRequest((current) => ({
           token: (current?.token || 0) + 1,
         }));
+      },
+    },
+    {
+      id: "go-to-file",
+      title: "Go to File",
+      shortcut: "Ctrl+P",
+      execute: () => {
+        setGoToFileOpen(true);
+      },
+    },
+    {
+      id: "go-to-line",
+      title: "Go to Line",
+      shortcut: "Ctrl+G",
+      execute: () => {
+        if (activePath) {
+          setGoToLineOpen(true);
+        }
+      },
+    },
+    {
+      id: "find-in-file",
+      title: "Find in File",
+      shortcut: "Ctrl+F",
+      execute: () => {
+        monacoFindRef.current?.find();
       },
     },
   ];
@@ -672,14 +811,82 @@ export default function IdeWorkspace({ selectedProject }) {
         return;
       }
 
+      if (goToLineOpen) {
+        if (event.key === "Escape") {
+          setGoToLineOpen(false);
+        }
+        return;
+      }
+
+      if (goToFileOpen) {
+        if (event.key === "Escape") {
+          setGoToFileOpen(false);
+        }
+        return;
+      }
+
+      if (symbolSearch) {
+        if (event.key === "Escape") {
+          setSymbolSearch(null);
+        }
+        return;
+      }
+
+      if (conflict) {
+        if (event.key === "Escape") {
+          setConflict(null);
+        }
+        return;
+      }
+
       if (status !== "ready" || pendingClosePath) {
+        return;
+      }
+
+      if (mod && event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        setGoToFileOpen(true);
+        return;
+      }
+
+      if (mod && event.key.toLowerCase() === "g") {
+        event.preventDefault();
+        if (activePath) {
+          setGoToLineOpen(true);
+        }
+        return;
+      }
+
+      if (mod && event.shiftKey && event.key.toLowerCase() === "o") {
+        event.preventDefault();
+        if (activePath) {
+          setSymbolSearch({ mode: "file" });
+        }
+        return;
+      }
+
+      if (mod && event.key.toLowerCase() === "t") {
+        event.preventDefault();
+        setSymbolSearch({ mode: "workspace" });
+        return;
+      }
+
+      if (mod && event.key === "Tab") {
+        if (
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement
+        ) {
+          return;
+        }
+        event.preventDefault();
+        switchToRecentTab();
         return;
       }
 
       if (mod && event.key.toLowerCase() === "s") {
         event.preventDefault();
         if (activePath) {
-          saveTab(activePath);
+          handleSave();
         }
         return;
       }
@@ -687,6 +894,12 @@ export default function IdeWorkspace({ selectedProject }) {
       if (mod && event.key.toLowerCase() === "w") {
         event.preventDefault();
         handleCloseTabFromKeyboard();
+        return;
+      }
+
+      if (mod && event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setLayout((current) => ({ ...current, leftOpen: !current.leftOpen }));
         return;
       }
 
@@ -717,7 +930,13 @@ export default function IdeWorkspace({ selectedProject }) {
     tabs,
     pendingClosePath,
     paletteOpen,
+    goToLineOpen,
+    goToFileOpen,
+    symbolSearch,
+    conflict,
     saveTab,
+    handleSave,
+    switchToRecentTab,
     handleCloseTabFromKeyboard,
     switchToRelativeTab,
     handlePendingCancel,
@@ -727,6 +946,33 @@ export default function IdeWorkspace({ selectedProject }) {
   const openPaths = tabs.map((tab) => tab.path);
   const activeTab = tabs.find((tab) => tab.path === activePath) || null;
   const pendingTab = tabs.find((tab) => tab.path === pendingClosePath) || null;
+
+  const getAiContext = useCallback(() => {
+    const currentFile =
+      activePath && typeof activeTab?.content === "string"
+        ? {
+            path: activePath,
+            content: activeTab.content,
+            language: activeTab.language || null,
+          }
+        : null;
+
+    const openDocuments = tabs
+      .filter((tab) => typeof tab.content === "string")
+      .map((tab) => ({
+        path: tab.path,
+        name: tab.name,
+        content: tab.content,
+      }));
+
+    return {
+      currentFile,
+      openDocuments,
+      diagnostics,
+      budget: clampBudget(settings.ai?.contextBudget),
+      sources: ["currentFile", "openDocuments", "diagnostics"],
+    };
+  }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget]);
   const canRetry = ["cancelled", "denied", "error"].includes(status);
 
   return (
@@ -745,16 +991,55 @@ export default function IdeWorkspace({ selectedProject }) {
             Projects
           </button>
           <button
-            className="ide-header-button"
-            onClick={() => setSearchOpen((current) => !current)}
+            className={`ide-header-button${
+              layout.leftOpen && layout.leftTab === "explorer"
+                ? " ide-header-button-active"
+                : ""
+            }`}
+            title="Toggle Explorer panel (Ctrl+B)"
+            onClick={() => toggleLeftPanel("explorer")}
           >
-            {searchOpen ? "Close Search" : "Search"}
+            {layout.leftOpen && layout.leftTab === "explorer"
+              ? "Close Explorer"
+              : "Explorer"}
           </button>
           <button
-            className="ide-header-button"
-            onClick={() => setTerminalOpen((current) => !current)}
+            className={`ide-header-button${
+              layout.leftOpen && layout.leftTab === "search"
+                ? " ide-header-button-active"
+                : ""
+            }`}
+            title="Toggle Search panel"
+            onClick={() => toggleLeftPanel("search")}
           >
-            {terminalOpen ? "Close Terminal" : "Terminal"}
+            {layout.leftOpen && layout.leftTab === "search"
+              ? "Close Search"
+              : "Search"}
+          </button>
+          <button
+            className={`ide-header-button${
+              layout.terminalOpen ? " ide-header-button-active" : ""
+            }`}
+            title="Toggle Terminal panel"
+            onClick={() =>
+              setLayout((current) => ({
+                ...current,
+                terminalOpen: !current.terminalOpen,
+              }))
+            }
+          >
+            {layout.terminalOpen ? "Close Terminal" : "Terminal"}
+          </button>
+          <button
+            className={`ide-header-button${
+              layout.rightOpen ? " ide-header-button-active" : ""
+            }`}
+            title="Toggle side panels"
+            onClick={() =>
+              setLayout((current) => ({ ...current, rightOpen: !current.rightOpen }))
+            }
+          >
+            {layout.rightOpen ? "Hide Panels" : "Panels"}
           </button>
         </div>
       </header>
@@ -762,19 +1047,84 @@ export default function IdeWorkspace({ selectedProject }) {
       {status === "ready" && tree ? (
         <>
           <div className="ide-layout">
-            {explorerVisible && (
-              <FileExplorer
-                root={tree}
-                onFileSelect={openFile}
-                selectedFilePath={activePath}
-                onCreateFile={handleCreateFile}
-                onCreateFolder={handleCreateFolder}
-                onRename={handleRenameEntry}
-                onDelete={handleDeleteEntry}
-                onRefresh={handleRefresh}
-                newFileRequest={newFileRequest}
-                newFolderRequest={newFolderRequest}
-              />
+            {layout.leftOpen && (
+              <>
+                <div
+                  className="ide-panel ide-left-panel"
+                  style={{ width: layout.leftWidth }}
+                >
+                  <div className="ide-panel-tabs" role="tablist">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={layout.leftTab === "explorer"}
+                      className={`ide-panel-tab${
+                        layout.leftTab === "explorer"
+                          ? " ide-panel-tab-active"
+                          : ""
+                      }`}
+                      onClick={() => toggleLeftPanel("explorer")}
+                    >
+                      Explorer
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={layout.leftTab === "search"}
+                      className={`ide-panel-tab${
+                        layout.leftTab === "search" ? " ide-panel-tab-active" : ""
+                      }`}
+                      onClick={() => toggleLeftPanel("search")}
+                    >
+                      Search
+                    </button>
+                  </div>
+                  <div className="ide-panel-content">
+                    {layout.leftTab === "explorer" ? (
+                      <FileExplorer
+                        root={tree}
+                        onFileSelect={openFile}
+                        selectedFilePath={activePath}
+                        onCreateFile={handleCreateFile}
+                        onCreateFolder={handleCreateFolder}
+                        onRename={handleRenameEntry}
+                        onDelete={handleDeleteEntry}
+                        onRefresh={handleRefresh}
+                        newFileRequest={newFileRequest}
+                        newFolderRequest={newFolderRequest}
+                        revealRequest={explorerRevealRequest}
+                      />
+                    ) : (
+                      <SearchPanel
+                        onSelect={handleSearchSelect}
+                        onClose={() =>
+                          setLayout((current) => ({
+                            ...current,
+                            leftTab: "explorer",
+                          }))
+                        }
+                        onReplaceMatch={handleReplaceMatch}
+                        onReplaceAllWorkspace={handleReplaceAllWorkspace}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div
+                  className="ide-resize-handle ide-resize-vertical"
+                  role="separator"
+                  aria-orientation="vertical"
+                  title="Resize Explorer panel"
+                  onPointerDown={startResize({
+                    horizontal: false,
+                    getSize: () => layout.leftWidth,
+                    setSize: (size) =>
+                      setLayout((current) => ({
+                        ...current,
+                        leftWidth: clamp(size, 180, 480),
+                      })),
+                  })}
+                />
+              </>
             )}
             <div className="editor-region">
               <TabBar
@@ -782,6 +1132,7 @@ export default function IdeWorkspace({ selectedProject }) {
                 activePath={activePath}
                 onActivate={switchTab}
                 onClose={handleCloseTab}
+                onMenuAction={handleTabMenuAction}
               />
               <EditorPane
                 tab={activeTab}
@@ -790,21 +1141,179 @@ export default function IdeWorkspace({ selectedProject }) {
                 onSave={handleSave}
                 revealRequest={revealRequest}
                 focusHandleRef={monacoFocusRef}
+                findHandleRef={monacoFindRef}
+                onNavigateDirectory={handleBreadcrumbNavigate}
               />
             </div>
-            {searchOpen && (
-              <SearchPanel
-                onSelect={handleSearchSelect}
-                onClose={() => setSearchOpen(false)}
-              />
+            {layout.rightOpen && (
+              <>
+                <div
+                  className="ide-resize-handle ide-resize-vertical"
+                  role="separator"
+                  aria-orientation="vertical"
+                  title="Resize side panel"
+                  onPointerDown={startResize({
+                    horizontal: false,
+                    getSize: () => layout.rightWidth,
+                    setSize: (size) =>
+                      setLayout((current) => ({
+                        ...current,
+                        rightWidth: clamp(size, 200, 480),
+                      })),
+                  })}
+                />
+                <div
+                  className="ide-panel ide-right-panel"
+                  style={{ width: layout.rightWidth }}
+                >
+                  <div className="ide-panel-tabs" role="tablist">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={layout.rightTab === "problems"}
+                      className={`ide-panel-tab${
+                        layout.rightTab === "problems"
+                          ? " ide-panel-tab-active"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setLayout((current) => ({
+                          ...current,
+                          rightTab: "problems",
+                        }))
+                      }
+                    >
+                      Problems
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={layout.rightTab === "outline"}
+                      className={`ide-panel-tab${
+                        layout.rightTab === "outline"
+                          ? " ide-panel-tab-active"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setLayout((current) => ({
+                          ...current,
+                          rightTab: "outline",
+                        }))
+                      }
+                    >
+                      Outline
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={layout.rightTab === "graph"}
+                      className={`ide-panel-tab${
+                        layout.rightTab === "graph" ? " ide-panel-tab-active" : ""
+                      }`}
+                      onClick={() =>
+                        setLayout((current) => ({
+                          ...current,
+                          rightTab: "graph",
+                        }))
+                      }
+                    >
+                      Graph
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={layout.rightTab === "git"}
+                      className={`ide-panel-tab${
+                        layout.rightTab === "git" ? " ide-panel-tab-active" : ""
+                      }`}
+                      onClick={() =>
+                        setLayout((current) => ({
+                          ...current,
+                          rightTab: "git",
+                        }))
+                      }
+                    >
+                      Git
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={layout.rightTab === "ai"}
+                      className={`ide-panel-tab${
+                        layout.rightTab === "ai" ? " ide-panel-tab-active" : ""
+                      }`}
+                      onClick={() =>
+                        setLayout((current) => ({
+                          ...current,
+                          rightTab: "ai",
+                        }))
+                      }
+                    >
+                      AI
+                    </button>
+                  </div>
+                  <div className="ide-panel-content">
+                    {layout.rightTab === "outline" ? (
+                      <OutlinePanel
+                        path={activePath}
+                        content={activeTab?.content}
+                        contentToken={activeTab?.contentToken}
+                        onSelect={handleOutlineSelect}
+                      />
+                    ) : layout.rightTab === "graph" ? (
+                      <GraphPanel
+                        activePath={activePath}
+                        activeContent={activeTab?.content}
+                        tree={tree}
+                        tabs={tabs}
+                        readFile={readFile}
+                        onOpen={(path) =>
+                          openFile({ path, name: nameFromPath(path) })
+                        }
+                      />
+                    ) : layout.rightTab === "git" ? (
+                      <GitPanel tree={tree} />
+                    ) : layout.rightTab === "ai" ? (
+                      <AIPanel getContextData={getAiContext} />
+                    ) : (
+                      <ProblemsPanel
+                        diagnostics={diagnostics}
+                        onSelect={handleDiagnosticSelect}
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
-          {terminalOpen && (
-            <TerminalPanel
-              provider={terminalProvider}
-              onClose={() => setTerminalOpen(false)}
-            />
+          {layout.terminalOpen && (
+            <div
+              className="ide-terminal-area"
+              style={{ height: layout.terminalHeight }}
+            >
+              <div
+                className="ide-resize-handle ide-resize-horizontal"
+                role="separator"
+                aria-orientation="horizontal"
+                title="Resize Terminal panel"
+                onPointerDown={startResize({
+                  horizontal: true,
+                  getSize: () => layout.terminalHeight,
+                  setSize: (size) =>
+                    setLayout((current) => ({
+                      ...current,
+                      terminalHeight: clamp(size, 100, 480),
+                    })),
+                })}
+              />
+              <TerminalPanel
+                provider={terminalProvider}
+                onClose={() =>
+                  setLayout((current) => ({ ...current, terminalOpen: false }))
+                }
+              />
+            </div>
           )}
 
           {paletteOpen && (
@@ -812,6 +1321,32 @@ export default function IdeWorkspace({ selectedProject }) {
               commands={commands}
               onSelect={handleCommandSelect}
               onClose={closePalette}
+            />
+          )}
+
+          {goToLineOpen && (
+            <GoToLineDialog
+              onGo={handleGoToLine}
+              onClose={() => setGoToLineOpen(false)}
+            />
+          )}
+
+          {goToFileOpen && (
+            <GoToFileDialog
+              tree={tree}
+              onOpen={openFile}
+              onClose={() => setGoToFileOpen(false)}
+            />
+          )}
+
+          {symbolSearch && (
+            <GoToSymbolDialog
+              mode={symbolSearch.mode}
+              activePath={activePath}
+              activeContent={activeTab?.content}
+              tabs={tabs}
+              onSelect={handleSymbolSelect}
+              onClose={() => setSymbolSearch(null)}
             />
           )}
 
@@ -845,6 +1380,125 @@ export default function IdeWorkspace({ selectedProject }) {
               </div>
             </div>
           )}
+
+          {batchClose && (
+            <div className="unsaved-overlay">
+              <div className="unsaved-dialog" role="dialog" aria-modal="true">
+                <p className="unsaved-title">Unsaved changes</p>
+                <p>
+                  {batchClose.dirtyPaths.length} tab
+                  {batchClose.dirtyPaths.length === 1 ? "" : "s"} ha
+                  {batchClose.dirtyPaths.length === 1 ? "s" : "ve"} unsaved
+                  changes. Save before closing?
+                </p>
+                <div className="unsaved-actions">
+                  <button
+                    className="unsaved-button unsaved-button-primary"
+                    onClick={handleBatchSaveAll}
+                  >
+                    Save All
+                  </button>
+                  <button
+                    className="unsaved-button unsaved-button-danger"
+                    onClick={handleBatchDiscardAll}
+                  >
+                    Discard All
+                  </button>
+                  <button
+                    className="unsaved-button"
+                    onClick={handleBatchCancel}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {conflict && (
+            <div className="unsaved-overlay">
+              <div className="unsaved-dialog" role="dialog" aria-modal="true">
+                <p className="unsaved-title">
+                  {conflict.missing
+                    ? "File no longer exists"
+                    : "File changed outside MODCODES"}
+                </p>
+                {conflict.missing ? (
+                  <p>
+                    <strong>{nameFromPath(conflict.path)}</strong> was deleted
+                    outside MODCODES. Your unsaved changes are kept in memory.
+                    Recreate the file to save them, or close the tab to discard
+                    them.
+                  </p>
+                ) : (
+                  <p>
+                    <strong>{nameFromPath(conflict.path)}</strong> was changed
+                    on disk after it was opened. Overwrite to keep your
+                    changes, or reload to keep the on-disk version and discard
+                    your unsaved changes.
+                  </p>
+                )}
+                <div className="unsaved-actions">
+                  {conflict.missing ? (
+                    <>
+                      <button
+                        className="unsaved-button unsaved-button-primary"
+                        onClick={handleConflictRecreate}
+                      >
+                        Recreate & Save
+                      </button>
+                      <button
+                        className="unsaved-button unsaved-button-danger"
+                        onClick={handleConflictClose}
+                      >
+                        Close
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="unsaved-button unsaved-button-danger"
+                        onClick={handleConflictReload}
+                      >
+                        Reload
+                      </button>
+                      <button
+                        className="unsaved-button unsaved-button-primary"
+                        onClick={handleConflictOverwrite}
+                      >
+                        Overwrite
+                      </button>
+                    </>
+                  )}
+                  <button
+                    className="unsaved-button"
+                    onClick={() => setConflict(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <ConfirmDialog
+            open={Boolean(replaceConfirm)}
+            title="Replace in workspace"
+            message={
+              <>
+                Replace {replaceConfirm?.totalMatches} match
+                {replaceConfirm?.totalMatches === 1 ? "" : "es"} across{" "}
+                {replaceConfirm?.totalFiles} file
+                {replaceConfirm?.totalFiles === 1 ? "" : "s"}? Affected files
+                will be updated in the editor. Nothing is written to disk until
+                you save each file.
+              </>
+            }
+            confirmLabel="Replace"
+            danger
+            onConfirm={applyWorkspaceReplace}
+            onCancel={handleReplaceCancel}
+          />
         </>
       ) : (
         <div className="ide-status">

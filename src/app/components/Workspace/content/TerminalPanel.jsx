@@ -18,10 +18,11 @@ export default function TerminalPanel({ provider, onClose }) {
     setLines([
       {
         type: "output",
-        text: "MODCODES browser terminal (simulated). Not connected to your operating system. Type 'help' for available commands.",
+        text: `MODCODES terminal (${provider.name}). Not connected to your operating system. Type 'help' for available commands.`,
       },
     ]);
     inputRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -29,6 +30,26 @@ export default function TerminalPanel({ provider, onClose }) {
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
   }, [lines]);
+
+  function appendOutput(result) {
+    setLines((current) => {
+      const next = [...current];
+
+      if (result.stdout) {
+        for (const text of String(result.stdout).split("\n")) {
+          next.push({ type: "output", text });
+        }
+      }
+
+      if (result.stderr) {
+        for (const text of String(result.stderr).split("\n")) {
+          next.push({ type: "error", text });
+        }
+      }
+
+      return next;
+    });
+  }
 
   async function handleSubmit() {
     const trimmed = input.trim();
@@ -42,7 +63,7 @@ export default function TerminalPanel({ provider, onClose }) {
     setInput("");
 
     if (trimmed === "clear") {
-      provider.clear();
+      provider.reset();
       setLines([]);
       inputRef.current?.focus();
       return;
@@ -52,18 +73,13 @@ export default function TerminalPanel({ provider, onClose }) {
     setBusy(true);
 
     try {
-      const output = await provider.execute(trimmed);
-      setLines((current) => [
-        ...current,
-        ...String(output)
-          .split("\n")
-          .map((text) => ({ type: "output", text })),
-      ]);
+      const result = await provider.execute(trimmed);
+      appendOutput(result);
     } catch (error) {
       setLines((current) => [
         ...current,
         {
-          type: "output",
+          type: "error",
           text: error && error.message ? error.message : String(error),
         },
       ]);
@@ -109,7 +125,7 @@ export default function TerminalPanel({ provider, onClose }) {
     >
       <header className="terminal-header">
         <span className="terminal-title">
-          TERMINAL <span className="terminal-badge">Browser simulation</span>
+          TERMINAL <span className="terminal-badge">{provider.name}</span>
         </span>
         <button className="terminal-close" title="Close Terminal" onClick={onClose}>
           ×

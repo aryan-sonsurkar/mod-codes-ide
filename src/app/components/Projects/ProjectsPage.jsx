@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
+import ConfirmDialog from "../Dialogs/ConfirmDialog";
 import "./ProjectsPage.css";
 
 function formatLastOpened(timestamp) {
@@ -184,34 +185,25 @@ export default function ProjectsPage({
         </div>
       )}
 
-      {confirmProject && (
-        <div className="projects-overlay">
-          <div className="projects-dialog" role="dialog" aria-modal="true">
-            <p className="projects-dialog-title">Delete project</p>
-            <p>
-              Delete <strong>{confirmProject.name}</strong>? This cannot be
-              undone.
-            </p>
-            <div className="projects-dialog-actions">
-              <button
-                className="projects-dialog-button"
-                onClick={() => setConfirmId(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="projects-dialog-button projects-dialog-danger"
-                onClick={() => {
-                  onDelete(confirmProject.id);
-                  setConfirmId(null);
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={Boolean(confirmProject)}
+        title="Delete project"
+        message={
+          <>
+            Delete <strong>{confirmProject?.name}</strong>? This cannot be
+            undone.
+          </>
+        }
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => {
+          if (confirmProject) {
+            onDelete(confirmProject.id);
+          }
+          setConfirmId(null);
+        }}
+        onCancel={() => setConfirmId(null)}
+      />
     </section>
   );
 }

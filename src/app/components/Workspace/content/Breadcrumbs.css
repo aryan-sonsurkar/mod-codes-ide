@@ -1,0 +1,50 @@
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 4px 12px;
+  border-bottom: solid 1px var(--border-color);
+  background-color: var(--sidebar-bg);
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 12px;
+  min-height: 26px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.breadcrumb-part {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.breadcrumb-separator {
+  color: var(--secondary-text);
+  padding: 0 2px;
+  user-select: none;
+}
+
+.breadcrumb-segment {
+  border: none;
+  background: transparent;
+  color: var(--secondary-text);
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: default;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.breadcrumb-link {
+  cursor: pointer;
+}
+
+.breadcrumb-link:hover {
+  background-color: var(--hover-color);
+  color: var(--primary-text);
+}
+
+.breadcrumb-current {
+  color: var(--primary-text);
+  font-weight: 600;
+}

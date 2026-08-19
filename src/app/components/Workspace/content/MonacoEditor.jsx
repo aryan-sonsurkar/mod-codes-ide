@@ -17,6 +17,7 @@ export default function MonacoEditor({
   onChange,
   revealRequest,
   focusHandleRef,
+  findHandleRef,
 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -226,6 +227,21 @@ export default function MonacoEditor({
       focusHandleRef.current = null;
     };
   }, [focusHandleRef]);
+
+  useEffect(() => {
+    if (!findHandleRef) {
+      return;
+    }
+
+    findHandleRef.current = {
+      find: () =>
+        editorRef.current?.trigger("modcodes", "actions.find", null),
+    };
+
+    return () => {
+      findHandleRef.current = null;
+    };
+  }, [findHandleRef]);
 
   useEffect(() => {
     const openSet = new Set(openPathsKey === "" ? [] : openPathsKey.split("\n"));
