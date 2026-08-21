@@ -49,6 +49,8 @@ import { clampBudget } from "../../../lib/ai/context/budget";
 import { CODE_ACTIONS, buildCodeActionPrompt } from "../../../lib/ai/codeActions";
 import { WORKSPACE_COMMANDS, buildWorkspacePrompt } from "../../../lib/ai/workspaceCommands";
 import { acceptDiff } from "../../../lib/ai/diffEngine";
+import { rankWorkspaceContext } from "../../../lib/ai/relevanceRanking";
+import { createContextCache, measureContextBuild } from "../../../lib/ai/contextPerformance";
 
 const STATUS_MESSAGES = {
   requesting: "Requesting access to this project's folder...",
@@ -109,6 +111,8 @@ export default function IdeWorkspace({ selectedProject }) {
   const monacoFocusRef = useRef(null);
   const monacoFindRef = useRef(null);
   const monacoSelectionRef = useRef(null);
+  const contextCacheRef = useRef(createContextCache({ ttlMs: 2000 }));
+  const graphNeighborsRef = useRef(null);
   const terminalProvider = useMemo(() => {
     function findTreeNode(node, segments) {
       let current = node;
@@ -984,20 +988,46 @@ export default function IdeWorkspace({ selectedProject }) {
 
     const selection = getSelectionForAi();
 
-    const openDocuments = tabs
+    const allOpen = tabs
       .filter((tab) => typeof tab.content === "string")
       .map((tab) => ({
         path: tab.path,
         name: tab.name,
         content: tab.content,
+        size: tab.content.length,
+        priority: 99,
       }));
+
+    const budget = clampBudget(settings.ai?.contextBudget);
+    const cacheKey = { currentFile, selection, budget, sources: ["ranked"] };
+    const cached = contextCacheRef.current.get(cacheKey);
+    let openDocuments;
+    if (cached && cached.openDocuments) {
+      openDocuments = cached.openDocuments;
+    } else {
+      const ranked = rankWorkspaceContext({
+        candidates: allOpen,
+        currentFile,
+        selection,
+        activePath,
+        diagnostics,
+        recentPaths: tabs.map((t) => t.path),
+        graphNeighbors: Array.isArray(graphNeighborsRef.current) ? graphNeighborsRef.current : [],
+        budget,
+      });
+      openDocuments = ranked.included.map((item) => {
+        const original = allOpen.find((c) => c.path === item.path);
+        return { path: original.path, name: original.name, content: original.content };
+      });
+      contextCacheRef.current.set(cacheKey, { openDocuments });
+    }
 
     return {
       currentFile,
       selection,
       openDocuments,
       diagnostics,
-      budget: clampBudget(settings.ai?.contextBudget),
+      budget,
     };
   }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget, getSelectionForAi]);
 

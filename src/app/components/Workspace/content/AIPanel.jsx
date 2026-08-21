@@ -40,6 +40,7 @@ import AIToolApproval from "./AIToolApproval";
 import AIConversations from "./AIConversations";
 import AIProviderCapabilities from "./AIProviderCapabilities";
 import AIActionHistory from "./AIActionHistory";
+import AgentWorkflowDemo from "./AgentWorkflowDemo";
 import { approvalRequestFor } from "../../../lib/ai/toolApproval";
 import { createActionHistory } from "../../../lib/ai/actionHistory";
 
@@ -897,6 +898,8 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         }}
         onNavigate={(path) => onNavigate && onNavigate({ path })}
       />
+
+      <AgentWorkflowDemo getContextData={getContextData} onApplyDiff={onApplyDiff} onNavigate={onNavigate} />
 
       <div className="ai-tools">
         <ShieldCheck size={12} />
