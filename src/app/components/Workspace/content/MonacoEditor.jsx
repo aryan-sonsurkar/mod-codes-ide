@@ -128,9 +128,13 @@ export default function MonacoEditor({
           automaticLayout: true,
           minimap: { enabled: editorSettings.minimap },
           fontSize: editorSettings.fontSize,
+          fontFamily: editorSettings.fontFamily,
           tabSize: editorSettings.tabSize,
+          insertSpaces: editorSettings.insertSpaces,
           wordWrap: editorSettings.wordWrap ? "on" : "off",
           lineNumbers: editorSettings.lineNumbers ? "on" : "off",
+          cursorBlinking: editorSettings.cursorBlinking,
+          smoothScrolling: editorSettings.smoothScrolling,
           scrollBeyondLastLine: false,
         });
         editorRef.current = editor;
@@ -174,16 +178,32 @@ export default function MonacoEditor({
     editor.updateOptions({
       minimap: { enabled: settings.editor.minimap },
       fontSize: settings.editor.fontSize,
+      fontFamily: settings.editor.fontFamily,
       tabSize: settings.editor.tabSize,
+      insertSpaces: settings.editor.insertSpaces,
       wordWrap: settings.editor.wordWrap ? "on" : "off",
       lineNumbers: settings.editor.lineNumbers ? "on" : "off",
+      cursorBlinking: settings.editor.cursorBlinking,
+      smoothScrolling: settings.editor.smoothScrolling,
     });
+    // also update model options for tabSize/insertSpaces live
+    const model = editor.getModel();
+    if (model && typeof model.updateOptions === "function") {
+      model.updateOptions({
+        tabSize: settings.editor.tabSize,
+        insertSpaces: settings.editor.insertSpaces,
+      });
+    }
   }, [
     settings.editor.fontSize,
+    settings.editor.fontFamily,
     settings.editor.tabSize,
+    settings.editor.insertSpaces,
     settings.editor.wordWrap,
     settings.editor.minimap,
     settings.editor.lineNumbers,
+    settings.editor.cursorBlinking,
+    settings.editor.smoothScrolling,
   ]);
 
   useEffect(() => {

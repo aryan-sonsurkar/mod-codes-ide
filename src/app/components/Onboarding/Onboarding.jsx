@@ -3,21 +3,37 @@ import { useState } from "react";
 import "./Onboarding.css";
 
 const STORAGE_KEY = "modcodes.onboarding.completed";
+let memoryCompleted = false;
 
 export function isOnboardingCompleted() {
+  if (memoryCompleted) {
+    return true;
+  }
   try {
-    return localStorage.getItem(STORAGE_KEY) === "true";
+    return typeof localStorage !== "undefined" && localStorage.getItem(STORAGE_KEY) === "true";
   } catch {
-    return false;
+    return memoryCompleted;
   }
 }
 
 export function completeOnboarding() {
+  memoryCompleted = true;
   try {
-    localStorage.setItem(STORAGE_KEY, "true");
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, "true");
+    }
   } catch {
     // best-effort
   }
+}
+
+export function clearOnboardingForTests() {
+  memoryCompleted = false;
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch {}
 }
 
 export default function Onboarding({ onComplete, onSkip }) {

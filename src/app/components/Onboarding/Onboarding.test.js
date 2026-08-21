@@ -1,11 +1,9 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { isOnboardingCompleted, completeOnboarding } from "./Onboarding";
+import { isOnboardingCompleted, completeOnboarding, clearOnboardingForTests } from "./Onboarding";
 
 describe("onboarding", () => {
   beforeEach(() => {
-    try {
-      localStorage.removeItem("modcodes.onboarding.completed");
-    } catch {}
+    clearOnboardingForTests();
   });
   it("completes and persists", () => {
     expect(isOnboardingCompleted()).toBe(false);

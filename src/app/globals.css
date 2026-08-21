@@ -1,19 +1,38 @@
 :root {
   --sidebar-bg: #18122B;
---workspace-bg: #22183A;
---surface-bg: #2A1F4D;
-
---accent-color: #8B5CF6;
-
---primary-text: #F8FAFC;
---secondary-text: #B8B5C5;
-
---border-color: #3B2E5A;
-
---success-color: #22C55E;
---danger-color: #EF4444;
---hover-color: #4a21aa;
---active-color: #100232;
+  --workspace-bg: #22183A;
+  --surface-bg: #2A1F4D;
+  --accent-color: #8B5CF6;
+  --accent-hover: #7C3AED;
+  --primary-text: #F8FAFC;
+  --secondary-text: #B8B5C5;
+  --muted-text: #8B8BA7;
+  --border-color: #3B2E5A;
+  --success-color: #22C55E;
+  --danger-color: #EF4444;
+  --warning-color: #F59E0B;
+  --focus-color: #A78BFA;
+  --hover-color: #4a21aa;
+  --active-color: #100232;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: Consolas, "Courier New", monospace;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 22px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,6 +65,11 @@ body {
   }
 }
 
+
+*:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
+}
 
 * {
   box-sizing: border-box;

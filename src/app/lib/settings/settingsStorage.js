@@ -5,10 +5,14 @@ export const DEFAULT_AI_BASE_URL = "http://127.0.0.1:11434";
 export const DEFAULT_SETTINGS = {
   editor: {
     fontSize: 13,
+    fontFamily: 'Consolas, "Courier New", monospace',
     tabSize: 2,
+    insertSpaces: true,
     wordWrap: false,
     minimap: false,
     lineNumbers: true,
+    cursorBlinking: "blink",
+    smoothScrolling: false,
   },
   files: {
     confirmBeforeDelete: true,
@@ -18,6 +22,7 @@ export const DEFAULT_SETTINGS = {
   },
   terminal: {
     fontSize: 13,
+    fontFamily: 'Consolas, "Courier New", monospace',
   },
   ai: {
     provider: "ollama",
@@ -77,8 +82,28 @@ function sanitizeSettings(settings) {
   const provider =
     ai.provider === "browser-bonsai" ? "browser-bonsai" : "ollama";
 
+  const editor = settings.editor || {};
+  const terminal = settings.terminal || {};
+  const sanitizedEditor = {
+    fontSize: Number.isFinite(editor.fontSize) ? Math.min(24, Math.max(10, Math.round(editor.fontSize))) : DEFAULT_SETTINGS.editor.fontSize,
+    fontFamily: typeof editor.fontFamily === "string" && editor.fontFamily.trim().length > 0 ? editor.fontFamily.trim().slice(0, 120) : DEFAULT_SETTINGS.editor.fontFamily,
+    tabSize: Number.isFinite(editor.tabSize) ? Math.min(8, Math.max(1, Math.round(editor.tabSize))) : DEFAULT_SETTINGS.editor.tabSize,
+    insertSpaces: typeof editor.insertSpaces === "boolean" ? editor.insertSpaces : DEFAULT_SETTINGS.editor.insertSpaces,
+    wordWrap: typeof editor.wordWrap === "boolean" ? editor.wordWrap : DEFAULT_SETTINGS.editor.wordWrap,
+    minimap: typeof editor.minimap === "boolean" ? editor.minimap : DEFAULT_SETTINGS.editor.minimap,
+    lineNumbers: typeof editor.lineNumbers === "boolean" ? editor.lineNumbers : DEFAULT_SETTINGS.editor.lineNumbers,
+    cursorBlinking: ["blink", "smooth", "phase", "expand", "solid"].includes(editor.cursorBlinking) ? editor.cursorBlinking : DEFAULT_SETTINGS.editor.cursorBlinking,
+    smoothScrolling: typeof editor.smoothScrolling === "boolean" ? editor.smoothScrolling : DEFAULT_SETTINGS.editor.smoothScrolling,
+  };
+  const sanitizedTerminal = {
+    fontSize: Number.isFinite(terminal.fontSize) ? Math.min(24, Math.max(10, Math.round(terminal.fontSize))) : DEFAULT_SETTINGS.terminal.fontSize,
+    fontFamily: typeof terminal.fontFamily === "string" && terminal.fontFamily.trim().length > 0 ? terminal.fontFamily.trim().slice(0, 120) : DEFAULT_SETTINGS.terminal.fontFamily,
+  };
+
   return {
     ...settings,
+    editor: sanitizedEditor,
+    terminal: sanitizedTerminal,
     ai: {
       provider,
       baseUrl,

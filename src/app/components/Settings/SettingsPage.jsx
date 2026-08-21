@@ -10,6 +10,7 @@ const CATEGORIES = [
   { id: "files", label: "Files" },
   { id: "terminal", label: "Terminal" },
   { id: "ai", label: "AI & Coder" },
+  { id: "advanced", label: "Advanced" },
 ];
 
 function ToggleRow({ label, description, checked, onChange }) {
@@ -225,6 +226,16 @@ export default function SettingsPage() {
     }
   };
 
+  const handleResetSettings = () => {
+    if (typeof window !== "undefined" && window.confirm("Reset all settings to defaults? This cannot be undone.")) {
+      try {
+        localStorage.removeItem("modcodes-settings");
+        localStorage.removeItem("modcodes.onboarding.completed");
+      } catch {}
+      window.location.reload();
+    }
+  };
+
   return (
     <section className="settings-page">
       <div className="settings-sidebar">
@@ -265,13 +276,44 @@ export default function SettingsPage() {
                   updateSetting("editor", "fontSize", value)
                 }
               />
+              <StringRow
+                label="Font family"
+                description="Monospace stack, e.g. Consolas. Applies immediately to Monaco."
+                value={settings.editor.fontFamily}
+                onChange={(value) => updateSetting("editor", "fontFamily", value)}
+              />
               <NumberRow
                 label="Tab size"
                 description="Number of spaces used per tab."
                 value={settings.editor.tabSize}
-                min={2}
+                min={1}
                 max={8}
                 onChange={(value) => updateSetting("editor", "tabSize", value)}
+              />
+              <ToggleRow
+                label="Insert spaces"
+                description="Use spaces instead of tabs when pressing Tab."
+                checked={settings.editor.insertSpaces}
+                onChange={(value) => updateSetting("editor", "insertSpaces", value)}
+              />
+              <SelectRow
+                label="Cursor blinking"
+                description="How the cursor blinks."
+                value={settings.editor.cursorBlinking}
+                options={[
+                  { value: "blink", label: "Blink" },
+                  { value: "smooth", label: "Smooth" },
+                  { value: "phase", label: "Phase" },
+                  { value: "expand", label: "Expand" },
+                  { value: "solid", label: "Solid" },
+                ]}
+                onChange={(value) => updateSetting("editor", "cursorBlinking", value)}
+              />
+              <ToggleRow
+                label="Smooth scrolling"
+                description="Animate scrolling."
+                checked={settings.editor.smoothScrolling}
+                onChange={(value) => updateSetting("editor", "smoothScrolling", value)}
               />
               <ToggleRow
                 label="Word wrap"
@@ -343,6 +385,12 @@ export default function SettingsPage() {
                 onChange={(value) =>
                   updateSetting("terminal", "fontSize", value)
                 }
+              />
+              <StringRow
+                label="Terminal font family"
+                description="Used for the terminal panel; live."
+                value={settings.terminal.fontFamily}
+                onChange={(value) => updateSetting("terminal", "fontFamily", value)}
               />
               <div className="settings-row">
                 <div className="settings-row-info">
@@ -456,8 +504,19 @@ export default function SettingsPage() {
               />
               {historyStatus && <p className="settings-inline-status">{historyStatus}</p>}
               <div className="settings-ai-note">
-                <strong>Browser AI:</strong> runs locally on your GPU via WebGPU after downloading the Bonsai model. Ollama runs as a local server at the URL above.
+                The system terminal is USER-ONLY. AI cannot execute shell commands. Bridge binds only to 127.0.0.1 and requires explicit pairing.
               </div>
+            </div>
+          </>
+        )}
+
+        {activeCategory === "advanced" && (
+          <>
+            <h3 className="settings-category-title">Advanced</h3>
+            <p className="settings-category-description">Danger zone and privacy controls.</p>
+            <div className="settings-group">
+              <ActionRow label="Reset settings" description="Restore all settings to defaults and clear onboarding. The page will reload." buttonLabel="Reset" onAction={handleResetSettings} />
+              <div className="settings-ai-note">All data stays local. No cloud sync. See docs/SECURITY_PRIVACY_AUDIT.md for full audit.</div>
             </div>
           </>
         )}

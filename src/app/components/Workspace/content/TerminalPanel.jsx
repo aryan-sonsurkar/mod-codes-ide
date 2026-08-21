@@ -148,7 +148,10 @@ export default function TerminalPanel({ provider, onClose }) {
   return (
     <section
       className="terminal-panel"
-      style={{ "--terminal-font-size": `${settings.terminal.fontSize}px` }}
+      style={{
+        "--terminal-font-size": `${settings.terminal.fontSize}px`,
+        "--terminal-font-family": settings.terminal.fontFamily,
+      }}
     >
       <header className="terminal-header">
         <span className="terminal-title">
