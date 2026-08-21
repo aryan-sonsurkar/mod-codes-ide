@@ -34,6 +34,36 @@
   padding: 1px 6px;
 }
 
+.terminal-connection {
+  margin-left: 8px;
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.terminal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-action {
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--secondary-text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.terminal-action:hover {
+  background-color: var(--hover-color);
+  color: var(--primary-text);
+}
+
 .terminal-close {
   display: flex;
   align-items: center;

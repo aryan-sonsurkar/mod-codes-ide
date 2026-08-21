@@ -118,6 +118,33 @@ export default function TerminalPanel({ provider, onClose }) {
     }
   }
 
+  const isSystem = provider.name && provider.name.toLowerCase().includes("system");
+  const connectionLabel = isSystem ? "Connected to local terminal" : "Browser simulation";
+  const [copied, setCopied] = useState(false);
+
+  const handleClear = () => {
+    provider.reset();
+    setLines([]);
+  };
+
+  const handleCopy = async () => {
+    const text = lines.map((l) => l.text).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
+  const handleKill = async () => {
+    if (typeof provider.kill === "function") {
+      try {
+        await provider.kill();
+        setLines((c) => [...c, { type: "output", text: "[session terminated]" }]);
+      } catch {}
+    }
+  };
+
   return (
     <section
       className="terminal-panel"
@@ -126,10 +153,26 @@ export default function TerminalPanel({ provider, onClose }) {
       <header className="terminal-header">
         <span className="terminal-title">
           TERMINAL <span className="terminal-badge">{provider.name}</span>
+          <span className="terminal-connection" title={connectionLabel}>
+            {connectionLabel}
+          </span>
         </span>
-        <button className="terminal-close" title="Close Terminal" onClick={onClose}>
-          ×
-        </button>
+        <div className="terminal-header-actions">
+          <button className="terminal-action" title="Copy terminal" onClick={handleCopy}>
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <button className="terminal-action" title="Clear" onClick={handleClear}>
+            Clear
+          </button>
+          {isSystem && (
+            <button className="terminal-action" title="Kill session" onClick={handleKill}>
+              Kill
+            </button>
+          )}
+          <button className="terminal-close" title="Close Terminal" onClick={onClose}>
+            ×
+          </button>
+        </div>
       </header>
       <div className="terminal-body" ref={bodyRef}>
         {lines.map((line, index) => (

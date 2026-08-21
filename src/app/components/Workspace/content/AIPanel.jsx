@@ -41,6 +41,7 @@ import AIConversations from "./AIConversations";
 import AIProviderCapabilities from "./AIProviderCapabilities";
 import AIActionHistory from "./AIActionHistory";
 import AgentWorkflowDemo from "./AgentWorkflowDemo";
+import AISetup from "./AISetup";
 import { approvalRequestFor } from "../../../lib/ai/toolApproval";
 import { createActionHistory } from "../../../lib/ai/actionHistory";
 
@@ -855,6 +856,8 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         registry={browserRegistry}
         onStateChange={handleBrowserStateChange}
       />
+
+      {(status === "unavailable" || status === "not-ready") && <AISetup providerId={providerId} />}
 
       {contextPreview && (
         <div className="ai-context">

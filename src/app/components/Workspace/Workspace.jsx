@@ -7,6 +7,7 @@ import ProjectsPage from "../Projects/ProjectsPage";
 import { useState } from "react";
 import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
 import { useToast } from "../../contexts/ToastContext";
+import Onboarding, { isOnboardingCompleted } from "../Onboarding/Onboarding";
 
 function loadProjects() {
   try {
@@ -23,6 +24,7 @@ export default function Workspace() {
     () => loadWorkspace()?.projectId || null
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingCompleted());
 
   const { toast } = useToast();
 
@@ -100,6 +102,12 @@ export default function Workspace() {
 
   return (
 <div className="workspace">
+  {showOnboarding && (
+    <Onboarding
+      onComplete={() => setShowOnboarding(false)}
+      onSkip={() => setShowOnboarding(false)}
+    />
+  )}
   {selectedProject ? (
     <IdeWorkspace selectedProject={selectedProject} />
   ) : (

@@ -17,6 +17,8 @@ import GoToLineDialog from "./GoToLineDialog";
 import GoToFileDialog from "./GoToFileDialog";
 import GoToSymbolDialog from "./GoToSymbolDialog";
 import { createTerminalService, createBrowserSimulationBackend } from "../../../lib/terminal";
+import { createSystemTerminalBackend, checkBridgeHealth, getBridgeToken } from "../../../lib/terminal/backends/systemTerminalBackend";
+import { useWorkspaceLayout } from "../../../hooks/useWorkspaceLayout";
 import {
   openProjectDirectory,
   readFile,
@@ -62,31 +64,6 @@ const STATUS_MESSAGES = {
   error: "ModCodes could not read this project's folder.",
 };
 
-const DEFAULT_LAYOUT = {
-  leftOpen: true,
-  leftTab: "explorer",
-  terminalOpen: false,
-  rightOpen: false,
-  rightTab: "problems",
-  leftWidth: 280,
-  rightWidth: 300,
-  terminalHeight: 220,
-};
-
-const LAYOUT_STORAGE_KEY = "modcodes.ide.layout.v1";
-
-function loadLayoutState() {
-  try {
-    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
-    if (!raw) {
-      return DEFAULT_LAYOUT;
-    }
-    return { ...DEFAULT_LAYOUT, ...JSON.parse(raw) };
-  } catch (error) {
-    return DEFAULT_LAYOUT;
-  }
-}
-
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -96,7 +73,7 @@ export default function IdeWorkspace({ selectedProject }) {
   const [status, setStatus] = useState("requesting");
   const [tree, setTree] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [layout, setLayout] = useState(loadLayoutState);
+  const { layout, setLayout, toggleLeftPanel, startResize } = useWorkspaceLayout();
   const [revealRequest, setRevealRequest] = useState(null);
   const [explorerRevealRequest, setExplorerRevealRequest] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -113,6 +90,18 @@ export default function IdeWorkspace({ selectedProject }) {
   const monacoSelectionRef = useRef(null);
   const contextCacheRef = useRef(createContextCache({ ttlMs: 2000 }));
   const graphNeighborsRef = useRef(null);
+  const [bridgeAvailable, setBridgeAvailable] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    checkBridgeHealth().then((r) => {
+      if (!cancelled) {
+        setBridgeAvailable(r.ok);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const terminalProvider = useMemo(() => {
     function findTreeNode(node, segments) {
       let current = node;
@@ -155,17 +144,19 @@ export default function IdeWorkspace({ selectedProject }) {
       };
     }
 
-    const backend = createBrowserSimulationBackend({
-      readDirectory,
-      getRootPath: () => tree?.name || null,
-    });
+    const useSystem = bridgeAvailable && Boolean(getBridgeToken());
+    const backend = useSystem
+      ? createSystemTerminalBackend({ getToken: getBridgeToken, getRootPath: () => tree?.name || null })
+      : createBrowserSimulationBackend({
+          readDirectory,
+          getRootPath: () => tree?.name || null,
+        });
     return createTerminalService({ backend });
-  }, [tree]);
+  }, [tree, bridgeAvailable]);
   const persistTimer = useRef(null);
   const restoreAttemptedRef = useRef(false);
 
   const { toast } = useToast();
-  const { settings } = useSettings();
 
   const {
     tabs,
@@ -207,50 +198,6 @@ export default function IdeWorkspace({ selectedProject }) {
       terminalProvider.dispose();
     };
   }, [terminalProvider]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
-    } catch (error) {
-      // Layout persistence is best-effort only.
-    }
-  }, [layout]);
-
-  const toggleLeftPanel = useCallback((tab) => {
-    setLayout((current) => {
-      if (current.leftOpen && current.leftTab === tab) {
-        return { ...current, leftOpen: false };
-      }
-      return { ...current, leftOpen: true, leftTab: tab };
-    });
-  }, []);
-
-  const startResize = useCallback(({ horizontal, getSize, setSize }) => {
-    return (event) => {
-      event.preventDefault();
-      const startPosition = horizontal ? event.clientY : event.clientX;
-      const startSize = getSize();
-
-      const onMove = (moveEvent) => {
-        const delta = horizontal
-          ? moveEvent.clientY - startPosition
-          : moveEvent.clientX - startPosition;
-        setSize(startSize + delta);
-      };
-
-      const onUp = () => {
-        window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", onUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      };
-
-      document.body.style.cursor = horizontal ? "row-resize" : "col-resize";
-      document.body.style.userSelect = "none";
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
-    };
-  }, []);
 
   useEffect(() => {
     if (status !== "requesting") {
@@ -962,6 +909,7 @@ export default function IdeWorkspace({ selectedProject }) {
     switchToRelativeTab,
     handlePendingCancel,
     closePalette,
+    setLayout,
   ]);
 
   const openPaths = tabs.map((tab) => tab.path);
@@ -1029,7 +977,8 @@ export default function IdeWorkspace({ selectedProject }) {
       diagnostics,
       budget,
     };
-  }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget, getSelectionForAi]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- settings from context is stable and correctly triggers re-render
+  }, [activePath, activeTab, tabs, diagnostics, settings, getSelectionForAi]);
 
   const triggerAiAction = useCallback(
     (actionId) => {
@@ -1047,7 +996,7 @@ export default function IdeWorkspace({ selectedProject }) {
         setLayout((current) => ({ ...current, rightOpen: true, rightTab: "ai" }));
       }
     },
-    [getSelectionForAi, activeTab, activePath]
+    [getSelectionForAi, activeTab, activePath, setLayout]
   );
 
   const triggerWorkspaceCommand = useCallback(
@@ -1066,7 +1015,7 @@ export default function IdeWorkspace({ selectedProject }) {
         setAiPrompt({ content: prompt, token: Date.now(), actionId: commandId });
       }
     },
-    [tree, tabs, diagnostics]
+    [tree, tabs, diagnostics, setLayout]
   );
 
   const handleApplyDiff = useCallback(

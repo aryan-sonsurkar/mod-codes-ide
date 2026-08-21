@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { createOllamaProvider } from "../../lib/ai";
+import { checkBridgeHealth, getBridgeToken, setBridgeToken } from "../../lib/terminal/backends/systemTerminalBackend";
 import "./SettingsPage.css";
 
 const CATEGORIES = [
@@ -181,6 +182,8 @@ export default function SettingsPage() {
   const [activeCategory, setActiveCategory] = useState("editor");
   const [cacheStatus, setCacheStatus] = useState("");
   const [historyStatus, setHistoryStatus] = useState("");
+  const [bridgeToken, setBridgeTokenState] = useState(() => getBridgeToken() || "");
+  const [bridgeStatus, setBridgeStatus] = useState({ kind: "idle" });
 
   const handleClearCache = async () => {
     try {
@@ -209,6 +212,16 @@ export default function SettingsPage() {
       window.setTimeout(() => setHistoryStatus(""), 2000);
     } catch {
       setHistoryStatus("Could not clear history");
+    }
+  };
+
+  const handleTestBridge = async () => {
+    setBridgeStatus({ kind: "checking" });
+    const result = await checkBridgeHealth();
+    if (result.ok) {
+      setBridgeStatus({ kind: "ok", message: "Bridge connected on 127.0.0.1:8787" });
+    } else {
+      setBridgeStatus({ kind: "error", message: result.reason || "Bridge unreachable" });
     }
   };
 
@@ -317,7 +330,7 @@ export default function SettingsPage() {
           <>
             <h3 className="settings-category-title">Terminal</h3>
             <p className="settings-category-description">
-              Control how the terminal looks.
+              Control how the terminal looks and connect the optional local system bridge.
             </p>
             <div className="settings-group">
               <NumberRow
@@ -331,6 +344,42 @@ export default function SettingsPage() {
                   updateSetting("terminal", "fontSize", value)
                 }
               />
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">Local bridge token</span>
+                  <span className="settings-row-description">
+                    Paste the token from `node tools/modcodes-bridge/server.js` (localhost only). Stored as modcodes.bridge.token.
+                  </span>
+                </div>
+                <input
+                  className="settings-text-input"
+                  type="password"
+                  spellCheck="false"
+                  value={bridgeToken}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setBridgeTokenState(next);
+                    setBridgeToken(next);
+                  }}
+                  placeholder="Paste 64-char hex token"
+                />
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">Test bridge</span>
+                  <span className="settings-row-description">Checks http://127.0.0.1:8787/health with the stored token.</span>
+                </div>
+                <div className="settings-connection-control">
+                  {bridgeStatus.kind === "ok" && <span className="settings-connection-ok">{bridgeStatus.message}</span>}
+                  {bridgeStatus.kind === "error" && <span className="settings-connection-error">{bridgeStatus.message}</span>}
+                  <button type="button" className="settings-connection-button" onClick={handleTestBridge} disabled={bridgeStatus.kind === "checking"}>
+                    {bridgeStatus.kind === "checking" ? "Testing…" : "Test"}
+                  </button>
+                </div>
+              </div>
+              <div className="settings-ai-note">
+                The system terminal is USER-ONLY. AI cannot execute shell commands. Bridge binds only to 127.0.0.1 and requires explicit pairing.
+              </div>
             </div>
           </>
         )}
