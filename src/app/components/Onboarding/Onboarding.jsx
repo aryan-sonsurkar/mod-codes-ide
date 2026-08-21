@@ -39,20 +39,25 @@ export function clearOnboardingForTests() {
 export default function Onboarding({ onComplete, onSkip }) {
   const [step, setStep] = useState(0);
   const [aiChoice, setAiChoice] = useState(null);
+  const [dontShowAgain, setDontShowAgain] = useState(true);
 
   const handleNext = () => {
     if (step === 2) {
-      completeOnboarding();
-      onComplete && onComplete({ aiChoice });
+      if (dontShowAgain) {
+        completeOnboarding();
+      }
+      onComplete && onComplete({ aiChoice, dontShowAgain });
       return;
     }
     setStep((s) => s + 1);
   };
 
   const handleSkip = () => {
-    completeOnboarding();
+    if (dontShowAgain) {
+      completeOnboarding();
+    }
     onSkip && onSkip();
-    onComplete && onComplete({ aiChoice: "skip" });
+    onComplete && onComplete({ aiChoice: "skip", dontShowAgain });
   };
 
   return (
@@ -111,6 +116,14 @@ export default function Onboarding({ onComplete, onSkip }) {
               <li>Terminal: browser simulation by default; optional local bridge (localhost only, explicit pairing) for system shell.</li>
               <li>All AI is local-first: Ollama or Browser AI, no cloud proxy.</li>
             </ul>
+            <label className="onboarding-dont-show">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+              />
+              Don&apos;t show again
+            </label>
           </>
         )}
         <div className="onboarding-actions">
