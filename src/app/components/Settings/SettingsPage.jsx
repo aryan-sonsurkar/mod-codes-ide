@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { createOllamaProvider } from "../../lib/ai";
 import { checkBridgeHealth, getBridgeToken, setBridgeToken } from "../../lib/terminal/backends/systemTerminalBackend";
+import DiagnosticsCenter from "../Diagnostics/DiagnosticsCenter";
 import "./SettingsPage.css";
 
 const CATEGORIES = [
@@ -11,6 +12,7 @@ const CATEGORIES = [
   { id: "terminal", label: "Terminal" },
   { id: "ai", label: "AI & Coder" },
   { id: "advanced", label: "Advanced" },
+  { id: "diagnostics", label: "Diagnostics" },
 ];
 
 function ToggleRow({ label, description, checked, onChange }) {
@@ -518,6 +520,14 @@ export default function SettingsPage() {
               <ActionRow label="Reset settings" description="Restore all settings to defaults and clear onboarding. The page will reload." buttonLabel="Reset" onAction={handleResetSettings} />
               <div className="settings-ai-note">All data stays local. No cloud sync. See docs/SECURITY_PRIVACY_AUDIT.md for full audit.</div>
             </div>
+          </>
+        )}
+
+        {activeCategory === "diagnostics" && (
+          <>
+            <h3 className="settings-category-title">Diagnostics</h3>
+            <p className="settings-category-description">Browser and system status — generated locally, never sent anywhere.</p>
+            <DiagnosticsCenter />
           </>
         )}
       </div>

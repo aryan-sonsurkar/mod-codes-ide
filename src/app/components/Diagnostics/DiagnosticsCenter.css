@@ -1,0 +1,92 @@
+.diagnostics-center {
+  padding: 14px 16px;
+  background-color: var(--surface-bg);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.diagnostics-center h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-base);
+  color: var(--primary-text);
+}
+
+.diagnostics-note {
+  margin: 0 0 12px;
+  color: var(--secondary-text);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.diagnostics-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diagnostics-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background-color: var(--workspace-bg);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.diagnostics-status-supported {
+  color: var(--success-color);
+}
+
+.diagnostics-status-unavailable {
+  color: var(--danger-color);
+}
+
+.diagnostics-status-unknown {
+  color: var(--muted-text);
+}
+
+.diagnostics-copy {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--primary-text);
+  cursor: pointer;
+}
+
+.diagnostics-copy:hover {
+  background-color: var(--hover-color);
+}
+
+.error-boundary {
+  padding: 24px;
+  background-color: var(--surface-bg);
+  border: 2px solid var(--danger-color);
+  border-radius: var(--radius-md);
+  color: var(--primary-text);
+}
+
+.error-boundary h2 {
+  margin: 0 0 8px;
+  color: var(--danger-color);
+}
+
+.error-boundary-hint {
+  margin: 8px 0;
+  color: var(--secondary-text);
+  font-size: var(--text-sm);
+}
+
+.error-boundary-retry {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-color);
+  color: white;
+  cursor: pointer;
+}

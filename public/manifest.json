@@ -1,0 +1,23 @@
+{
+  "name": "MODCODES — Browser IDE with Local AI",
+  "short_name": "MODCODES",
+  "description": "A fast, private, browser-based development environment with local AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#22183A",
+  "theme_color": "#8B5CF6",
+  "icons": [
+    {
+      "src": "/file.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/window.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
