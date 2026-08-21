@@ -18,6 +18,7 @@ export default function MonacoEditor({
   revealRequest,
   focusHandleRef,
   findHandleRef,
+  selectionHandleRef,
 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -242,6 +243,42 @@ export default function MonacoEditor({
       findHandleRef.current = null;
     };
   }, [findHandleRef]);
+
+  useEffect(() => {
+    if (!selectionHandleRef) {
+      return;
+    }
+
+    selectionHandleRef.current = {
+      getSelection: () => {
+        const editor = editorRef.current;
+        if (!editor) {
+          return null;
+        }
+        const selection = editor.getSelection();
+        if (!selection) {
+          return null;
+        }
+        const model = editor.getModel();
+        if (!model) {
+          return null;
+        }
+        const text = model.getValueInRange(selection);
+        if (!text) {
+          return null;
+        }
+        return {
+          text,
+          startLine: selection.startLineNumber,
+          endLine: selection.endLineNumber,
+        };
+      },
+    };
+
+    return () => {
+      selectionHandleRef.current = null;
+    };
+  }, [selectionHandleRef]);
 
   useEffect(() => {
     const openSet = new Set(openPathsKey === "" ? [] : openPathsKey.split("\n"));

@@ -48,6 +48,14 @@ export {
   registerOllamaProvider,
 } from "./providers";
 export {
+  MODCODES_CODER_PROVIDER_ID,
+  MODCODES_CODER_PROVIDER_NAME,
+  MODCODES_CODER_VERSION,
+  MODCODES_CODER_CAPABILITIES,
+  createModcodesCoderProvider,
+  registerModcodesCoderProvider,
+} from "./providers/modcodesCoder";
+export {
   MODEL_CATALOG,
   MODEL_KINDS,
   QUANT_FACTORS,
@@ -74,6 +82,97 @@ export {
   formatDurationMs,
   createStatsTracker,
 } from "./instrumentation";
+export {
+  CONVERSATION_ROLES,
+  CONVERSATION_STATES,
+  createMessage,
+  createConversation,
+  appendMessage,
+  updateMessage,
+  clearConversation,
+  conversationToHistory,
+  resetMessageIdForTests,
+} from "./conversation";
+export {
+  CODE_ACTION_IDS,
+  CODE_ACTIONS,
+  getCodeAction,
+  buildCodeActionPrompt,
+  isSelectionRequired,
+} from "./codeActions";
+export {
+  computeChangedRanges,
+  createDiff,
+  acceptDiff,
+  rejectDiff,
+  createDiffSession,
+  createMultiFileDiffSession,
+  resetDiffIdForTests,
+} from "./diffEngine";
+export {
+  WORKSPACE_COMMAND_IDS,
+  WORKSPACE_COMMANDS,
+  getWorkspaceCommand,
+  buildWorkspacePrompt,
+} from "./workspaceCommands";
+export {
+  REFERENCE_TYPES,
+  createReference,
+  parseReferencesFromText,
+  referencesFromDiagnostics,
+  referencesFromSymbols,
+} from "./references";
+export {
+  requiresApproval,
+  approvalRequestFor,
+  canAutoRun,
+} from "./toolApproval";
+export {
+  loadConversations,
+  saveConversations,
+  createStoredConversation,
+  clearConversations,
+  CONVERSATION_STORAGE_KEY,
+} from "./conversationStorage";
+export {
+  CAPABILITIES,
+  normalizeCapabilities,
+  hasCapability,
+  describeCapability as describeAiCapability,
+  capabilityStatus,
+} from "./capabilities";
+export {
+  CHANGESET_OPERATIONS,
+  CHANGESET_STATUSES,
+  createChangesetOperation,
+  createChangeset,
+  changesetSummary,
+  approveOperation,
+  rejectOperation,
+  applyOperation,
+  canApply,
+  resetChangesetIdsForTests,
+} from "./changeset";
+export {
+  createActionEntry,
+  createActionHistory,
+  resetActionIdForTests,
+} from "./actionHistory";
+export {
+  TASK_STATES,
+  STEP_STATES,
+  createAgentTask,
+  createAgentStep,
+  createAgentSession,
+  resetAgentIdsForTests,
+} from "./agentTask";
+export {
+  rankWorkspaceContext,
+} from "./relevanceRanking";
+export {
+  measureContextBuild,
+  createContextCache,
+} from "./contextPerformance";
 export {
   WEBGPU_STATES,
   WEBGPU_REASONS,

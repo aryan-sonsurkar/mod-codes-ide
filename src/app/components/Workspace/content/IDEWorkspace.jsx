@@ -46,6 +46,9 @@ import { friendlyError } from "../../../lib/errors/messages";
 import { useToast } from "../../../contexts/ToastContext";
 import { useSettings } from "../../../contexts/SettingsContext";
 import { clampBudget } from "../../../lib/ai/context/budget";
+import { CODE_ACTIONS, buildCodeActionPrompt } from "../../../lib/ai/codeActions";
+import { WORKSPACE_COMMANDS, buildWorkspacePrompt } from "../../../lib/ai/workspaceCommands";
+import { acceptDiff } from "../../../lib/ai/diffEngine";
 
 const STATUS_MESSAGES = {
   requesting: "Requesting access to this project's folder...",
@@ -102,8 +105,10 @@ export default function IdeWorkspace({ selectedProject }) {
   const [symbolSearch, setSymbolSearch] = useState(null);
   const [replaceConfirm, setReplaceConfirm] = useState(null);
   const [conflict, setConflict] = useState(null);
+  const [aiPrompt, setAiPrompt] = useState(null);
   const monacoFocusRef = useRef(null);
   const monacoFindRef = useRef(null);
+  const monacoSelectionRef = useRef(null);
   const terminalProvider = useMemo(() => {
     function findTreeNode(node, segments) {
       let current = node;
@@ -784,6 +789,18 @@ export default function IdeWorkspace({ selectedProject }) {
         monacoFindRef.current?.find();
       },
     },
+    ...CODE_ACTIONS.map((action) => ({
+      id: action.id,
+      title: action.title,
+      shortcut: "",
+      execute: () => triggerAiAction(action.id),
+    })),
+    ...WORKSPACE_COMMANDS.map((command) => ({
+      id: command.id,
+      title: command.title,
+      shortcut: "",
+      execute: () => triggerWorkspaceCommand(command.id),
+    })),
   ];
 
   function handleCommandSelect(command) {
@@ -947,6 +964,14 @@ export default function IdeWorkspace({ selectedProject }) {
   const activeTab = tabs.find((tab) => tab.path === activePath) || null;
   const pendingTab = tabs.find((tab) => tab.path === pendingClosePath) || null;
 
+  const getSelectionForAi = useCallback(() => {
+    const sel = monacoSelectionRef.current?.getSelection?.();
+    if (!sel || !activePath) {
+      return null;
+    }
+    return { path: activePath, text: sel.text, startLine: sel.startLine, endLine: sel.endLine };
+  }, [activePath]);
+
   const getAiContext = useCallback(() => {
     const currentFile =
       activePath && typeof activeTab?.content === "string"
@@ -956,6 +981,8 @@ export default function IdeWorkspace({ selectedProject }) {
             language: activeTab.language || null,
           }
         : null;
+
+    const selection = getSelectionForAi();
 
     const openDocuments = tabs
       .filter((tab) => typeof tab.content === "string")
@@ -967,12 +994,81 @@ export default function IdeWorkspace({ selectedProject }) {
 
     return {
       currentFile,
+      selection,
       openDocuments,
       diagnostics,
       budget: clampBudget(settings.ai?.contextBudget),
-      sources: ["currentFile", "openDocuments", "diagnostics"],
     };
-  }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget]);
+  }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget, getSelectionForAi]);
+
+  const triggerAiAction = useCallback(
+    (actionId) => {
+      const selection = getSelectionForAi();
+      const context = {
+        selection: selection?.text || null,
+        fileContent: activeTab?.content || null,
+        path: activePath,
+      };
+      const prompt = buildCodeActionPrompt(actionId, context);
+      if (prompt) {
+        setLayout((current) => ({ ...current, rightOpen: true, rightTab: "ai" }));
+        setAiPrompt({ content: prompt, selection, token: Date.now(), actionId });
+      } else {
+        setLayout((current) => ({ ...current, rightOpen: true, rightTab: "ai" }));
+      }
+    },
+    [getSelectionForAi, activeTab, activePath]
+  );
+
+  const triggerWorkspaceCommand = useCallback(
+    (commandId) => {
+      const context = {
+        fileTree: tree,
+        openDocuments: tabs.map((tab) => ({ path: tab.path, dirty: tab.dirty })),
+        diagnostics,
+        graph: null,
+        symbols: null,
+        searchResults: null,
+      };
+      const prompt = buildWorkspacePrompt(commandId, context);
+      if (prompt) {
+        setLayout((current) => ({ ...current, rightOpen: true, rightTab: "ai" }));
+        setAiPrompt({ content: prompt, token: Date.now(), actionId: commandId });
+      }
+    },
+    [tree, tabs, diagnostics]
+  );
+
+  const handleApplyDiff = useCallback(
+    (diff) => {
+      const dummyManager = {
+        setContent: (path, name, content, savedContent) => {
+          setTabContent(path, content);
+        },
+      };
+      acceptDiff(dummyManager, diff);
+      toast(`Applied suggestion to ${diff.path}. Save to write to disk.`, "success");
+    },
+    [setTabContent, toast]
+  );
+
+  const handleAiNavigate = useCallback(
+    (ref) => {
+      if (!ref || !ref.path) {
+        return;
+      }
+      openFile({ path: ref.path, name: ref.path.split("/").pop() });
+      if (ref.line) {
+        setRevealRequest((current) => ({
+          token: (current?.token || 0) + 1,
+          path: ref.path,
+          line: ref.line,
+        }));
+      }
+      monacoFocusRef.current?.focus();
+    },
+    [openFile]
+  );
   const canRetry = ["cancelled", "denied", "error"].includes(status);
 
   return (
@@ -1142,6 +1238,7 @@ export default function IdeWorkspace({ selectedProject }) {
                 revealRequest={revealRequest}
                 focusHandleRef={monacoFocusRef}
                 findHandleRef={monacoFindRef}
+                selectionHandleRef={monacoSelectionRef}
                 onNavigateDirectory={handleBreadcrumbNavigate}
               />
             </div>
@@ -1274,7 +1371,12 @@ export default function IdeWorkspace({ selectedProject }) {
                     ) : layout.rightTab === "git" ? (
                       <GitPanel tree={tree} />
                     ) : layout.rightTab === "ai" ? (
-                      <AIPanel getContextData={getAiContext} />
+                      <AIPanel
+                        getContextData={getAiContext}
+                        externalPrompt={aiPrompt}
+                        onApplyDiff={handleApplyDiff}
+                        onNavigate={handleAiNavigate}
+                      />
                     ) : (
                       <ProblemsPanel
                         diagnostics={diagnostics}

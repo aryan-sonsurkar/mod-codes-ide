@@ -31,8 +31,16 @@ const FEATURES = [
     description: "Read and save files directly on your machine.",
   },
   {
-    title: "Terminal Foundation",
-    description: "A terminal-ready architecture for future runtimes.",
+    title: "Browser AI — Bonsai",
+    description: "Run a capable model locally in your browser via WebGPU. No cloud proxy.",
+  },
+  {
+    title: "Ollama Integration",
+    description: "Connect to a local Ollama server for larger models, same UX.",
+  },
+  {
+    title: "AI-Assisted Development",
+    description: "Explain code, find bugs, and navigate references — all privacy-first.",
   },
 ];
 
@@ -73,8 +81,8 @@ const REASONS = [
     description: "Pick a folder and start — that's it.",
   },
   {
-    title: "Engineered for the future",
-    description: "An architecture ready for AI capabilities down the line.",
+    title: "Privacy-first AI",
+    description: "Your files and conversations stay on your machine. Local inference only.",
   },
 ];
 
@@ -90,11 +98,9 @@ export default function Landing() {
 
       <main>
         <section className="landing-hero">
-          <h1 className="landing-hero-title">Your development environment, built for the browser.</h1>
+          <h1 className="landing-hero-title">A browser-based development environment with local-first AI.</h1>
           <p className="landing-hero-subtitle">
-            MODCODES is a local-first coding workspace that connects directly
-            to your files. Explore projects, edit code with Monaco, search
-            your workspace, and drive everything from your keyboard.
+            MODCODES connects directly to your files and understands your code. Use Ollama or the in-browser Bonsai model — no cloud backend, no account. Explore projects, edit with Monaco, and let AI assist where you choose.
           </p>
           <div className="landing-hero-actions">
             <Link className="landing-cta landing-cta-primary" href="/projects">

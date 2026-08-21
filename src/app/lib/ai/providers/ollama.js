@@ -15,7 +15,7 @@ import { serializeContextItems } from "../context";
 export const OLLAMA_PROVIDER_ID = "ollama";
 export const OLLAMA_PROVIDER_NAME = "Ollama";
 export const OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434";
-export const OLLAMA_CAPABILITIES = ["chat", "streaming"];
+export const OLLAMA_CAPABILITIES = ["chat", "streaming", "cancellation", "local", "statistics"];
 export const OLLAMA_REQUEST_TIMEOUT_MS = 60_000;
 
 export const OLLAMA_OPTION_KEYS = [

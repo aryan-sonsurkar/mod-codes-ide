@@ -246,6 +246,13 @@
   line-height: 1.5;
 }
 
+.settings-inline-status {
+  color: rgb(80, 190, 120);
+  font-size: 12px;
+  margin-top: -4px;
+  padding-left: 2px;
+}
+
 @media (max-width: 768px) {
   .settings-page {
     flex-direction: column;

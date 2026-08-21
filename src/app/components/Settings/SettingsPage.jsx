@@ -162,9 +162,55 @@ function ConnectionRow({ value }) {
   );
 }
 
+function ActionRow({ label, description, buttonLabel, onAction }) {
+  return (
+    <div className="settings-row">
+      <div className="settings-row-info">
+        <span className="settings-row-label">{label}</span>
+        {description && <span className="settings-row-description">{description}</span>}
+      </div>
+      <button type="button" className="settings-connection-button" onClick={onAction}>
+        {buttonLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { settings, updateSetting } = useSettings();
   const [activeCategory, setActiveCategory] = useState("editor");
+  const [cacheStatus, setCacheStatus] = useState("");
+  const [historyStatus, setHistoryStatus] = useState("");
+
+  const handleClearCache = async () => {
+    try {
+      if (typeof caches !== "undefined" && caches.delete) {
+        await caches.delete("modcodes-ai-v1");
+      }
+      if (typeof localStorage !== "undefined") {
+        const keys = Object.keys(localStorage).filter((k) => k.startsWith("modcodes.ai"));
+        for (const key of keys) {
+          localStorage.removeItem(key);
+        }
+      }
+      setCacheStatus("Cache cleared");
+      window.setTimeout(() => setCacheStatus(""), 2000);
+    } catch {
+      setCacheStatus("Could not clear cache");
+    }
+  };
+
+  const handleClearHistory = () => {
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("modcodes.ai.conversations.v1");
+      }
+      setHistoryStatus("History cleared");
+      window.setTimeout(() => setHistoryStatus(""), 2000);
+    } catch {
+      setHistoryStatus("Could not clear history");
+    }
+  };
 
   return (
     <section className="settings-page">
@@ -341,6 +387,27 @@ export default function SettingsPage() {
                 available to the model. The AI never receives the whole project,
                 secrets, or environment variables, and cannot run commands or
                 modify files.
+              </div>
+              <div className="settings-ai-note">
+                <strong>Privacy:</strong> conversations are stored locally in this browser only. No telemetry is sent anywhere.
+                Secrets (.env, keys, tokens) are never transmitted. Disable persistence by clearing history.
+              </div>
+              <ActionRow
+                label="Clear AI cache"
+                description="Removes cached Bonsai weights from this browser."
+                buttonLabel="Clear cache"
+                onAction={handleClearCache}
+              />
+              {cacheStatus && <p className="settings-inline-status">{cacheStatus}</p>}
+              <ActionRow
+                label="Clear conversation history"
+                description="Deletes locally stored conversations."
+                buttonLabel="Clear history"
+                onAction={handleClearHistory}
+              />
+              {historyStatus && <p className="settings-inline-status">{historyStatus}</p>}
+              <div className="settings-ai-note">
+                <strong>Browser AI:</strong> runs locally on your GPU via WebGPU after downloading the Bonsai model. Ollama runs as a local server at the URL above.
               </div>
             </div>
           </>

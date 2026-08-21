@@ -1,19 +1,22 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./AIPanel.css";
-import { Bot, Cpu, RefreshCw, Send, ShieldCheck, Square } from "lucide-react";
+import { Bot, Cpu, RefreshCw, Send, ShieldCheck, Square, Copy, Check } from "lucide-react";
 import {
   AI_ERRORS,
   BUILTIN_READONLY_TOOLS,
+  CONVERSATION_STATES,
   MODEL_STATES,
   buildContext,
   buildContextPreview,
   createAiSession,
   createBrowserBonsaiProvider,
   createBrowserRuntime,
+  createDiff,
   createHardwareProfile,
+  createMessage,
   createModelRegistry,
-  createOllamaProvider,
+  createStoredConversation,
   createTool,
   createToolRegistry,
   describeDeviceTier,
@@ -23,10 +26,22 @@ import {
   formatTokensPerSecond,
   hardwareTier,
   isWebGpuAvailable,
+  loadConversations,
+  parseReferencesFromText,
   recommendModels,
+  saveConversations,
 } from "../../../lib/ai";
 import { useSettings } from "../../../contexts/SettingsContext";
 import BrowserAISection from "./BrowserAISection";
+import AIContextInspector from "./AIContextInspector";
+import AIReferences from "./AIReferences";
+import AIDiffPreview, { hasCodeBlock, extractCodeBlocks } from "./AIDiffPreview";
+import AIToolApproval from "./AIToolApproval";
+import AIConversations from "./AIConversations";
+import AIProviderCapabilities from "./AIProviderCapabilities";
+import AIActionHistory from "./AIActionHistory";
+import { approvalRequestFor } from "../../../lib/ai/toolApproval";
+import { createActionHistory } from "../../../lib/ai/actionHistory";
 
 const BROWSER_MODEL_ID = "bonsai-1.7b";
 
@@ -115,7 +130,7 @@ function statusLabel(status, providerId) {
   return providerId === "browser-bonsai" ? "Bonsai is not ready" : "Ollama is not reachable";
 }
 
-export default function AIPanel({ getContextData }) {
+export default function AIPanel({ getContextData, externalPrompt = null, onApplyDiff = null, onNavigate = null }) {
   const { settings, updateSetting } = useSettings();
   const [providerId, setProviderId] = useState(
     settings.ai?.provider === "browser-bonsai" ? "browser-bonsai" : "ollama"
@@ -128,6 +143,7 @@ export default function AIPanel({ getContextData }) {
   const [input, setInput] = useState("");
   const [streamingText, setStreamingText] = useState("");
   const [sending, setSending] = useState(false);
+  const [generationState, setGenerationState] = useState(CONVERSATION_STATES.idle);
   const [contextPreview, setContextPreview] = useState(null);
   const [retryToken, setRetryToken] = useState(0);
   const [toolActivity, setToolActivity] = useState(null);
@@ -135,6 +151,14 @@ export default function AIPanel({ getContextData }) {
   const [browserModelInfo, setBrowserModelInfo] = useState(null);
   const [browserRegistry, setBrowserRegistry] = useState(null);
   const [lastStats, setLastStats] = useState(null);
+  const [excludedSources, setExcludedSources] = useState(() => new Set());
+  const [contextForInspector, setContextForInspector] = useState(null);
+  const [pendingApproval, setPendingApproval] = useState(null);
+  const [appliedDiffId, setAppliedDiffId] = useState(null);
+  const [conversations, setConversations] = useState(() => loadConversations());
+  const [activeConversationId, setActiveConversationId] = useState(null);
+  const actionHistoryRef = useRef(createActionHistory({ limit: 50 }));
+  const [actionEntries, setActionEntries] = useState([]);
 
   const sessionRef = useRef(null);
   const streamRef = useRef("");
@@ -333,92 +357,340 @@ export default function AIPanel({ getContextData }) {
       setContextPreview(null);
       setToolActivity(null);
       setStreamingText("");
+      setGenerationState(CONVERSATION_STATES.idle);
     },
     [providerId, updateSetting]
   );
 
-  const handleSend = useCallback(async () => {
-    const content = input.trim();
-    const session = sessionRef.current;
-    if (!content || sending || !session || status !== "connected") {
-      return;
-    }
-
-    const context = buildContext({
-      ...(getContextData ? getContextData() : {}),
-      model: models.find((model) => model.id === modelId) || null,
-    });
-    setContextPreview(buildContextPreview(context));
-
-    setInput("");
-    setSending(true);
+  const handleClearConversation = useCallback(() => {
+    sessionRef.current?.clear();
+    setMessages([]);
+    setContextPreview(null);
+    setContextForInspector(null);
+    setToolActivity(null);
     setStreamingText("");
-    streamRef.current = "";
-    setMessages((current) => [...current, { role: "user", content }]);
+    setGenerationState(CONVERSATION_STATES.idle);
+    setLastStats(null);
+    setPendingApproval(null);
+  }, []);
 
-    try {
-      const result = await session.sendMessage({
-        content,
-        context,
-        options:
-          providerId === "ollama" &&
-          models.find((model) => model.id === modelId)?.contextLength
-            ? { num_ctx: models.find((model) => model.id === modelId).contextLength }
-            : {},
-        maxToolRounds: settings.ai?.maxToolRounds ?? 2,
-        tools: BUILTIN_READONLY_TOOLS,
-        toolRunner: async ({ toolName, arguments: args }) =>
-          executeToolCall({
-            registry: toolRegistryRef.current,
-            toolName,
-            args,
-            permission: "read",
-          }),
-        onTool: ({ toolCalls }) => {
-          setToolActivity(toolCalls.map((call) => call.toolName));
-        },
-        onDelta: (text) => {
-          streamRef.current = text;
-          setStreamingText(text);
-        },
+  const persistConversation = useCallback(
+    (nextMessages) => {
+      if (nextMessages.length === 0) {
+        return;
+      }
+      const title = nextMessages.find((m) => m.role === "user")?.content.slice(0, 40) || "Conversation";
+      const record = createStoredConversation({
+        title,
+        provider: providerId,
+        model: modelId,
+        messages: nextMessages,
       });
-      if (result && result.stats) {
-        setLastStats({ ...result.stats, model: modelId, provider: providerId });
+      const next = [record, ...conversations].slice(0, 20);
+      setConversations(next);
+      saveConversations(next);
+      setActiveConversationId(record.id);
+    },
+    [conversations, providerId, modelId]
+  );
+
+  const handleCreateConversation = useCallback(() => {
+    handleClearConversation();
+    setActiveConversationId(null);
+  }, [handleClearConversation]);
+
+  const handleSelectConversation = useCallback(
+    (id) => {
+      const found = conversations.find((c) => c.id === id);
+      if (!found) {
+        return;
       }
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", content: result.text },
-      ]);
-    } catch (error) {
-      const code = error && error.code;
-      if (code === AI_ERRORS.cancelled) {
-        const last = session.history().at(-1);
-        if (last && last.role === "assistant") {
-          setMessages((current) => [
-            ...current,
-            { role: "assistant", content: last.content },
-          ]);
+      setActiveConversationId(id);
+      const restored = found.messages.map((m) =>
+        createMessage({ role: m.role, content: m.content, id: m.id, timestamp: m.timestamp })
+      );
+      setMessages(restored);
+      sessionRef.current?.clear();
+      for (const message of restored) {
+        if (message.role === "user" || message.role === "assistant") {
+          try {
+            sessionRef.current?.addMessage(message.role, message.content);
+          } catch {
+            // ignore
+          }
         }
-      } else {
-        const message =
-          error && typeof error.message === "string"
-            ? error.message
-            : "The AI request failed.";
-        setMessages((current) => [
-          ...current,
-          { role: "error", content: message },
-        ]);
       }
-    } finally {
-      setSending(false);
+    },
+    [conversations]
+  );
+
+  const handleRenameConversation = useCallback(
+    (id, title) => {
+      const next = conversations.map((c) => (c.id === id ? { ...c, title, updatedAt: Date.now() } : c));
+      setConversations(next);
+      saveConversations(next);
+    },
+    [conversations]
+  );
+
+  const handleDeleteConversation = useCallback(
+    (id) => {
+      const next = conversations.filter((c) => c.id !== id);
+      setConversations(next);
+      saveConversations(next);
+      if (activeConversationId === id) {
+        handleClearConversation();
+        setActiveConversationId(null);
+      }
+    },
+    [conversations, activeConversationId, handleClearConversation]
+  );
+
+  const handleClearAllConversations = useCallback(() => {
+    setConversations([]);
+    saveConversations([]);
+    handleClearConversation();
+    setActiveConversationId(null);
+  }, [handleClearConversation]);
+
+  const handleToggleSource = useCallback((type) => {
+    setExcludedSources((current) => {
+      const next = new Set(current);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleRefreshContext = useCallback(() => {
+    const data = getContextData ? getContextData() : {};
+    const model = models.find((m) => m.id === modelId) || null;
+    const sourceMap = {
+      selection: "selection",
+      currentFile: "current_file",
+      explicitFiles: "explicit",
+      symbols: "symbols",
+      openDocuments: "open_document",
+      searchResults: "search",
+      diagnostics: "diagnostics",
+      graph: "graph",
+    };
+    const allSources = Object.keys(sourceMap);
+    const sources =
+      excludedSources.size > 0
+        ? allSources.filter((source) => !excludedSources.has(sourceMap[source]))
+        : undefined;
+    const ctx = buildContext({ ...data, model, sources });
+    setContextForInspector(ctx);
+    setContextPreview(buildContextPreview(ctx));
+  }, [getContextData, models, modelId, excludedSources]);
+
+  const handleAcceptDiff = useCallback(
+    (proposed) => {
+      const data = getContextData ? getContextData() : {};
+      const path = data.currentFile?.path;
+      if (!path || !onApplyDiff) {
+        return;
+      }
+      const original = data.currentFile?.content || "";
+      const diff = createDiff({ path, original, proposed, actionId: "ai.code-action" });
+      onApplyDiff(diff);
+      setAppliedDiffId(diff.id);
+      actionHistoryRef.current.add({
+        action: "Improve code",
+        provider: providerId,
+        model: modelId,
+        target: path,
+        result: "Accepted",
+        accepted: true,
+        files: [path],
+      });
+      setActionEntries([...actionHistoryRef.current.list()]);
+    },
+    [getContextData, onApplyDiff, providerId, modelId]
+  );
+
+  const handleCopy = useCallback(async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleNavigateReference = useCallback(
+    (ref) => {
+      if (onNavigate) {
+        onNavigate(ref);
+      }
+    },
+    [onNavigate]
+  );
+
+  const sendWithContent = useCallback(
+    async (promptContent) => {
+      const content = typeof promptContent === "string" ? promptContent.trim() : input.trim();
+      const session = sessionRef.current;
+      if (!content || sending || !session || status !== "connected") {
+        return;
+      }
+      const sourceMap = {
+        selection: "selection",
+        currentFile: "current_file",
+        explicitFiles: "explicit",
+        symbols: "symbols",
+        openDocuments: "open_document",
+        searchResults: "search",
+        diagnostics: "diagnostics",
+        graph: "graph",
+      };
+      const allSources = Object.keys(sourceMap);
+      const sources =
+        excludedSources.size > 0
+          ? allSources.filter((source) => !excludedSources.has(sourceMap[source]))
+          : undefined;
+      const context = buildContext({
+        ...(getContextData ? getContextData() : {}),
+        ...(promptContent && externalPrompt && externalPrompt.selection
+          ? { selection: externalPrompt.selection }
+          : {}),
+        model: models.find((model) => model.id === modelId) || null,
+        sources,
+      });
+      const preview = buildContextPreview(context);
+      setContextPreview(preview);
+      setContextForInspector(context);
+      if (promptContent == null) {
+        setInput("");
+      }
+      setSending(true);
+      setGenerationState(CONVERSATION_STATES.generating);
       setStreamingText("");
       streamRef.current = "";
-      setToolActivity(null);
+      setMessages((current) => [
+        ...current,
+        createMessage({
+          role: "user",
+          content,
+          contextMetadata: { budget: context.budget, used: context.used, limitedBy: context.limitedBy },
+        }),
+      ]);
+      try {
+        const result = await session.sendMessage({
+          content,
+          context,
+          options:
+            providerId === "ollama" &&
+            models.find((model) => model.id === modelId)?.contextLength
+              ? { num_ctx: models.find((model) => model.id === modelId).contextLength }
+              : {},
+          maxToolRounds: settings.ai?.maxToolRounds ?? 2,
+          tools: BUILTIN_READONLY_TOOLS,
+          toolRunner: async ({ toolName, arguments: args }) => {
+            const tool = toolRegistryRef.current?.getTool
+              ? toolRegistryRef.current.getTool(toolName)
+              : null;
+            const permission = tool ? tool.permission : "read";
+            const request = approvalRequestFor({ toolName, permission, args });
+            if (request.requiresApproval && permission !== "read") {
+              setPendingApproval(request);
+              return { ok: false, code: "approvalRequired", error: "Tool approval required" };
+            }
+            return executeToolCall({
+              registry: toolRegistryRef.current,
+              toolName,
+              args,
+              permission: "read",
+            });
+          },
+          onTool: ({ toolCalls }) => {
+            setToolActivity(toolCalls.map((call) => call.toolName));
+          },
+          onDelta: (text) => {
+            streamRef.current = text;
+            setStreamingText(text);
+          },
+        });
+        if (result && result.stats) {
+          setLastStats({ ...result.stats, model: modelId, provider: providerId });
+        }
+        const assistantMessage = createMessage({
+          role: "assistant",
+          content: result.text,
+          toolMetadata: result.toolCalls ? { toolCalls: result.toolCalls } : null,
+        });
+        setMessages((current) => {
+          const next = [...current, assistantMessage];
+          persistConversation(next);
+          return next;
+        });
+        setGenerationState(CONVERSATION_STATES.complete);
+      } catch (error) {
+        const code = error && error.code;
+        if (code === AI_ERRORS.cancelled) {
+          setGenerationState(CONVERSATION_STATES.cancelled);
+          const last = session.history().at(-1);
+          if (last && last.role === "assistant") {
+            setMessages((current) => [
+              ...current,
+              createMessage({ role: "assistant", content: last.content }),
+            ]);
+          }
+        } else {
+          const message =
+            error && typeof error.message === "string" ? error.message : "The AI request failed.";
+          setMessages((current) => [
+            ...current,
+            createMessage({ role: "error", content: message }),
+          ]);
+          setGenerationState(CONVERSATION_STATES.error);
+        }
+      } finally {
+        setSending(false);
+        setStreamingText("");
+        streamRef.current = "";
+        setToolActivity(null);
+        setPendingApproval(null);
+      }
+    },
+    [
+      input,
+      sending,
+      status,
+      getContextData,
+      externalPrompt,
+      models,
+      modelId,
+      providerId,
+      settings.ai,
+      excludedSources,
+      persistConversation,
+    ]
+  );
+
+  useEffect(() => {
+    if (!externalPrompt || typeof externalPrompt.content !== "string" || externalPrompt.content.length === 0) {
+      return;
     }
-  }, [input, sending, status, getContextData, settings.ai, models, modelId, providerId]);
+    if (status !== "connected" || sending) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      sendWithContent(externalPrompt.content);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [externalPrompt, status, sending, sendWithContent]);
+
+  const handleSend = useCallback(async () => {
+    await sendWithContent();
+  }, [sendWithContent]);
 
   const handleStop = useCallback(() => {
     sessionRef.current?.stop();
+    setGenerationState(CONVERSATION_STATES.cancelled);
   }, []);
 
   const handleBrowserStateChange = useCallback(
@@ -440,12 +712,61 @@ export default function AIPanel({ getContextData }) {
     (providerId === "browser-bonsai" &&
       !(browserModelInfo && browserModelInfo.state === MODEL_STATES.downloaded));
 
+  const modelStatusLabel = (() => {
+    if (status === "checking") {
+      return "Loading model…";
+    }
+    if (status === "connected" && models.length > 0) {
+      return "Model ready";
+    }
+    if (status === "not-ready") {
+      return "Model downloading";
+    }
+    if (status === "unavailable") {
+      return "Provider unavailable";
+    }
+    if (status === "connected" && models.length === 0) {
+      return providerId === "ollama" ? "No model available" : "Model unavailable";
+    }
+    return null;
+  })();
+
+  const generationLabel =
+    generationState === CONVERSATION_STATES.generating
+      ? "Generating…"
+      : generationState === CONVERSATION_STATES.cancelled
+        ? "Cancelled"
+        : generationState === CONVERSATION_STATES.error
+          ? "Error"
+          : null;
+
   return (
     <div className="ai-panel">
       <div className={`ai-status ${connectionClass}`}>
         <Bot size={14} />
         <span className="ai-status-text">{statusLabel(status, providerId)}</span>
         {version && <span className="ai-status-version">v{version}</span>}
+        {modelStatusLabel && (
+          <span className="ai-status-model" title={modelStatusLabel}>
+            · {modelStatusLabel}
+          </span>
+        )}
+        {generationLabel && (
+          <span className="ai-status-generating" aria-live="polite">
+            · {generationLabel}
+          </span>
+        )}
+        <span className="ai-status-spacer" />
+        {messages.length > 0 && !sending && (
+          <button
+            type="button"
+            className="ai-clear"
+            onClick={handleClearConversation}
+            aria-label="Clear conversation"
+          >
+            Clear
+          </button>
+        )}
         {status === "unavailable" && (
           <button
             type="button"
@@ -523,6 +844,9 @@ export default function AIPanel({ getContextData }) {
             tokens
           </p>
         ) : null}
+        {models.find((model) => model.id === modelId) && (
+          <AIProviderCapabilities model={models.find((model) => model.id === modelId)} />
+        )}
       </div>
 
       <BrowserAISection
@@ -547,6 +871,33 @@ export default function AIPanel({ getContextData }) {
         </div>
       )}
 
+      <AIContextInspector
+        context={contextForInspector}
+        preview={contextPreview}
+        excludedSources={excludedSources}
+        onToggleSource={handleToggleSource}
+        onRefresh={handleRefreshContext}
+      />
+
+      <AIConversations
+        conversations={conversations}
+        activeId={activeConversationId}
+        onSelect={handleSelectConversation}
+        onCreate={handleCreateConversation}
+        onRename={handleRenameConversation}
+        onDelete={handleDeleteConversation}
+        onClearAll={handleClearAllConversations}
+      />
+
+      <AIActionHistory
+        entries={actionEntries}
+        onClear={() => {
+          actionHistoryRef.current.clear();
+          setActionEntries([]);
+        }}
+        onNavigate={(path) => onNavigate && onNavigate({ path })}
+      />
+
       <div className="ai-tools">
         <ShieldCheck size={12} />
         <span>Read-only tools: current file, diagnostics, open files</span>
@@ -556,6 +907,14 @@ export default function AIPanel({ getContextData }) {
           </span>
         )}
       </div>
+
+      {pendingApproval && (
+        <AIToolApproval
+          request={pendingApproval}
+          onApprove={() => setPendingApproval(null)}
+          onReject={() => setPendingApproval(null)}
+        />
+      )}
 
       {lastStats && (
         <div className="ai-stats">
@@ -572,7 +931,7 @@ export default function AIPanel({ getContextData }) {
         </div>
       )}
 
-      <div className="ai-messages" ref={listRef}>
+      <div className="ai-messages" ref={listRef} role="log" aria-live="polite">
         {messages.length === 0 && !sending ? (
           <div className="ai-empty">
             <Bot size={18} />
@@ -580,31 +939,55 @@ export default function AIPanel({ getContextData }) {
             <p>Context is attached explicitly when you send a message.</p>
           </div>
         ) : (
-          messages.map((message, index) =>
-            message.role === "error" ? (
-              <div key={index} className="ai-message ai-message-error">
-                {message.content}
+          messages.map((message) => {
+            const key = message.id || message.timestamp;
+            if (message.role === "error") {
+              return (
+                <div key={key} className="ai-message ai-message-error" role="alert">
+                  {message.content}
+                </div>
+              );
+            }
+            if (message.role === "user") {
+              return (
+                <div key={key} className="ai-message ai-message-user">
+                  {message.content}
+                </div>
+              );
+            }
+            const originalContent = getContextData ? getContextData().currentFile?.content : "";
+            return (
+              <div key={key} className="ai-message ai-message-assistant">
+                <div>{message.content}</div>
+                <AIReferences text={message.content} onNavigate={handleNavigateReference} />
+                {hasCodeBlock(message.content) && (
+                  <AIDiffPreview
+                    message={message}
+                    original={originalContent}
+                    onAccept={handleAcceptDiff}
+                    onReject={() => {}}
+                    onCopy={handleCopy}
+                  />
+                )}
               </div>
-            ) : message.role === "user" ? (
-              <div key={index} className="ai-message ai-message-user">
-                {message.content}
-              </div>
-            ) : (
-              <div key={index} className="ai-message ai-message-assistant">
-                {message.content}
-              </div>
-            )
-          )
+            );
+          })
         )}
         {sending && streamingText && (
-          <div className="ai-message ai-message-assistant ai-message-streaming">
+          <div className="ai-message ai-message-assistant ai-message-streaming" aria-live="polite">
             {streamingText}
-            <span className="ai-caret" />
+            <span className="ai-caret" aria-hidden="true" />
           </div>
         )}
         {sending && !streamingText && (
-          <div className="ai-message ai-message-assistant ai-message-thinking">
-            Thinking<span className="ai-caret" />
+          <div className="ai-message ai-message-assistant ai-message-thinking" aria-live="polite">
+            Thinking<span className="ai-caret" aria-hidden="true" />
+          </div>
+        )}
+        {appliedDiffId && (
+          <div className="ai-diff-applied" role="status">
+            <Check size={12} />
+            Change applied — save the file to write it to disk.
           </div>
         )}
       </div>

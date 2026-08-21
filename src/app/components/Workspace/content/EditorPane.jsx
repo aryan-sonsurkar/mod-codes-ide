@@ -24,7 +24,7 @@ const FILE_STATUS_MESSAGES = {
   error: "ModCodes could not check this file on disk.",
 };
 
-export default function EditorPane({ tab, openPaths, onChange, onSave, revealRequest, focusHandleRef, findHandleRef, onNavigateDirectory }) {
+export default function EditorPane({ tab, openPaths, onChange, onSave, revealRequest, focusHandleRef, findHandleRef, selectionHandleRef, onNavigateDirectory }) {
   if (!tab) {
     return (
       <div className="editor-pane">
@@ -120,6 +120,7 @@ export default function EditorPane({ tab, openPaths, onChange, onSave, revealReq
           revealRequest={revealRequest}
           focusHandleRef={focusHandleRef}
           findHandleRef={findHandleRef}
+          selectionHandleRef={selectionHandleRef}
         />
         {overlayMessage && (
           <div className="editor-body-overlay">{overlayMessage}</div>

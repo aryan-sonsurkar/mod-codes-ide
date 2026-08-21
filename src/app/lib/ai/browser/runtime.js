@@ -2,7 +2,7 @@ import { AI_ERRORS, AiError, normalizeAiError } from "../errors";
 
 export const BONSAI_PROVIDER_ID = "browser-bonsai";
 export const BONSAI_PROVIDER_NAME = "Bonsai (in-browser)";
-export const BONSAI_CAPABILITIES = ["chat", "streaming", "tools"];
+export const BONSAI_CAPABILITIES = ["chat", "streaming", "tools", "browser", "local", "cancellation", "statistics"];
 
 /**
  * The runtime adapter contract the provider depends on. The Web Worker (M52)

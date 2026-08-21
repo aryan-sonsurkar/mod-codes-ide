@@ -77,12 +77,21 @@ or bitgpu's `ChatResult`). This is displayed locally only — no telemetry.
   output is ever executed.
 - Provider switching is explicit and never silent.
 
+## Developer experience
+
+- **Context Inspector**: the AI panel's "Context inspector" shows what was actually sent — per source (current file, selection, open files, diagnostics, symbols, graph, search), its size, priority, and included/excluded/truncated state, plus the budget (used/available/limit) and model window. Sources can be excluded per message and the preview refreshed; secret paths are never listed as sendable.
+- **Code Actions** (Command Palette): Explain Selection/File, Improve Code, Find Bug, Generate Docs/Tests, Refactor — each sends only the narrow selection plus the bounded context, never the whole project. The result is shown in the chat with a diff preview (Original/Suggested, Accept/Reject/Copy). Accept marks the file dirty; you save explicitly.
+- **Workspace Commands** (Command Palette): Explain Project, Find TODOs, Find Potential Bugs, Explain Architecture/Dependencies, Summarize Changes, Generate README — each reuses the existing filesystem/symbols/diagnostics/graph/search, respects the model window and secret filtering, and returns file:line references you can click to navigate.
+- **Clickable references**: file:line references in AI replies (and diagnostics/symbols) are clickable and open the right tab/line via Monaco (`revealLineInCenter`).
+- **Tool approval**: read tools auto-run; write/destructive show an approval card (tool, reason, args, Approve/Reject). Execute remains disabled.
+
 ## Troubleshooting
 
 - **"WebGPU is not available"** — enable WebGPU (e.g. Chrome
   `chrome://flags/#enable-unsafe-webgpu` on older versions) or use the Ollama
   provider.
 - **Download fails with a storage error** — the browser ran out of quota;
-  remove the cached model or free browser storage, then retry.
+  remove the cached model or free browser storage, then retry. You can also clear the AI cache from Settings → AI & Coder.
 - **Slow but working** — on smaller devices decode is slower; the stats line
   shows your real tokens/second.
+- **Conversations** — stored locally in `localStorage` (`modcodes.ai.conversations.v1`), at most 50, sanitized. Clear from the AI panel or Settings; no database is involved.
