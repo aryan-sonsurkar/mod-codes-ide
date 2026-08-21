@@ -4,6 +4,7 @@ import {
   buildBudget,
   buildContext,
   buildContextPreview,
+  budgetForModel,
   clampBudget,
   estimatedTokens,
   isSecretPath,
@@ -63,6 +64,31 @@ describe("budget", () => {
 
   it("estimates tokens conservatively", () => {
     expect(estimatedTokens(100)).toBe(25);
+  });
+
+  it("derives a budget from a model context window", () => {
+    const derived = budgetForModel({ id: "m", contextLength: 32768 });
+    expect(derived.limitedBy).toBe(32768);
+    expect(derived.budget).toBeGreaterThan(0);
+    expect(derived.budget).toBeLessThan(32768 * 4);
+  });
+
+  it("falls back to the default budget when context is unknown", () => {
+    const derived = budgetForModel({ id: "m", contextLength: null });
+    expect(derived.limitedBy).toBeNull();
+    expect(derived.budget).toBe(DEFAULT_CONTEXT_BUDGET);
+  });
+
+  it("reserves room for output and history", () => {
+    const reserved = budgetForModel(
+      { id: "m", contextLength: 8192 },
+      { outputBudget: 2048, historyBudget: 2048 }
+    );
+    const roomy = budgetForModel(
+      { id: "m", contextLength: 8192 },
+      { outputBudget: 64, historyBudget: 64 }
+    );
+    expect(reserved.budget).toBeLessThan(roomy.budget);
   });
 });
 
@@ -138,6 +164,26 @@ describe("buildContext", () => {
     const context = buildContext({});
     expect(context.items).toEqual([]);
     expect(context.used).toBe(0);
+  });
+
+  it("derives the budget from the model when no explicit budget is given", () => {
+    const context = buildContext({
+      model: { id: "m", contextLength: 16384 },
+      currentFile: { path: "src/a.js", content: "x".repeat(80000) },
+    });
+    expect(context.limitedBy).toBe(16384);
+    expect(context.budget).toBe(budgetForModel({ id: "m", contextLength: 16384 }).budget);
+    expect(context.used).toBeLessThanOrEqual(context.budget);
+  });
+
+  it("prefers an explicit budget over the model window", () => {
+    const context = buildContext({
+      model: { id: "m", contextLength: 16384 },
+      budget: 4000,
+      currentFile: { path: "src/a.js", content: "x".repeat(80000) },
+    });
+    expect(context.limitedBy).toBeNull();
+    expect(context.budget).toBe(4000);
   });
 });
 

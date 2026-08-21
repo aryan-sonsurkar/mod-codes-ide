@@ -32,6 +32,7 @@ async function streamRequest(provider, request, onDelta) {
   const stream = await provider.streamChat(request);
   let text = "";
   const toolCalls = [];
+  let stats = null;
   for await (const chunk of stream) {
     if (chunk && chunk.type === "text" && typeof chunk.text === "string") {
       text += chunk.text;
@@ -43,13 +44,15 @@ async function streamRequest(provider, request, onDelta) {
         toolName: chunk.toolRequest.toolName,
         arguments: chunk.toolRequest.arguments ?? {},
       });
+    } else if (chunk && chunk.type === "stats" && chunk.stats) {
+      stats = { ...stats, ...chunk.stats };
     } else if (chunk && chunk.type === "error") {
       throw chunk.error;
     } else if (chunk && chunk.type === "done") {
       break;
     }
   }
-  return { text, toolCalls };
+  return { text, toolCalls, stats };
 }
 
 async function chatRequest(provider, request) {
@@ -166,20 +169,31 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
         const request = makeRequest();
         request.signal = controller.signal;
 
-        const { text, toolCalls } =
+        const { text, toolCalls, stats } =
           typeof provider.streamChat === "function"
             ? await streamRequest(provider, request, handleDelta)
             : await chatRequest(provider, request);
 
         if (toolCalls.length === 0) {
           const message = addMessage("assistant", text);
-          return { ok: true, text, message };
+          return {
+            ok: true,
+            text,
+            message,
+            stats: stats && Object.keys(stats).length > 0 ? stats : null,
+          };
         }
 
         rounds += 1;
         if (rounds > maxRounds) {
           const message = addMessage("assistant", text);
-          return { ok: true, text, message, toolLimitReached: true };
+          return {
+            ok: true,
+            text,
+            message,
+            toolLimitReached: true,
+            stats: stats && Object.keys(stats).length > 0 ? stats : null,
+          };
         }
 
         messages.push({

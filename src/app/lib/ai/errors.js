@@ -7,6 +7,7 @@ export const AI_ERRORS = {
   rateLimited: "rateLimited",
   invalidRequest: "invalidRequest",
   cancelled: "cancelled",
+  notReady: "notReady",
 };
 
 export class AiError extends Error {

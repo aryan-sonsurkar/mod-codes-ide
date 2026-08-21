@@ -5,6 +5,7 @@ export const STREAM_EVENTS = {
   done: "done",
   error: "error",
   tool: "tool",
+  stats: "stats",
 };
 
 export function textChunk(text) {
@@ -23,6 +24,10 @@ export function toolChunk(toolRequest) {
   return { type: STREAM_EVENTS.tool, toolRequest };
 }
 
+export function statsChunk(stats) {
+  return { type: STREAM_EVENTS.stats, stats: stats || {} };
+}
+
 export function isStreamChunk(value) {
   return (
     value &&
@@ -30,7 +35,8 @@ export function isStreamChunk(value) {
     (value.type === STREAM_EVENTS.text ||
       value.type === STREAM_EVENTS.done ||
       value.type === STREAM_EVENTS.error ||
-      value.type === STREAM_EVENTS.tool)
+      value.type === STREAM_EVENTS.tool ||
+      value.type === STREAM_EVENTS.stats)
   );
 }
 

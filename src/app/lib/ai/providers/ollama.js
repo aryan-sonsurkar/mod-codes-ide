@@ -4,6 +4,7 @@ import {
   createChatResult,
   doneChunk,
   errorChunk,
+  statsChunk,
   textChunk,
   toolChunk,
 } from "../response";
@@ -125,7 +126,7 @@ export function toolCallsFromMessage(message) {
     }));
 }
 
-export function toModel(entry) {
+export function toModel(entry, { contextLength = null } = {}) {
   const name = entry && (entry.name || entry.model);
   if (typeof name !== "string" || name.length === 0) {
     return null;
@@ -138,6 +139,8 @@ export function toModel(entry) {
     name: label,
     provider: OLLAMA_PROVIDER_ID,
     capabilities: [...OLLAMA_CAPABILITIES],
+    contextLength:
+      Number.isFinite(contextLength) && contextLength > 0 ? contextLength : null,
     metadata: {
       tag: tag || "latest",
       size: typeof entry.size === "number" ? entry.size : null,
@@ -149,6 +152,8 @@ export function toModel(entry) {
           ? details.quantization_level
           : null,
       family: typeof details.family === "string" ? details.family : null,
+      contextLength:
+        Number.isFinite(contextLength) && contextLength > 0 ? contextLength : null,
     },
   });
 }
@@ -301,6 +306,37 @@ function buildChatBody(request, { stream = true } = {}) {
   return body;
 }
 
+export function ollamaStreamStats(line) {
+  if (!line || typeof line !== "object") {
+    return null;
+  }
+  const evalCount =
+    typeof line.eval_count === "number" && Number.isFinite(line.eval_count)
+      ? line.eval_count
+      : null;
+  const evalDurationMs =
+    typeof line.eval_duration === "number" && Number.isFinite(line.eval_duration)
+      ? line.eval_duration / 1_000_000
+      : null;
+  const totalDurationMs =
+    typeof line.total_duration === "number" && Number.isFinite(line.total_duration)
+      ? line.total_duration / 1_000_000
+      : null;
+  if (evalCount == null) {
+    return null;
+  }
+  return {
+    tokensPerSecond:
+      evalCount != null && evalDurationMs != null && evalDurationMs > 0
+        ? evalCount / (evalDurationMs / 1000)
+        : null,
+    outputTokens: evalCount,
+    decodeMs: evalDurationMs,
+    durationMs: totalDurationMs,
+    finishReason: typeof line.done_reason === "string" ? line.done_reason : null,
+  };
+}
+
 async function* ollamaStream(baseUrl, request, timeoutMs) {
   const controller = new AbortController();
   const timer =
@@ -364,6 +400,10 @@ async function* ollamaStream(baseUrl, request, timeoutMs) {
       yield toolChunk({ toolName: call.toolName, arguments: call.arguments });
     }
     if (line.done) {
+      const stats = ollamaStreamStats(line);
+      if (stats) {
+        yield statsChunk(stats);
+      }
       yield doneChunk();
       return;
     }
@@ -377,6 +417,10 @@ export function createOllamaProvider(options = {}) {
     options.timeoutMs !== undefined && options.timeoutMs !== null
       ? options.timeoutMs
       : OLLAMA_REQUEST_TIMEOUT_MS;
+  const contextLength =
+    Number.isFinite(options.contextLength) && options.contextLength > 0
+      ? options.contextLength
+      : null;
 
   async function getModels() {
     const payload = await fetchJson(baseUrl, "/api/tags", {
@@ -386,7 +430,7 @@ export function createOllamaProvider(options = {}) {
     const entries = Array.isArray(payload && payload.models)
       ? payload.models
       : [];
-    return entries.map(toModel).filter(Boolean);
+    return entries.map((entry) => toModel(entry, { contextLength })).filter(Boolean);
   }
 
   function getCapabilities() {

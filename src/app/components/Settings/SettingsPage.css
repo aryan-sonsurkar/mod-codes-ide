@@ -160,6 +160,22 @@
   font-size: 13px;
 }
 
+.settings-select {
+  width: 280px;
+  padding: 7px 9px;
+  background-color: var(--workspace-bg);
+  color: var(--primary-text);
+  border: solid 2px var(--border-color);
+  border-radius: 5px;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.settings-select:focus {
+  border-color: var(--accent-color);
+}
+
 .settings-text-input {
   width: 280px;
   padding: 7px 9px;

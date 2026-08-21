@@ -97,6 +97,21 @@ export function hardwareTier(deviceMemoryGb) {
   return "minimal";
 }
 
+export function describeDeviceTier(tier) {
+  switch (tier) {
+    case "large":
+      return "large (32+ GB RAM)";
+    case "medium":
+      return "medium (16+ GB RAM)";
+    case "small":
+      return "small (8+ GB RAM)";
+    case "minimal":
+      return "minimal (under 8 GB RAM)";
+    default:
+      return "unknown";
+  }
+}
+
 export function recommendModels({
   catalog = MODEL_CATALOG,
   profile = null,

@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS = {
     fontSize: 13,
   },
   ai: {
+    provider: "ollama",
     baseUrl: DEFAULT_AI_BASE_URL,
     defaultModel: "",
     contextBudget: 24000,
@@ -73,10 +74,13 @@ function sanitizeSettings(settings) {
       : DEFAULT_SETTINGS.ai.maxToolRounds;
   const defaultModel =
     typeof ai.defaultModel === "string" ? ai.defaultModel : "";
+  const provider =
+    ai.provider === "browser-bonsai" ? "browser-bonsai" : "ollama";
 
   return {
     ...settings,
     ai: {
+      provider,
       baseUrl,
       defaultModel,
       contextBudget,

@@ -45,5 +45,6 @@ export function buildContextPreview(context) {
     files,
     filesCount: files.length,
     truncated: items.some((item) => item.truncated),
+    limitedBy: Number.isFinite(context.limitedBy) ? context.limitedBy : null,
   };
 }

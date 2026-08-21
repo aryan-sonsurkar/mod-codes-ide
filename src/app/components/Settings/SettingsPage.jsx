@@ -81,6 +81,30 @@ function StringRow({ label, description, value, onChange }) {
   );
 }
 
+function SelectRow({ label, description, value, options, onChange }) {
+  return (
+    <div className="settings-row">
+      <div className="settings-row-info">
+        <span className="settings-row-label">{label}</span>
+        {description && (
+          <span className="settings-row-description">{description}</span>
+        )}
+      </div>
+      <select
+        className="settings-select"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function ConnectionRow({ value }) {
   const [state, setState] = useState({ kind: "idle" });
 
@@ -269,10 +293,21 @@ export default function SettingsPage() {
           <>
             <h3 className="settings-category-title">AI & Coder</h3>
             <p className="settings-category-description">
-              Configure the local AI provider. ModCodes talks to Ollama running
-              on this machine — no cloud proxy is used.
+              Configure the local AI provider. ModCodes runs the model locally —
+              either through Ollama on this machine or fully in the browser on
+              your GPU. No cloud proxy is used.
             </p>
             <div className="settings-group">
+              <SelectRow
+                label="Provider"
+                description="Ollama uses a local server; Bonsai runs entirely in this browser tab."
+                value={settings.ai.provider}
+                options={[
+                  { value: "ollama", label: "Ollama (local server)" },
+                  { value: "browser-bonsai", label: "Bonsai (in this browser)" },
+                ]}
+                onChange={(value) => updateSetting("ai", "provider", value)}
+              />
               <StringRow
                 label="Ollama base URL"
                 description="Where Ollama listens. Leave at the default for local setup."

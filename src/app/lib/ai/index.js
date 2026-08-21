@@ -63,10 +63,74 @@ export {
   detectGpuInfo,
   createHardwareProfile,
   hardwareTier,
+  describeDeviceTier,
   recommendModels,
   summarizeHardware,
 } from "./hardware";
 export { createAiSession } from "./session";
+export {
+  normalizeStats,
+  formatTokensPerSecond,
+  formatDurationMs,
+  createStatsTracker,
+} from "./instrumentation";
+export {
+  WEBGPU_STATES,
+  WEBGPU_REASONS,
+  getGpuObject,
+  requestAdapter,
+  requestDevice,
+  readAdapterInfo,
+  readAdapterLimits,
+  watchDeviceLost,
+  detectWebGpuCapability,
+  isWebGpuAvailable,
+  describeCapability,
+} from "./browser";
+export {
+  BONSAI_MODEL_TIERS,
+  getModelById,
+  listModels,
+  modelVersionKey,
+  modelDownloadBytes,
+  isDownloadAllowed,
+} from "./browser";
+export {
+  WEIGHT_CACHE_NAME,
+  openWeightCache,
+  hasCachedWeight,
+  cacheWeight,
+  removeCachedWeight,
+  listCachedWeightUrls,
+  weightCacheContainsModel,
+  createIndexedDbStore,
+  normalizeStorageError,
+} from "./browser";
+export {
+  MODEL_STATES,
+  isWebGpuCapable,
+  checkModelCompatibility,
+  baseModelState,
+  createModelRegistry,
+} from "./browser";
+export {
+  BONSAI_PROVIDER_ID,
+  BONSAI_PROVIDER_NAME,
+  BONSAI_CAPABILITIES,
+  isAbortError,
+  mapRuntimeError,
+} from "./browser";
+export { createBrowserBonsaiProvider } from "./browser";
+export { createBrowserWorker, createBrowserRuntime } from "./browser";
+export {
+  DOWNLOAD_STATES,
+  formatBytes,
+  downloadPercent,
+  describeDownload,
+  createIdleProgress,
+  isAbortedError,
+  downloadModel,
+} from "./browser";
 export {
   PERMISSION_LEVELS,
   PERMISSION_ORDER,
@@ -90,6 +154,7 @@ export {
   clampBudget,
   estimatedTokens,
   buildBudget,
+  budgetForModel,
   isSecretPath,
   excludeSecretPaths,
   currentFileSource,

@@ -1,4 +1,4 @@
-import { buildBudget } from "./budget";
+import { budgetForModel, buildBudget, clampBudget } from "./budget";
 import {
   currentFileSource,
   diagnosticsSource,
@@ -49,8 +49,17 @@ function collectCandidates(request, enabledSources) {
   return candidates;
 }
 
+function resolveBudget(request = {}) {
+  if (Number.isFinite(request.budget)) {
+    return { total: clampBudget(request.budget), limitedBy: null };
+  }
+  const derived = budgetForModel(request.model || request.modelInfo || null);
+  return { total: derived.budget, limitedBy: derived.limitedBy };
+}
+
 export function buildContext(request = {}) {
-  const budget = buildBudget({ budget: request.budget });
+  const resolved = resolveBudget(request);
+  const budget = buildBudget({ budget: resolved.total });
   const candidates = collectCandidates(request, request.sources);
 
   candidates.sort((a, b) => {
@@ -91,6 +100,7 @@ export function buildContext(request = {}) {
     used: budget.total - remaining,
     remaining,
     estimatedTokens: Math.ceil((budget.total - remaining) / 4),
+    limitedBy: resolved.limitedBy,
   };
 }
 
@@ -108,5 +118,6 @@ export function createFallbackContext(message) {
     used: message.length,
     remaining: 0,
     estimatedTokens: Math.ceil(message.length / 4),
+    limitedBy: null,
   };
 }
