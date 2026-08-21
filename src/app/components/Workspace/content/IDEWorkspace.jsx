@@ -52,7 +52,9 @@ import { CODE_ACTIONS, buildCodeActionPrompt } from "../../../lib/ai/codeActions
 import { WORKSPACE_COMMANDS, buildWorkspacePrompt } from "../../../lib/ai/workspaceCommands";
 import { acceptDiff } from "../../../lib/ai/diffEngine";
 import { rankWorkspaceContext } from "../../../lib/ai/relevanceRanking";
-import { createContextCache, measureContextBuild } from "../../../lib/ai/contextPerformance";
+import { createContextCache } from "../../../lib/ai/contextPerformance";
+import { buildWorkspaceGraph, dependenciesOf, dependentsOf } from "../../../lib/workspaceGraph/graph";
+import { useRankedContext } from "../../../hooks/useRankedContext";
 
 const STATUS_MESSAGES = {
   requesting: "Requesting access to this project's folder...",
@@ -192,6 +194,36 @@ export default function IdeWorkspace({ selectedProject }) {
   } = useTabs({ readFile, writeFile });
 
   const { diagnostics } = useDiagnostics({ tabs, activePath, tree });
+
+  const workspaceGraph = useMemo(() => {
+    if (!tree) {
+      return { nodes: [], edges: [] };
+    }
+    const files = collectFilePaths(tree);
+    return buildWorkspaceGraph({
+      files,
+      getAnalysis: (path) => {
+        const tab = tabs.find((t) => t.path === path);
+        if (!tab || typeof tab.content !== "string") {
+          return null;
+        }
+        const imports = [];
+        const importRegex = /import\s+.*?from\s+["'](\.[^"']+)["']/g;
+        let m;
+        while ((m = importRegex.exec(tab.content)) !== null) {
+          imports.push({ source: m[1] });
+        }
+        return { imports };
+      },
+    });
+  }, [tree, tabs]);
+
+  useEffect(() => {
+    if (activePath) {
+      const neighbors = [...dependenciesOf(workspaceGraph, activePath), ...dependentsOf(workspaceGraph, activePath)];
+      graphNeighborsRef.current = neighbors;
+    }
+  }, [activePath, workspaceGraph]);
 
   useEffect(() => {
     return () => {

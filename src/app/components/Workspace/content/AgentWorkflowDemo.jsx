@@ -48,7 +48,10 @@ export default function AgentWorkflowDemo({ getContextData, onApplyDiff, onNavig
         const changeset = agentObservationsToChangeset({
           title: "Demo fix",
           observations: [observation],
-          proposedEdits: [{ path: "src/demo-fix.js", operation: "modify", original: "const x=1", proposed: "const x=2 // fixed", reason: "demo" }],
+          proposedEdits: [
+            { path: "src/demo-fix.js", operation: "modify", original: "const x=1", proposed: "const x=2 // fixed", reason: "demo" },
+            { path: "src/demo-fix-2.js", operation: "create", proposed: "// new file for multi-file demo\n", reason: "demo" },
+          ],
         });
         orchestratorRef.current.proposeChangeset(changeset);
       } catch {

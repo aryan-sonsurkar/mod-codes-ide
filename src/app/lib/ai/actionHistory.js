@@ -27,8 +27,48 @@ export function createActionEntry({
   };
 }
 
+const ACTION_STORAGE_KEY = "modcodes.ai.actionHistory.v1";
+
+function loadStored(limit) {
+  try {
+    if (typeof localStorage === "undefined") {
+      return [];
+    }
+    const raw = localStorage.getItem(ACTION_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.slice(0, limit).map((e) => createActionEntry(e));
+  } catch {
+    return [];
+  }
+}
+
+function persist(entries) {
+  try {
+    if (typeof localStorage === "undefined") {
+      return;
+    }
+    const sanitized = entries.slice(0, 100).map((e) => ({
+      id: e.id,
+      action: e.action,
+      provider: e.provider,
+      model: e.model,
+      timestamp: e.timestamp,
+      target: e.target,
+      accepted: e.accepted,
+      files: e.files,
+    }));
+    localStorage.setItem(ACTION_STORAGE_KEY, JSON.stringify(sanitized));
+  } catch {}
+}
+
 export function createActionHistory({ limit = 100 } = {}) {
-  const entries = [];
+  const entries = loadStored(limit);
 
   return {
     add(entry) {
@@ -37,6 +77,7 @@ export function createActionHistory({ limit = 100 } = {}) {
       if (entries.length > limit) {
         entries.length = limit;
       }
+      persist(entries);
       return sanitized;
     },
     list() {
@@ -44,6 +85,12 @@ export function createActionHistory({ limit = 100 } = {}) {
     },
     clear() {
       entries.length = 0;
+      persist(entries);
+      try {
+        if (typeof localStorage !== "undefined") {
+          localStorage.removeItem(ACTION_STORAGE_KEY);
+        }
+      } catch {}
     },
     get(id) {
       return entries.find((e) => e.id === id) || null;
