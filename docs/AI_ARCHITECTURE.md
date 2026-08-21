@@ -1,13 +1,17 @@
 # MODCODES AI Architecture
 
-Status: Modules 40–67 are implemented — architecture review (M40), provider
+Status: Modules 40–132 are implemented — architecture review (M40), provider
 contract (M41), context engine (M42), Ollama provider (M43), model catalog with
 hardware recommendations (M44), AI session + chat panel (M45), the AI tool
 system with read-only tools and permission enforcement (M46), AI settings with
 provider configuration and integration (M47), the browser AI phase (M48–M57),
-and the AI developer experience phase (M58–M67). See [BROWSER_AI.md](./BROWSER_AI.md)
-for the browser provider and [AI_PRODUCT_MODEL.md](./AI_PRODUCT_MODEL.md) for
-the product model.
+the AI developer experience phase (M58–M67), the MODCODES-CODER + agentic
+preparation (M68–82), the controlled agent workflow + coder runtime (M83–92),
+and the launch readiness + polish + distribution (M93–132). See
+[BROWSER_AI.md](./BROWSER_AI.md) for the browser provider,
+[AI_PRODUCT_MODEL.md](./AI_PRODUCT_MODEL.md) for the product model,
+[CONTROLLED_AGENT_WORKFLOW.md](./CONTROLLED_AGENT_WORKFLOW.md) for the agent,
+and [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md) for deployment.
 
 ## Design principle
 
@@ -220,9 +224,21 @@ Providers (all behind the same contract):
 9. Can providers fail without crashing the IDE? **Yes** — `testConnection` + `AI_ERRORS` + isolated sessions.
 10. Can the system support a future local MODCODES-CODER runtime? **Yes** — stub shares the shape; real runtime plugs in as another bridge like Bonsai.
 
+## MODCODES v1 — Final product
+
+MODCODES v1 is a fast, private, browser-based development environment with local
+AI — not an IDE with every feature. It prioritizes reliability, clarity,
+performance, privacy, and developer experience over feature count.
+
+- **What it is:** Browser IDE with Monaco, file explorer, tabs, search, diagnostics, terminal (simulation + optional localhost bridge `127.0.0.1:8787` with token), local AI (Ollama + Bonsai), controlled agent workflow (plan → approval → read-only tools → changeset → diff review → dirty → Save).
+- **Who it is for:** Developers who want local-first AI without cloud, account, or database.
+- **Why it exists:** To prove a browser IDE can be a real development environment with privacy-first AI and safe agent assistance.
+
+No cloud inference, no MODCODES-CODER weights, no auth/database/payments are shipped; the architecture is ready for the future coder provider without rewriting the IDE.
+
 ## Future: modcodes-coder
 
 `modcodes-coder` will implement the same provider contract (or a registry entry
 pointing at its model). No IDE changes required beyond configuration. Out of scope
-for 40–82: model training/fine-tuning, cloud inference, auth, database, payments,
+for 40–132: model training/fine-tuning, cloud inference, auth, database, payments,
 ads, autonomous execution, and arbitrary shell/JS execution. See `MODCODES_CODER_ARCHITECTURE.md` and `AGENT_ARCHITECTURE.md`.
