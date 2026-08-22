@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import "./FileExplorer.css";
 import FileTreeNode from "./FileTreeNode";
 import { useSettings } from "../../../../contexts/SettingsContext";
@@ -48,7 +48,7 @@ function flattenVisible(node, expanded, forceExpanded, out = []) {
   return out;
 }
 
-export default function FileExplorer({
+function FileExplorerInner({
   root,
   onFileSelect,
   selectedFilePath,
@@ -524,3 +524,5 @@ export default function FileExplorer({
     </aside>
   );
 }
+
+export default memo(FileExplorerInner);

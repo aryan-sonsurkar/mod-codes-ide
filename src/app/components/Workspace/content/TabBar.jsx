@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import "./TabBar.css";
 
-export default function TabBar({
+function TabBarInner({
   tabs,
   activePath,
   onActivate,
@@ -195,3 +195,5 @@ export default function TabBar({
     </div>
   );
 }
+
+export default memo(TabBarInner);

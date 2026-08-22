@@ -2,6 +2,7 @@ import "./EditorPane.css";
 import MonacoEditor from "./MonacoEditor";
 import Breadcrumbs from "./Breadcrumbs";
 import { getLanguageFromPath } from "../../../lib/monaco/monaco";
+import { memo } from "react";
 
 const READ_ERROR_MESSAGES = {
   missing: "This file is no longer available.",
@@ -24,7 +25,7 @@ const FILE_STATUS_MESSAGES = {
   error: "ModCodes could not check this file on disk.",
 };
 
-export default function EditorPane({ tab, openPaths, onChange, onSave, revealRequest, focusHandleRef, findHandleRef, selectionHandleRef, onNavigateDirectory }) {
+function EditorPaneInner({ tab, openPaths, onChange, onSave, revealRequest, focusHandleRef, findHandleRef, selectionHandleRef, onNavigateDirectory }) {
   if (!tab) {
     return (
       <div className="editor-pane">
@@ -129,3 +130,5 @@ export default function EditorPane({ tab, openPaths, onChange, onSave, revealReq
     </div>
   );
 }
+
+export default memo(EditorPaneInner);

@@ -25,6 +25,7 @@ export default function MonacoEditor({
   const monacoRef = useRef(null);
   const modelsRef = useRef(new Map());
   const currentPathRef = useRef(null);
+  const viewStatesRef = useRef(new Map());
   const pendingRevealRef = useRef(null);
 
   const { settings } = useSettings();
@@ -83,9 +84,20 @@ export default function MonacoEditor({
     const ready = Boolean(path) && readStatusRef.current === "ready";
 
     if (!ready) {
+      if (editorRef.current && currentPathRef.current) {
+        try {
+          viewStatesRef.current.set(currentPathRef.current, editor.saveViewState());
+        } catch {}
+      }
       editor.setModel(null);
       currentPathRef.current = null;
       return;
+    }
+
+    if (currentPathRef.current && currentPathRef.current !== path && editor) {
+      try {
+        viewStatesRef.current.set(currentPathRef.current, editor.saveViewState());
+      } catch {}
     }
 
     let model = modelsRef.current.get(path);
@@ -102,6 +114,12 @@ export default function MonacoEditor({
     }
 
     editor.setModel(model);
+    const saved = viewStatesRef.current.get(path);
+    if (saved) {
+      try {
+        editor.restoreViewState(saved);
+      } catch {}
+    }
     editor.focus();
     currentPathRef.current = path;
     applyReveal();
