@@ -164,6 +164,8 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
 
   const sessionRef = useRef(null);
   const streamRef = useRef("");
+  const pendingTextRef = useRef("");
+  const rafRef = useRef(null);
   const listRef = useRef(null);
   const toolRegistryRef = useRef(null);
   const browserRuntimeRef = useRef(null);
@@ -175,6 +177,14 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         : null,
     []
   );
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   const hardwareHint = useMemo(() => {
     const profile = createHardwareProfile();
@@ -612,8 +622,15 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
             setToolActivity(toolCalls.map((call) => call.toolName));
           },
           onDelta: (text) => {
-            streamRef.current = text;
-            setStreamingText(text);
+            pendingTextRef.current = text;
+            if (rafRef.current == null) {
+              rafRef.current = window.requestAnimationFrame(() => {
+                rafRef.current = null;
+                const pending = pendingTextRef.current;
+                streamRef.current = pending;
+                setStreamingText(pending);
+              });
+            }
           },
         });
         if (result && result.stats) {
@@ -651,9 +668,14 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           setGenerationState(CONVERSATION_STATES.error);
         }
       } finally {
+        if (rafRef.current != null) {
+          window.cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
         setSending(false);
         setStreamingText("");
         streamRef.current = "";
+        pendingTextRef.current = "";
         setToolActivity(null);
         setPendingApproval(null);
       }

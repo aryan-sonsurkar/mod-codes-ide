@@ -19,7 +19,12 @@ export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(() => loadSettings());
 
   useEffect(() => {
-    saveSettings(settings);
+    const id = window.setTimeout(() => {
+      try {
+        saveSettings(settings);
+      } catch {}
+    }, 300);
+    return () => window.clearTimeout(id);
   }, [settings]);
 
   const updateSetting = useCallback((category, key, value) => {
