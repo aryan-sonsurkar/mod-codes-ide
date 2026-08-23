@@ -2,11 +2,9 @@
   width: 280px;
   flex-shrink: 0;
   overflow-y: auto;
-  background-color: var(--sidebar-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  background-color: transparent;
   color: var(--primary-text);
-  padding: 8px;
+  padding: 4px;
 }
 
 .explorer-header {
@@ -14,26 +12,30 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-weight: bold;
+  font-weight: 600;
   letter-spacing: 1px;
-  color: var(--secondary-text);
+  color: var(--muted-text);
   padding: 4px 8px 8px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   border-bottom: solid 1px var(--border-color);
+  font-size: var(--text-xs);
 }
 
 .explorer-title {
   flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .explorer-filter-input {
   padding: 5px 8px;
-  margin-bottom: 8px;
-  background-color: var(--workspace-bg);
+  margin-bottom: 6px;
+  background-color: rgba(34, 24, 58, 0.6);
   color: var(--primary-text);
-  border: solid 2px var(--border-color);
-  border-radius: 4px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-md);
   outline: none;
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
 }
 
 .explorer-filter-input:focus {
@@ -47,21 +49,23 @@
 
 .explorer-action-button {
   background: transparent;
-  color: var(--secondary-text);
-  border: solid 1px var(--border-color);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 12px;
+  color: var(--muted-text);
+  border: solid 1px transparent;
+  border-radius: var(--radius-md);
+  padding: 3px 8px;
+  font-size: var(--text-xs);
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .explorer-action-button:hover {
-  background-color: var(--hover-color);
+  background-color: rgba(139, 92, 246, 0.1);
   color: var(--primary-text);
+  border-color: var(--border-color);
 }
 
 .explorer-action-button:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: default;
 }
 
@@ -76,31 +80,37 @@
   z-index: 21;
   display: flex;
   flex-direction: column;
-  min-width: 150px;
+  min-width: 160px;
   padding: 4px;
   background-color: var(--surface-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 120ms ease;
 }
 
 .explorer-menu-item {
   text-align: left;
   padding: 6px 10px;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--primary-text);
-  font-size: 13px;
+  font-size: var(--text-sm);
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .explorer-menu-item:hover {
-  background-color: var(--hover-color);
+  background-color: rgba(139, 92, 246, 0.12);
 }
 
 .explorer-menu-danger {
-  color: rgb(240, 82, 82);
+  color: var(--danger-color);
+}
+
+.explorer-menu-danger:hover {
+  background-color: rgba(239, 68, 68, 0.12);
 }
 
 .explorer-overlay {
@@ -110,32 +120,40 @@
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 30;
+  animation: fadeIn var(--transition-base);
 }
 
 .explorer-dialog {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   width: 380px;
-  padding: 16px;
+  padding: 20px;
   background-color: var(--surface-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-xl);
   color: var(--primary-text);
+  box-shadow: var(--shadow-lg);
+  animation: slideUp var(--transition-smooth);
 }
 
 .explorer-dialog-title {
   font-weight: 700;
+  font-size: var(--text-lg);
 }
 
 .explorer-dialog-input {
-  padding: 6px 8px;
-  background-color: var(--workspace-bg);
+  padding: 8px 10px;
+  background-color: rgba(34, 24, 58, 0.6);
   color: var(--primary-text);
-  border: solid 2px var(--border-color);
-  border-radius: 4px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-md);
   outline: none;
+  font-size: var(--text-base);
+  transition: border-color var(--transition-fast);
 }
 
 .explorer-dialog-input:focus {
@@ -143,8 +161,8 @@
 }
 
 .explorer-dialog-error {
-  color: rgb(240, 82, 82);
-  font-size: 13px;
+  color: var(--danger-color);
+  font-size: var(--text-sm);
 }
 
 .explorer-dialog-actions {
@@ -156,22 +174,32 @@
 .explorer-dialog-button {
   color: var(--primary-text);
   background-color: var(--surface-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 6px 14px;
   cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: all var(--transition-base);
 }
 
 .explorer-dialog-button:hover {
   background-color: var(--hover-color);
+  border-color: var(--accent-color);
 }
 
 .explorer-dialog-primary {
   background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.explorer-dialog-primary:hover {
+  box-shadow: var(--shadow-glow);
 }
 
 .explorer-dialog-danger {
-  background-color: rgb(189, 24, 24);
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
 }
 
 .explorer-tree {
@@ -180,22 +208,23 @@
 }
 
 .explorer-empty {
-  color: var(--secondary-text);
+  color: var(--muted-text);
   padding: 8px;
+  font-size: var(--text-sm);
 }
 
 .tree-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-top: 3px;
-  padding-right: 8px;
-  padding-bottom: 3px;
-  border-radius: 4px;
+  padding: 3px 6px;
+  border-radius: var(--radius-md);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: default;
+  font-size: var(--text-sm);
+  transition: background-color var(--transition-fast);
 }
 
 .tree-row:focus-visible {
@@ -207,11 +236,12 @@
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  color: var(--secondary-text);
+  color: var(--muted-text);
+  font-size: 14px;
 }
 
 .tree-row-directory .tree-icon {
-  color: #fbbf24;
+  color: var(--warning-color);
 }
 
 .tree-row-selected .tree-icon {
@@ -225,12 +255,17 @@
 }
 
 .tree-row-directory:hover {
-  background-color: var(--hover-color);
+  background-color: rgba(139, 92, 246, 0.1);
 }
 
 .tree-row-file {
-  color: var(--primary-text);
+  color: var(--secondary-text);
   cursor: pointer;
+}
+
+.tree-row-file:hover {
+  background-color: rgba(139, 92, 246, 0.06);
+  color: var(--primary-text);
 }
 
 .tree-row-selected {
@@ -255,8 +290,9 @@
 }
 
 .tree-empty {
-  color: var(--secondary-text);
+  color: var(--muted-text);
   font-style: italic;
   padding-top: 2px;
   padding-bottom: 2px;
+  font-size: var(--text-sm);
 }

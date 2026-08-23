@@ -17,20 +17,24 @@
 .projects-title {
   font-size: 26px;
   color: var(--primary-text);
+  letter-spacing: -0.3px;
 }
 
 .projects-new-button {
-  color: var(--primary-text);
-  background-color: var(--accent-color);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
-  padding: 8px 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  border: solid 1px rgba(139, 92, 246, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 8px 16px;
   cursor: pointer;
   font-weight: 600;
+  font-size: var(--text-sm);
+  transition: all var(--transition-base);
 }
 
 .projects-new-button:hover {
-  background-color: var(--hover-color);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
 }
 
 .projects-toolbar {
@@ -43,12 +47,14 @@
 .projects-search {
   flex-grow: 1;
   min-width: 200px;
-  padding: 8px 10px;
-  background-color: var(--surface-bg);
+  padding: 8px 12px;
+  background-color: rgba(42, 31, 77, 0.5);
   color: var(--primary-text);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-lg);
   outline: none;
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
 }
 
 .projects-search:focus {
@@ -62,18 +68,24 @@
 }
 
 .projects-sort-label {
-  color: var(--secondary-text);
-  font-size: 13px;
+  color: var(--muted-text);
+  font-size: var(--text-sm);
 }
 
 .projects-sort-select {
   padding: 8px 10px;
-  background-color: var(--surface-bg);
+  background-color: rgba(42, 31, 77, 0.5);
   color: var(--primary-text);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-md);
   outline: none;
   cursor: pointer;
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.projects-sort-select:focus {
+  border-color: var(--accent-color);
 }
 
 .projects-favorites {
@@ -81,14 +93,19 @@
   align-items: center;
   gap: 6px;
   color: var(--secondary-text);
-  font-size: 13px;
+  font-size: var(--text-sm);
   cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.projects-favorites:hover {
+  color: var(--primary-text);
 }
 
 .projects-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .project-card {
@@ -96,10 +113,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px;
-  background-color: var(--surface-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 6px;
+  padding: 16px 18px;
+  background-color: rgba(42, 31, 77, 0.5);
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-base);
+}
+
+.project-card:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow: var(--shadow-glow);
 }
 
 .project-card-main {
@@ -112,12 +135,17 @@
 .project-favorite {
   background: transparent;
   border: none;
-  color: #fbbf24;
-  font-size: 20px;
+  color: var(--warning-color);
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
   padding: 2px;
   flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.project-favorite:hover {
+  transform: scale(1.15);
 }
 
 .project-card-info {
@@ -125,14 +153,15 @@
 }
 
 .project-card-name {
-  font-size: 18px;
+  font-size: 17px;
   margin-bottom: 4px;
   word-break: break-word;
+  font-weight: 600;
 }
 
 .project-card-meta {
   color: var(--secondary-text);
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.5;
   word-break: break-word;
 }
@@ -144,29 +173,35 @@
 }
 
 .projects-open-button {
-  color: var(--primary-text);
+  color: #ffffff;
   background-color: var(--accent-color);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  border: solid 1px rgba(139, 92, 246, 0.4);
+  border-radius: var(--radius-lg);
   padding: 7px 14px;
   cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: all var(--transition-base);
 }
 
 .projects-open-button:hover {
-  background-color: var(--hover-color);
+  box-shadow: var(--shadow-glow);
 }
 
 .projects-delete-button {
   color: var(--primary-text);
-  background-color: rgb(189, 24, 24);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  background-color: rgba(239, 68, 68, 0.15);
+  border: solid 1px rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-lg);
   padding: 7px 14px;
   cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: all var(--transition-base);
 }
 
 .projects-delete-button:hover {
-  background-color: rgb(140, 20, 20);
+  background-color: rgba(239, 68, 68, 0.25);
 }
 
 .projects-empty {
@@ -176,9 +211,9 @@
   gap: 8px;
   padding: 48px 16px;
   text-align: center;
-  background-color: var(--surface-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 6px;
+  background-color: rgba(42, 31, 77, 0.3);
+  border: dashed 1px var(--border-color);
+  border-radius: var(--radius-xl);
 }
 
 .projects-empty-title {
@@ -198,23 +233,29 @@
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 30;
+  animation: fadeIn var(--transition-base);
 }
 
 .projects-dialog {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   width: 380px;
-  padding: 16px;
+  padding: 20px;
   background-color: var(--surface-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-xl);
   color: var(--primary-text);
+  box-shadow: var(--shadow-lg);
+  animation: slideUp var(--transition-smooth);
 }
 
 .projects-dialog-title {
   font-weight: 700;
+  font-size: var(--text-lg);
 }
 
 .projects-dialog-actions {
@@ -226,18 +267,23 @@
 .projects-dialog-button {
   color: var(--primary-text);
   background-color: var(--surface-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 6px 14px;
   cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: all var(--transition-base);
 }
 
 .projects-dialog-button:hover {
   background-color: var(--hover-color);
+  border-color: var(--accent-color);
 }
 
 .projects-dialog-danger {
-  background-color: rgb(189, 24, 24);
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
 }
 
 @media (max-width: 768px) {

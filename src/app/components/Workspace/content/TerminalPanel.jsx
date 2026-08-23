@@ -47,6 +47,10 @@ export default function TerminalPanel({ provider, onClose }) {
         }
       }
 
+      // Bound history to 500 lines to keep rendering fast for large output
+      if (next.length > 500) {
+        return next.slice(next.length - 500);
+      }
       return next;
     });
   }

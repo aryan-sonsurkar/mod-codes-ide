@@ -55,11 +55,22 @@ export function useWorkspaceLayout() {
       event.preventDefault();
       const startPosition = horizontal ? event.clientY : event.clientX;
       const startSize = getSize();
+      let rafId = null;
+      let pendingDelta = 0;
+      const flush = () => {
+        rafId = null;
+        setSize(startSize + pendingDelta);
+      };
       const onMove = (moveEvent) => {
-        const delta = horizontal ? moveEvent.clientY - startPosition : moveEvent.clientX - startPosition;
-        setSize(startSize + delta);
+        pendingDelta = horizontal ? moveEvent.clientY - startPosition : moveEvent.clientX - startPosition;
+        if (rafId == null) {
+          rafId = window.requestAnimationFrame(flush);
+        }
       };
       const onUp = () => {
+        if (rafId != null) {
+          window.cancelAnimationFrame(rafId);
+        }
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
         document.body.style.cursor = "";

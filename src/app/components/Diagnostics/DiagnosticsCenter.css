@@ -1,8 +1,8 @@
 .diagnostics-center {
   padding: 14px 16px;
-  background-color: var(--surface-bg);
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-md);
+  background-color: rgba(42, 31, 77, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
 }
 
 .diagnostics-center h3 {
@@ -24,7 +24,7 @@
   margin: 0 0 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .diagnostics-item {
@@ -32,8 +32,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 8px;
-  background-color: var(--workspace-bg);
-  border-radius: var(--radius-sm);
+  background-color: rgba(34, 24, 58, 0.4);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
 }
 
@@ -50,43 +50,58 @@
 }
 
 .diagnostics-copy {
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: transparent;
   color: var(--primary-text);
   cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: all var(--transition-fast);
 }
 
 .diagnostics-copy:hover {
-  background-color: var(--hover-color);
+  background-color: rgba(139, 92, 246, 0.1);
+  border-color: var(--accent-color);
 }
 
 .error-boundary {
   padding: 24px;
-  background-color: var(--surface-bg);
-  border: 2px solid var(--danger-color);
-  border-radius: var(--radius-md);
+  background-color: rgba(42, 31, 77, 0.5);
+  border: 1px solid var(--danger-color);
+  border-radius: var(--radius-xl);
   color: var(--primary-text);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);
 }
 
 .error-boundary h2 {
   margin: 0 0 8px;
   color: var(--danger-color);
+  font-size: var(--text-lg);
 }
 
 .error-boundary-hint {
   margin: 8px 0;
   color: var(--secondary-text);
   font-size: var(--text-sm);
+  line-height: 1.5;
 }
 
 .error-boundary-retry {
   margin-top: 12px;
   padding: 8px 16px;
   border: none;
-  border-radius: var(--radius-sm);
-  background-color: var(--accent-color);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
   color: white;
   cursor: pointer;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  transition: all var(--transition-base);
+}
+
+.error-boundary-retry:hover {
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
 }

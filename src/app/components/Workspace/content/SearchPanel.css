@@ -5,11 +5,9 @@
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
-  background-color: var(--sidebar-bg);
-  border: solid 2px var(--border-color);
-  border-radius: 5px;
+  background-color: transparent;
   color: var(--primary-text);
-  padding: 8px;
+  padding: 4px;
 }
 
 .search-header {
@@ -17,12 +15,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-weight: bold;
+  font-weight: 600;
   letter-spacing: 1px;
-  color: var(--secondary-text);
+  color: var(--muted-text);
   padding: 4px 8px 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   border-bottom: solid 1px var(--border-color);
+  font-size: var(--text-xs);
 }
 
 .search-close-button {
@@ -33,27 +32,30 @@
   height: 22px;
   padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: transparent;
-  color: var(--secondary-text);
+  color: var(--muted-text);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .search-close-button:hover {
-  background-color: var(--hover-color);
+  background-color: rgba(139, 92, 246, 0.12);
   color: var(--primary-text);
 }
 
 .search-input {
   padding: 6px 8px;
   margin-bottom: 8px;
-  background-color: var(--workspace-bg);
+  background-color: rgba(34, 24, 58, 0.6);
   color: var(--primary-text);
-  border: solid 2px var(--border-color);
-  border-radius: 4px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-md);
   outline: none;
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
 }
 
 .search-inputs {
@@ -76,9 +78,14 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: var(--secondary-text);
-  font-size: 12px;
+  color: var(--muted-text);
+  font-size: var(--text-xs);
   cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.search-option:hover {
+  color: var(--secondary-text);
 }
 
 .search-actions {
@@ -92,23 +99,32 @@
   padding: 5px 8px;
   background-color: var(--surface-bg);
   color: var(--primary-text);
-  border: solid 2px var(--border-color);
-  border-radius: 4px;
-  font-size: 12px;
+  border: solid 1px var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: 600;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .search-action-button:hover:not(:disabled) {
-  background-color: var(--hover-color);
+  background-color: rgba(139, 92, 246, 0.15);
+  border-color: var(--accent-color);
 }
 
 .search-action-button:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: default;
 }
 
 .search-action-danger {
-  background-color: rgb(189, 24, 24);
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--danger-color);
+}
+
+.search-action-danger:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.25);
 }
 
 .search-input:focus {
@@ -123,13 +139,13 @@
 }
 
 .search-status {
-  color: var(--secondary-text);
-  font-size: 13px;
+  color: var(--muted-text);
+  font-size: var(--text-sm);
   padding: 4px 8px;
 }
 
 .search-error {
-  color: rgb(240, 82, 82);
+  color: var(--danger-color);
 }
 
 .search-results {
@@ -145,8 +161,8 @@
 
 .search-group-header {
   color: var(--accent-color);
-  font-family: "Consolas", "Menlo", monospace;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   font-weight: 600;
   padding: 6px 8px 2px;
   border-bottom: solid 1px var(--border-color);
@@ -162,21 +178,27 @@
   align-items: flex-start;
   gap: 2px;
   text-align: left;
-  padding: 5px 8px;
+  padding: 4px 8px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--primary-text);
   cursor: pointer;
+  font-size: var(--text-sm);
+  transition: all var(--transition-fast);
 }
 
 .search-result:hover {
-  background-color: var(--hover-color);
+  background-color: rgba(139, 92, 246, 0.08);
 }
 
 .search-result-selected {
   background-color: var(--accent-color);
   color: #ffffff;
+}
+
+.search-result-selected:hover {
+  background-color: var(--hover-color);
 }
 
 .search-result-selected .search-result-line,
@@ -191,16 +213,18 @@
 }
 
 .search-result-line {
-  color: var(--secondary-text);
-  font-size: 12px;
+  color: var(--muted-text);
+  font-size: var(--text-xs);
   flex-shrink: 0;
+  font-family: var(--font-mono);
 }
 
 .search-result-text {
   color: var(--secondary-text);
-  font-size: 12px;
+  font-size: var(--text-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  font-family: var(--font-mono);
 }
