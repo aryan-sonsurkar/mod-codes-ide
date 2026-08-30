@@ -19,6 +19,13 @@ import GoToSymbolDialog from "./GoToSymbolDialog";
 import { createTerminalService, createBrowserSimulationBackend } from "../../../lib/terminal";
 import { createSystemTerminalBackend, checkBridgeHealth, getBridgeToken } from "../../../lib/terminal/backends/systemTerminalBackend";
 import { useWorkspaceLayout } from "../../../hooks/useWorkspaceLayout";
+import ProjectOverview from "./ProjectOverview";
+import ResearchWorkspace from "./ResearchWorkspace";
+import PRDWorkspace from "./PRDWorkspace";
+import RoadmapWorkspace from "./RoadmapWorkspace";
+import AgentWorkspace from "./AgentWorkspace";
+import { loadModcodes, saveModcodes, ensureModcodes } from "../../../lib/project/service";
+import { reconcileProjectMemory } from "../../../lib/project/reconcile";
 import {
   openProjectDirectory,
   readFile,
@@ -34,6 +41,12 @@ import {
   loadWorkspace,
   saveWorkspace,
 } from "../../../lib/workspace/workspaceStorage";
+function collectFileCount(node) {
+  if (!node) return 0;
+  if (node.kind === "file") return 1;
+  if (!node.children) return 0;
+  return node.children.reduce((sum, child) => sum + collectFileCount(child), 0);
+}
 import { buildRecoveryPlan } from "../../../lib/workspace/workspaceRecovery";
 import { collectFilePaths } from "../../../lib/diagnostics/resolve";
 import { useTabs } from "../../../hooks/useTabs";
@@ -93,6 +106,9 @@ export default function IdeWorkspace({ selectedProject }) {
   const contextCacheRef = useRef(createContextCache({ ttlMs: 2000 }));
   const graphNeighborsRef = useRef(null);
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
+  const [modcodesData, setModcodesData] = useState(null);
+  const [workspaceMode, setWorkspaceMode] = useState("code"); // code | research | prd | roadmap | agent | overview
+  const [showContinue, setShowContinue] = useState(false);
   useEffect(() => {
     let cancelled = false;
     checkBridgeHealth().then((r) => {
@@ -104,6 +120,24 @@ export default function IdeWorkspace({ selectedProject }) {
       cancelled = true;
     };
   }, []);
+  // Load .modcodes when tree is available (local-first project memory)
+  useEffect(() => {
+    if (!tree || !selectedProject) return;
+    const rootName = tree.name;
+    ensureModcodes({ rootName, projectName: selectedProject.name, phase: "idea", source: selectedProject.bringing || "idea", github: selectedProject.githubRepo ? "pending" : null }).then((res) => {
+      if (res.ok && res.data) {
+        setModcodesData(res.data);
+        if (res.created) {
+          // new project: stay in code, .modcodes created
+        } else {
+          // existing: show Continue experience
+          setShowContinue(true);
+        }
+      } else if (res.ok && res.absent) {
+        // no .modcodes yet
+      }
+    });
+  }, [tree, selectedProject]);
   const terminalProvider = useMemo(() => {
     function findTreeNode(node, segments) {
       let current = node;
@@ -1150,9 +1184,42 @@ export default function IdeWorkspace({ selectedProject }) {
           </button>
         </div>
       </header>
+      <div className="workspace-mode-bar" style={{display:"flex",gap:6,padding:"6px 0"}}>
+        {[
+          ["code","Code"],
+          ["overview","Overview"],
+          ["research","Research"],
+          ["prd","PRD"],
+          ["roadmap","Roadmap"],
+          ["agent","Agent"],
+        ].map(([id,label])=>(
+          <button key={id} className={`ide-header-button${workspaceMode===id?" ide-header-button-active":""}`} onClick={()=>setWorkspaceMode(id)}>{label}</button>
+        ))}
+        <span style={{marginLeft:"auto",color:"var(--secondary-text)",fontSize:12,alignSelf:"center"}}>Phase: {modcodesData?.project?.phase || "idea"} · .modcodes local</span>
+      </div>
+
+      {showContinue && modcodesData && (
+        <ProjectOverview
+          modcodesData={modcodesData}
+          codebaseSnapshot={{ fileCount: tree ? collectFileCount(tree) : 0, filesChangedSinceLastSession: 0, depsCount: 0, prdHash: modcodesData.sections?.PRD ? "present" : null }}
+          onContinue={()=>setShowContinue(false)}
+          onReview={()=>setShowContinue(false)}
+          onOpen={()=>setShowContinue(false)}
+          onPhaseChange={(next)=>{ const updated={...modcodesData, project:{...modcodesData.project, phase: next, updatedAt:new Date().toISOString()}}; setModcodesData(updated); saveModcodes({rootName: tree.name, data: updated});}}
+        />
+      )}
 
       {status === "ready" && tree ? (
         <>
+          {workspaceMode !== "code" ? (
+            <div style={{flex:1, minHeight:0, overflow:"auto", background:"var(--workspace-bg)", border:"1px solid var(--border-color)", borderRadius:8}}>
+              {workspaceMode==="overview" && <ProjectOverview modcodesData={modcodesData} codebaseSnapshot={{fileCount: collectFileCount(tree), filesChangedSinceLastSession:0}} onContinue={()=>setWorkspaceMode("code")} onOpen={()=>setWorkspaceMode("code")} onReview={()=>{}} onPhaseChange={(next)=>{const u={...modcodesData, project:{...modcodesData.project, phase:next, updatedAt:new Date().toISOString()}}; setModcodesData(u); saveModcodes({rootName:tree.name,data:u});}} />}
+              {workspaceMode==="research" && <ResearchWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
+              {workspaceMode==="prd" && <PRDWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
+              {workspaceMode==="roadmap" && <RoadmapWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
+              {workspaceMode==="agent" && <AgentWorkspace orchestrator={null} />}
+            </div>
+          ) : (
           <div className="ide-layout">
             {layout.leftOpen && (
               <>
@@ -1399,6 +1466,7 @@ export default function IdeWorkspace({ selectedProject }) {
               </>
             )}
           </div>
+          )}
 
           {layout.terminalOpen && (
             <div

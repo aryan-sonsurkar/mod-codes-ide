@@ -4,8 +4,10 @@ import { useState } from "react";
 export default function CreateProjectModal({ closeModal, addProject }) {
   const [projectName, setProjectName] = useState("");
   const [projectLocation, setProjectLocation] = useState("");
-  const [projectType, setProjectType] = useState("");
+  const [bringing, setBringing] = useState("idea");
+  const [projectType, setProjectType] = useState("Blank Project");
   const [projectGit, setProjectGit] = useState(false);
+  const [githubRepo, setGithubRepo] = useState(false);
 
   async function chooseProjectFolder() {
     if (!("showDirectoryPicker" in window)) {
@@ -24,23 +26,31 @@ export default function CreateProjectModal({ closeModal, addProject }) {
   }
 
   function handleSubmit(event) {
+    event.preventDefault();
+    if (!projectName.trim() || !projectLocation.trim()) {
+      window.alert("Please provide project name and folder.");
+      return;
+    }
     const currentTime = Date.now();
     const project = {
       id: crypto.randomUUID(),
-      name: projectName,
+      name: projectName.trim(),
       location: projectLocation,
       type: projectType,
+      bringing, // idea | codebase | hybrid | empty
       git: projectGit,
+      githubRepo,
       createdAt: currentTime,
       lastOpened: currentTime,
       favorite: false,
     };
-    event.preventDefault();
     addProject(project);
     setProjectName("");
     setProjectGit(false);
+    setGithubRepo(false);
     setProjectLocation("");
-    setProjectType("");
+    setProjectType("Blank Project");
+    setBringing("idea");
   }
 
   return (
@@ -70,6 +80,18 @@ export default function CreateProjectModal({ closeModal, addProject }) {
           </button>
         </div>
 
+        <label className="labels">What are you bringing?</label>
+        <select
+          className="input"
+          value={bringing}
+          onChange={(event) => setBringing(event.target.value)}
+        >
+          <option value="idea">IDEA — I have an idea</option>
+          <option value="codebase">EXISTING CODEBASE</option>
+          <option value="hybrid">IDEA + EXISTING CODEBASE (hybrid)</option>
+          <option value="empty">EMPTY PROJECT</option>
+        </select>
+
         <label className="labels">Project Type: </label>
         <select
           className="input"
@@ -92,6 +114,21 @@ export default function CreateProjectModal({ closeModal, addProject }) {
           ></input>
           <label className="labels">Initialize Git Repository</label>
         </section>
+        <section className="gitrepo">
+          <input
+            className="input"
+            type="checkbox"
+            checked={githubRepo}
+            onChange={(event) => setGithubRepo(event.target.checked)}
+          ></input>
+          <label className="labels">Create GitHub Repository (offered at creation)</label>
+        </section>
+        <p style={{ color: "var(--secondary-text)", fontSize: "12px", margin: "4px 0 0" }}>
+          {bringing === "idea" && "Flow: idea → research → PRD → roadmap → development. You can start coding earlier."}
+          {bringing === "codebase" && "MODCODES will inspect the codebase first, then propose a plan for approval."}
+          {bringing === "hybrid" && "Understand existing code + idea → research → gap analysis → architecture → plan → approve → execute."}
+          {bringing === "empty" && "Start with a clean workspace and .modcodes memory."}
+        </p>
 
         <section className="ModalButtons">
           <button className="button" type="reset" onClick={closeModal}>Cancel</button>

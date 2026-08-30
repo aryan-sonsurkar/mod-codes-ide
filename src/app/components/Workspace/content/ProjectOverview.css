@@ -1,0 +1,10 @@
+.project-overview{padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--surface-bg);border:1px solid var(--border-color);border-radius:8px;color:var(--primary-text)}
+.project-overview .muted{color:var(--secondary-text);font-size:13px}
+.project-overview .small{font-size:12px;font-style:italic}
+.overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.overview-card{background:var(--workspace-bg);border:1px solid var(--border-color);border-radius:6px;padding:10px;font-size:13px}
+.reconcile-proposals{border:1px solid var(--border-color);border-radius:6px;padding:10px}
+.proposal{margin:8px 0;padding:8px;background:var(--workspace-bg);border-radius:4px}
+.proposal-actions{display:flex;gap:6px;margin-top:6px}
+.overview-actions{display:flex;gap:8px;flex-wrap:wrap}
+.overview-actions .primary{background:var(--accent-color);color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer}

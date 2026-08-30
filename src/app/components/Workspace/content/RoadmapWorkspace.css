@@ -1,0 +1,2 @@
+.roadmap-ws{padding:16px;display:flex;flex-direction:column;gap:10px;color:var(--primary-text)}
+.roadmap-pre{background:var(--surface-bg);border:1px solid var(--border-color);border-radius:8px;padding:10px;white-space:pre-wrap;font-size:13px;color:var(--secondary-text)}

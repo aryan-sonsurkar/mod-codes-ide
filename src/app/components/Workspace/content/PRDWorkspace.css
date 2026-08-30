@@ -1,0 +1,5 @@
+.prd-ws{padding:16px;display:flex;flex-direction:column;gap:12px;color:var(--primary-text)}
+.prd-actions{display:flex;gap:8px}
+.prd-editor{width:100%;background:var(--surface-bg);color:var(--primary-text);border:1px solid var(--border-color);border-radius:8px;padding:10px;font-family:var(--font-mono);font-size:13px}
+.muted{color:var(--secondary-text)}
+.primary{background:var(--accent-color);color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer}
