@@ -70,6 +70,13 @@ export default function RoadmapWorkspace({ modcodesData, onUpdate, tree, lifecyc
               <button onClick={()=>{}}>Review Assessment</button>
             </div>
           )}
+          {lifecycleSnap.verification && (
+            <div className="verification" style={{marginTop:8,padding:8,background:"var(--surface-bg)",borderRadius:6,border:"1px solid var(--border-color)"}}>
+              <strong>Verification: {lifecycleSnap.verification.status}</strong>
+              <div>{lifecycleSnap.verification.passed} passed, {lifecycleSnap.verification.failed} failed, {lifecycleSnap.verification.unknown} unknown, {lifecycleSnap.verification.blocked} blocked</div>
+              <button>Verify</button><button>View Results</button>
+            </div>
+          )}
         </div>
       )}
       <div className="milestones">

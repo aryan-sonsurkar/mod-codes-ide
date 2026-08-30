@@ -1,6 +1,7 @@
 "use client";
 import { createContextRequest, selectContext } from "../ai/contextIntelligence";
 import { detectMilestoneCompletion } from "./completion";
+import { verifyMilestone } from "./verification";
 
 export const LIFECYCLE_STATES = {
   idle: "idle",
@@ -37,6 +38,7 @@ export function createProjectLifecycleOrchestrator({
   let inspectionResult = null;
   let contextSelection = null;
   let completionAssessment = null;
+  let verification = null;
   let proposedMemoryUpdate = null;
   let error = null;
   let agentUnsub = null;
@@ -55,6 +57,7 @@ export function createProjectLifecycleOrchestrator({
       inspectionResult,
       contextSelection,
       completionAssessment,
+      verification,
       proposedMemoryUpdate,
       error,
       agentState: agentOrchestrator.getSnapshot ? agentOrchestrator.getSnapshot().state : null,
@@ -105,8 +108,24 @@ export function createProjectLifecycleOrchestrator({
           gitState: inspectionResult?.gitSafety ? { clean: inspectionResult.gitSafety === "normal" } : null,
           agentState: agentSnap.state,
         });
+        // Run verification (read-only) — consumes assessment
+        try {
+          verification = verifyMilestone({
+            milestone,
+            assessment: completionAssessment,
+            projectData,
+            inspection: inspectionResult,
+            tests: null,
+            gitState: inspectionResult?.gitSafety ? { clean: inspectionResult.gitSafety === "normal" } : null,
+            changeset: changeset || agentOrchestrator.getSnapshot().changeset,
+            permissions: { canRunTests: true },
+          });
+        } catch {
+          verification = null;
+        }
       } catch {
         completionAssessment = null;
+        verification = null;
       }
       emit();
     }
@@ -149,6 +168,7 @@ export function createProjectLifecycleOrchestrator({
     inspectionResult = null;
     contextSelection = null;
     completionAssessment = null;
+    verification = null;
     proposedMemoryUpdate = null;
     error = null;
     setState(LIFECYCLE_STATES.preparing);

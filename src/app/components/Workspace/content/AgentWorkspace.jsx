@@ -62,6 +62,13 @@ export default function AgentWorkspace({ orchestrator, lifecycle }) {
           <button>View Assessment</button>
         </div>
       )}
+      {lifecycleSnap && lifecycleSnap.verification && (
+        <div className="agent-context" style={{marginTop:8}}>
+          <strong>Verification: {lifecycleSnap.verification.status}</strong>
+          <div>✓ {lifecycleSnap.verification.passed} passed ✗ {lifecycleSnap.verification.failed} failed ? {lifecycleSnap.verification.unknown} unknown</div>
+          <button>View Results</button>
+        </div>
+      )}
       <div className="agent-grid">
         <div className="agent-card"><strong>Plan</strong><pre>{snap.plan ? JSON.stringify(snap.plan,null,2).slice(0,800) : "— no plan yet"}</pre></div>
         <div className="agent-card"><strong>Progress</strong><pre>Current: {snap.task?.currentStep || "—"}{"\n"}Observations: {(snap.observations||[]).length}</pre></div>
