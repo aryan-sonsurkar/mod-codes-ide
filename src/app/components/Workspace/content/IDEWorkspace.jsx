@@ -26,6 +26,7 @@ import RoadmapWorkspace from "./RoadmapWorkspace";
 import AgentWorkspace from "./AgentWorkspace";
 import { loadModcodes, saveModcodes, ensureModcodes } from "../../../lib/project/service";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
+import { useAgentWorkspace } from "../../../hooks/useAgentWorkspace";
 import {
   openProjectDirectory,
   readFile,
@@ -109,6 +110,7 @@ export default function IdeWorkspace({ selectedProject }) {
   const [modcodesData, setModcodesData] = useState(null);
   const [workspaceMode, setWorkspaceMode] = useState("code"); // code | research | prd | roadmap | agent | overview
   const [showContinue, setShowContinue] = useState(false);
+  const { orchestrator: agentOrchestrator } = useAgentWorkspace();
   useEffect(() => {
     let cancelled = false;
     checkBridgeHealth().then((r) => {
@@ -1217,7 +1219,7 @@ export default function IdeWorkspace({ selectedProject }) {
               {workspaceMode==="research" && <ResearchWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
               {workspaceMode==="prd" && <PRDWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
               {workspaceMode==="roadmap" && <RoadmapWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
-              {workspaceMode==="agent" && <AgentWorkspace orchestrator={null} />}
+              {workspaceMode==="agent" && <AgentWorkspace orchestrator={agentOrchestrator} />}
             </div>
           ) : (
           <div className="ide-layout">

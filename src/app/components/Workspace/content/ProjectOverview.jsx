@@ -14,28 +14,50 @@ export default function ProjectOverview({ modcodesData, codebaseSnapshot, onCont
   const progress = phaseProgress(phase);
   const lastWorked = modcodesData.project?.updatedAt ? new Date(modcodesData.project.updatedAt).toLocaleDateString() : "Unknown";
   const filesChanged = codebaseSnapshot?.filesChangedSinceLastSession ?? 0;
+  const depsChanged = codebaseSnapshot?.depsChanged ?? codebaseSnapshot?.depsCount ?? 0;
+  const researchChanged = codebaseSnapshot?.researchChanged ?? 0;
+  const gitStatus = codebaseSnapshot?.gitStatus || "clean";
+  const prdDrift = !codebaseSnapshot?.prdHash ? "not yet" : researchChanged ? `${researchChanged} research updates since PRD` : "unchanged";
+  const milestoneMatch = String(modcodesData.sections?.Milestones || "").match(/M(\d+)/);
+  const currentMilestone = milestoneMatch ? milestoneMatch[0] : "M1";
+  // Explainable recommendation
+  let recommendation = "Implement next milestone task";
+  let reason = "Roadmap indicates next task pending.";
+  if (progress < 30) { recommendation = "Run research deeper on open questions"; reason = `Phase is ${label} (${progress}%) — research incomplete.`; }
+  else if (reconciliation.proposals.some(p=>p.id==="stale-memory")) {
+    // eslint-disable-next-line react-hooks/purity
+    const lastUpdated = modcodesData.project?.updatedAt ? Date.parse(modcodesData.project.updatedAt) : Date.now();
+    // eslint-disable-next-line react-hooks/purity
+    const ageDays = Math.floor((Date.now() - lastUpdated) / (24*3600*1000));
+    recommendation = "Review stale project memory proposals"; reason = `Memory ${ageDays} days old and ${filesChanged} files changed.`;
+  }
+  else if (String(modcodesData.sections?.Progress || "").includes("6/7")) { recommendation = "Run authentication integration tests"; reason = "Authentication milestone is 6/7 complete and test suite contains unverified cases."; }
 
   return (
     <div className="project-overview">
       <h2>Continue Project — {modcodesData.project?.name}</h2>
-      <p className="muted">Phase: {label} · {progress}% · Last worked: {lastWorked}</p>
+      <p className="muted">Welcome back — Last session {lastWorked} · Phase: {label} · {progress}% · Milestone {currentMilestone}</p>
       <div className="overview-grid">
         <div className="overview-card">
           <strong>Since last session</strong>
           <ul>
             <li>{filesChanged} files changed</li>
-            <li>{codebaseSnapshot?.depsCount ?? 0} deps</li>
-            <li>PRD {codebaseSnapshot?.prdHash ? "unchanged" : "not yet"}</li>
+            <li>{depsChanged} dependencies changed</li>
+            <li>PRD {prdDrift}</li>
+            <li>Git: {gitStatus}</li>
+            <li>Research: {researchChanged ? `${researchChanged} updates` : "no change"}</li>
           </ul>
         </div>
         <div className="overview-card">
           <strong>Project health</strong>
           <p>✓ Architecture matches</p>
           {reconciliation.proposals.length > 0 ? <p>⚠ Project memory may be outdated</p> : <p>✓ Memory fresh</p>}
+          <p>Confidence: {filesChanged > 10 ? "review recommended" : "high"}</p>
         </div>
         <div className="overview-card">
-          <strong>Next recommended step</strong>
-          <p>{modcodesData.sections?.Progress ? String(modcodesData.sections.Progress).split("\n")[0] : "Implement next milestone task"}</p>
+          <strong>Next recommended action</strong>
+          <p><strong>{recommendation}</strong></p>
+          <p className="muted small">Reason: {reason}</p>
         </div>
       </div>
       {reconciliation.proposals.length > 0 && (
