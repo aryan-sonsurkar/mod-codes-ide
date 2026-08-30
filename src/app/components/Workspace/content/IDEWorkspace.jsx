@@ -27,6 +27,7 @@ import AgentWorkspace from "./AgentWorkspace";
 import { loadModcodes, saveModcodes, ensureModcodes } from "../../../lib/project/service";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
 import { useAgentWorkspace } from "../../../hooks/useAgentWorkspace";
+import { createProjectLifecycleOrchestrator } from "../../../lib/project/lifecycle";
 import {
   openProjectDirectory,
   readFile,
@@ -111,6 +112,7 @@ export default function IdeWorkspace({ selectedProject }) {
   const [workspaceMode, setWorkspaceMode] = useState("code"); // code | research | prd | roadmap | agent | overview
   const [showContinue, setShowContinue] = useState(false);
   const { orchestrator: agentOrchestrator } = useAgentWorkspace();
+  const lifecycleOrchestrator = useMemo(() => createProjectLifecycleOrchestrator({ agentOrchestrator }), [agentOrchestrator]);
   useEffect(() => {
     let cancelled = false;
     checkBridgeHealth().then((r) => {
@@ -1218,7 +1220,7 @@ export default function IdeWorkspace({ selectedProject }) {
               {workspaceMode==="overview" && <ProjectOverview modcodesData={modcodesData} codebaseSnapshot={{fileCount: collectFileCount(tree), filesChangedSinceLastSession:0}} onContinue={()=>setWorkspaceMode("code")} onOpen={()=>setWorkspaceMode("code")} onReview={()=>{}} onPhaseChange={(next)=>{const u={...modcodesData, project:{...modcodesData.project, phase:next, updatedAt:new Date().toISOString()}}; setModcodesData(u); saveModcodes({rootName:tree.name,data:u});}} />}
               {workspaceMode==="research" && <ResearchWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
               {workspaceMode==="prd" && <PRDWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
-              {workspaceMode==="roadmap" && <RoadmapWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
+              {workspaceMode==="roadmap" && <RoadmapWorkspace modcodesData={modcodesData} lifecycle={lifecycleOrchestrator} tree={tree} onSwitchToAgent={()=>setWorkspaceMode("agent")} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
               {workspaceMode==="agent" && <AgentWorkspace orchestrator={agentOrchestrator} />}
             </div>
           ) : (
