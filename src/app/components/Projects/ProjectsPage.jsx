@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import ConfirmDialog from "../Dialogs/ConfirmDialog";
+import { createAdService } from "../../lib/ads/AdService";
 import "./ProjectsPage.css";
 
 function formatLastOpened(timestamp) {
@@ -79,9 +80,16 @@ export default function ProjectsPage({
   });
 
   const confirmProject = projects.find((project) => project.id === confirmId) || null;
+  const ad = createAdService().requestAd({ placement: "projects-dashboard" });
 
   return (
     <section className="projects-page">
+      {ad && (
+        <div style={{border:"1px dashed var(--border-color)",padding:"8px 10px",borderRadius:6,background:"var(--workspace-bg)",fontSize:12,display:"flex",gap:8,alignItems:"center"}}>
+          <span style={{background:"var(--border-color)",padding:"2px 6px",borderRadius:4,fontSize:11}}>{ad.label}</span>
+          {ad.title} <a href={ad.href} style={{color:"var(--accent-color)"}}>{ad.cta}</a> <span style={{marginLeft:"auto",color:"var(--secondary-text)"}}>Projects dashboard — ad isolated from project data</span>
+        </div>
+      )}
       <div className="projects-header">
         <h2 className="projects-title">Projects</h2>
         <button className="projects-new-button" onClick={onCreate}>

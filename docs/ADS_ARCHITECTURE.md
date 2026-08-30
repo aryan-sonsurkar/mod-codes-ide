@@ -1,0 +1,3 @@
+# Ads Architecture — MODCODES
+
+Mock `lib/ads/AdService.js` implements `requestAd({placement})/showAd()/dismissAd()/reportImpression()` — isolated from project data. Never receives source/.modcodes/prompts/terminal/secrets. Round-robin `MOCK_ADS` labeled `Sponsored`, distinct styling. Placements: project-opening transition, project-creation transition, Projects dashboard, Research sponsored block, collapsible secondary. Never between editor/terminal, editor/explorer, line numbers, AI input, agent/diff controls. Production will select legitimate provider after privacy review; this mock proves isolation.
