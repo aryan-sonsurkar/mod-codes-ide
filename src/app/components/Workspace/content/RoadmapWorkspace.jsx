@@ -77,6 +77,27 @@ export default function RoadmapWorkspace({ modcodesData, onUpdate, tree, lifecyc
               <button>Verify</button><button>View Results</button>
             </div>
           )}
+          {lifecycleSnap.memoryProposal && lifecycleSnap.memoryProposal.status === "pending" && (
+            <div className="memory-proposal" style={{marginTop:8,padding:8,background:"var(--surface-bg)",borderRadius:6,border:"1px solid var(--accent-color)"}}>
+              <strong>Project Memory Proposal — {lifecycleSnap.memoryProposal.section}</strong>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:6}}>
+                <div><strong>Current</strong><pre style={{whiteSpace:"pre-wrap",fontSize:12,background:"var(--workspace-bg)",padding:6,borderRadius:4}}>{lifecycleSnap.memoryProposal.before || "(empty)"}</pre></div>
+                <div><strong>Proposed</strong><pre style={{whiteSpace:"pre-wrap",fontSize:12,background:"var(--workspace-bg)",padding:6,borderRadius:4}}>{lifecycleSnap.memoryProposal.after}</pre></div>
+              </div>
+              <div style={{marginTop:6,fontSize:12}}>Reason: {lifecycleSnap.memoryProposal.reason} — Evidence: {lifecycleSnap.memoryProposal.evidence.join(", ")}</div>
+              <div style={{display:"flex",gap:6,marginTop:6}}>
+                <button className="primary" onClick={()=>lifecycle.acceptMemoryProposal()}>Accept</button>
+                <button onClick={()=>{
+                  const edited = window.prompt("Edit proposal", lifecycleSnap.memoryProposal.after);
+                  if (edited !== null) lifecycle.editMemoryProposal(edited);
+                }}>Edit</button>
+                <button onClick={()=>lifecycle.rejectMemoryProposal()}>Reject</button>
+              </div>
+            </div>
+          )}
+          {lifecycleSnap.memoryProposal && lifecycleSnap.memoryProposal.status !== "pending" && (
+            <div style={{marginTop:8,fontSize:12}}>Memory proposal: {lifecycleSnap.memoryProposal.status}</div>
+          )}
         </div>
       )}
       <div className="milestones">

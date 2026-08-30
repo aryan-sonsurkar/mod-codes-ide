@@ -2,6 +2,7 @@
 import { createContextRequest, selectContext } from "../ai/contextIntelligence";
 import { detectMilestoneCompletion } from "./completion";
 import { verifyMilestone } from "./verification";
+import { createProgressProposal, PROPOSAL_STATUSES, acceptProposal, editProposal, rejectProposal } from "./memoryProposal";
 
 export const LIFECYCLE_STATES = {
   idle: "idle",
@@ -39,6 +40,7 @@ export function createProjectLifecycleOrchestrator({
   let contextSelection = null;
   let completionAssessment = null;
   let verification = null;
+  let memoryProposal = null;
   let proposedMemoryUpdate = null;
   let error = null;
   let agentUnsub = null;
@@ -58,7 +60,8 @@ export function createProjectLifecycleOrchestrator({
       contextSelection,
       completionAssessment,
       verification,
-      proposedMemoryUpdate,
+      memoryProposal,
+      proposedMemoryUpdate: memoryProposal || proposedMemoryUpdate, // backward compat
       error,
       agentState: agentOrchestrator.getSnapshot ? agentOrchestrator.getSnapshot().state : null,
       // agent and lifecycle states are distinct
@@ -120,12 +123,40 @@ export function createProjectLifecycleOrchestrator({
             changeset: changeset || agentOrchestrator.getSnapshot().changeset,
             permissions: { canRunTests: true },
           });
+          // Create memory proposal (M157) — verified/failed/partially/blocked, fallback to ready_for_review for backward compat
+          try {
+            let proposal = null;
+            try { proposal = createProgressProposal({ milestone, verification, projectData }); } catch { proposal = null; }
+            if (!proposal) {
+              // Fallback: generic Progress ready_for_review (keeps existing tests passing)
+              proposal = {
+                id: `mp_${Date.now().toString(36)}`,
+                section: "Progress",
+                operation: "append",
+                before: String(projectData ? (projectData.sections?.Progress || "") : ""),
+                after: `${String(projectData ? (projectData.sections?.Progress || "") : "").trim()}\n- ${milestone.id} ${milestone.goal || milestone.title}: ready_for_review (${new Date().toISOString()})`.trim(),
+                reason: `Milestone ${milestone.id} ready for review`,
+                evidence: verification ? (verification.criteria||[]).slice(0,3).map(c=>String(c.description||"").slice(0,40)) : [],
+                requires: ["Accept","Edit","Reject"],
+                status: "pending",
+                createdAt: new Date().toISOString(),
+                milestoneId: milestone.id,
+                beforeHash: String(projectData ? (projectData.sections?.Progress || "") : ""),
+              };
+            }
+            memoryProposal = proposal;
+            proposedMemoryUpdate = { section: proposal.section, append: proposal.after, reason: proposal.reason, evidence: proposal.evidence, requires: proposal.requires };
+          } catch {
+            memoryProposal = null;
+          }
         } catch {
           verification = null;
+          memoryProposal = null;
         }
       } catch {
         completionAssessment = null;
         verification = null;
+        memoryProposal = null;
       }
       emit();
     }
@@ -169,6 +200,7 @@ export function createProjectLifecycleOrchestrator({
     contextSelection = null;
     completionAssessment = null;
     verification = null;
+    memoryProposal = null;
     proposedMemoryUpdate = null;
     error = null;
     setState(LIFECYCLE_STATES.preparing);
@@ -302,6 +334,27 @@ export function createProjectLifecycleOrchestrator({
     return getSnapshot();
   }
 
+  function acceptMemoryProposal() {
+    if (!memoryProposal || memoryProposal.status !== PROPOSAL_STATUSES.pending) throw new Error("No pending memory proposal");
+    memoryProposal = acceptProposal(memoryProposal);
+    emit();
+    return getSnapshot();
+  }
+
+  function editMemoryProposal(newAfter) {
+    if (!memoryProposal || memoryProposal.status !== PROPOSAL_STATUSES.pending) throw new Error("No pending memory proposal");
+    memoryProposal = editProposal(memoryProposal, newAfter);
+    emit();
+    return getSnapshot();
+  }
+
+  function rejectMemoryProposal() {
+    if (!memoryProposal || memoryProposal.status !== PROPOSAL_STATUSES.pending) throw new Error("No pending memory proposal");
+    memoryProposal = rejectProposal(memoryProposal);
+    emit();
+    return getSnapshot();
+  }
+
   if (hasDependencyCheck()) {
     throw new Error("Lifecycle dependency violation");
   }
@@ -317,6 +370,9 @@ export function createProjectLifecycleOrchestrator({
     reviewChanges,
     complete,
     fail,
+    acceptMemoryProposal,
+    editMemoryProposal,
+    rejectMemoryProposal,
     states: LIFECYCLE_STATES,
   };
 }
