@@ -1,4 +1,5 @@
 "use client";
+import { createContextRequest, selectContext } from "../ai/contextIntelligence";
 
 export const LIFECYCLE_STATES = {
   idle: "idle",
@@ -33,6 +34,7 @@ export function createProjectLifecycleOrchestrator({
   let milestone = null;
   let projectData = null;
   let inspectionResult = null;
+  let contextSelection = null;
   let proposedMemoryUpdate = null;
   let error = null;
   let agentUnsub = null;
@@ -49,6 +51,7 @@ export function createProjectLifecycleOrchestrator({
       milestone,
       projectData,
       inspectionResult,
+      contextSelection,
       proposedMemoryUpdate,
       error,
       agentState: agentOrchestrator.getSnapshot ? agentOrchestrator.getSnapshot().state : null,
@@ -126,6 +129,7 @@ export function createProjectLifecycleOrchestrator({
     milestone = incoming;
     projectData = modcodesData;
     inspectionResult = null;
+    contextSelection = null;
     proposedMemoryUpdate = null;
     error = null;
     setState(LIFECYCLE_STATES.preparing);
@@ -153,16 +157,40 @@ export function createProjectLifecycleOrchestrator({
 
     setState(LIFECYCLE_STATES.contextReady);
 
-    // Assemble context for planner (use existing context ranking infras where available)
-    const context = {
+    // Context Intelligence — relevant, bounded, explainable, safe (M154)
+    let context = {
       milestone,
       project: projectData.project,
-      prd: projectData.sections?.PRD ? String(projectData.sections.PRD).slice(0, 2000) : null,
-      architecture: projectData.sections?.Architecture ? String(projectData.sections.Architecture).slice(0, 1000) : null,
-      decisions: projectData.sections?.Decisions ? String(projectData.sections.Decisions).slice(0, 1000) : null,
-      openQuestions: projectData.sections?.["Open Questions"] ? String(projectData.sections["Open Questions"]).slice(0, 800) : null,
       inspection: inspectionResult,
     };
+    try {
+      const taskText = `${milestone.title || milestone.goal || milestone.id} ${Array.isArray(milestone.tasks) ? milestone.tasks.join(" ") : ""}`;
+      const request = createContextRequest({ task: taskText, milestone, project: projectData.project, phase: projectData.project.phase, budget: 24000 });
+      const selection = selectContext(request, { projectData, tree, fileContents });
+      contextSelection = selection;
+      context = {
+        milestone,
+        project: projectData.project,
+        inspection: inspectionResult,
+        contextSelection: selection,
+        // Backward-compatible slices for planner that expects prd/arch/decisions
+        prd: projectData.sections?.PRD ? String(projectData.sections.PRD).slice(0, 800) : null,
+        architecture: selection.selected.find((s)=>s.type==="architecture")?.content || null,
+        decisions: selection.selected.filter((s)=>s.type==="decision").map((s)=>s.content).join("\n").slice(0, 800) || null,
+        evidence: selection.selected.filter((s)=>s.type==="research").map((s)=>s.content).slice(0,4),
+      };
+    } catch {
+      // fallback to previous naive context if intelligence fails
+      context = {
+        milestone,
+        project: projectData.project,
+        prd: projectData.sections?.PRD ? String(projectData.sections.PRD).slice(0, 2000) : null,
+        architecture: projectData.sections?.Architecture ? String(projectData.sections.Architecture).slice(0, 1000) : null,
+        decisions: projectData.sections?.Decisions ? String(projectData.sections.Decisions).slice(0, 1000) : null,
+        openQuestions: projectData.sections?.["Open Questions"] ? String(projectData.sections["Open Questions"]).slice(0, 800) : null,
+        inspection: inspectionResult,
+      };
+    }
 
     // Create development task via existing agentOrchestrator + planner
     setState(LIFECYCLE_STATES.planning);

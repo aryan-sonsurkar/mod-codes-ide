@@ -2,14 +2,22 @@
 import { useEffect, useState } from "react";
 import "./AgentWorkspace.css";
 
-export default function AgentWorkspace({ orchestrator }) {
+export default function AgentWorkspace({ orchestrator, lifecycle }) {
   const [snap, setSnap] = useState(() => orchestrator ? orchestrator.getSnapshot() : { state: "idle", task: { title: "Idle" }, plan: null, observations: [], changeset: null });
+  const [lifecycleSnap, setLifecycleSnap] = useState(() => lifecycle ? lifecycle.getSnapshot() : null);
+  const [showContext, setShowContext] = useState(false);
 
   useEffect(() => {
     if (!orchestrator || !orchestrator.subscribe) return;
     const unsub = orchestrator.subscribe(setSnap);
     return unsub;
   }, [orchestrator]);
+
+  useEffect(() => {
+    if (!lifecycle || !lifecycle.subscribe) return;
+    const unsub = lifecycle.subscribe(setLifecycleSnap);
+    return unsub;
+  }, [lifecycle]);
 
   const progress = snap.plan ? `${snap.observations?.length || 0}/${snap.plan.steps?.length || 0}` : "—";
 
@@ -22,6 +30,31 @@ export default function AgentWorkspace({ orchestrator }) {
         <span className="badge">{snap.state}</span>
         <span>{progress}</span>
       </div>
+      {lifecycleSnap && lifecycleSnap.contextSelection && (
+        <div className="agent-context">
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <strong>Context</strong>
+            <span>{lifecycleSnap.contextSelection.selected.length} selected • {lifecycleSnap.contextSelection.rejected.length} excluded • budget {lifecycleSnap.contextSelection.budget.used}/{lifecycleSnap.contextSelection.budget.total}</span>
+            <button onClick={()=>setShowContext(v=>!v)}>{showContext ? "Hide" : "View Context"}</button>
+          </div>
+          {showContext && (
+            <div className="context-details">
+              <div><strong>Selected</strong></div>
+              {lifecycleSnap.contextSelection.selected.slice(0,14).map((s)=>(
+                <div key={s.id || s.path} className="context-item">
+                  <code>{s.path || s.id}</code> — <span>{s.reason}</span> <em>({s.provenance?.source})</em>
+                </div>
+              ))}
+              <div style={{marginTop:6}}><strong>Excluded</strong></div>
+              {lifecycleSnap.contextSelection.rejected.slice(0,6).map((s)=>(
+                <div key={s.id || s.path} className="context-item muted">
+                  <code>{s.path || s.id}</code> — <span>{s.reason}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div className="agent-grid">
         <div className="agent-card"><strong>Plan</strong><pre>{snap.plan ? JSON.stringify(snap.plan,null,2).slice(0,800) : "— no plan yet"}</pre></div>
         <div className="agent-card"><strong>Progress</strong><pre>Current: {snap.task?.currentStep || "—"}{"\n"}Observations: {(snap.observations||[]).length}</pre></div>

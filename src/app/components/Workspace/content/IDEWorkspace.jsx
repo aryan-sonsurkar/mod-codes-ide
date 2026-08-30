@@ -1221,7 +1221,7 @@ export default function IdeWorkspace({ selectedProject }) {
               {workspaceMode==="research" && <ResearchWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
               {workspaceMode==="prd" && <PRDWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
               {workspaceMode==="roadmap" && <RoadmapWorkspace modcodesData={modcodesData} lifecycle={lifecycleOrchestrator} tree={tree} onSwitchToAgent={()=>setWorkspaceMode("agent")} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
-              {workspaceMode==="agent" && <AgentWorkspace orchestrator={agentOrchestrator} />}
+              {workspaceMode==="agent" && <AgentWorkspace orchestrator={agentOrchestrator} lifecycle={lifecycleOrchestrator} />}
             </div>
           ) : (
           <div className="ide-layout">
