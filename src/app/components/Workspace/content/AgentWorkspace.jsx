@@ -55,6 +55,13 @@ export default function AgentWorkspace({ orchestrator, lifecycle }) {
           )}
         </div>
       )}
+      {lifecycleSnap && lifecycleSnap.completionAssessment && (
+        <div className="agent-context" style={{marginTop:8}}>
+          <strong>Milestone Assessment: {lifecycleSnap.completionAssessment.status}</strong>
+          <div>{lifecycleSnap.completionAssessment.completed}/{lifecycleSnap.completionAssessment.total} supported • {lifecycleSnap.completionAssessment.blockers.length} blocker(s)</div>
+          <button>View Assessment</button>
+        </div>
+      )}
       <div className="agent-grid">
         <div className="agent-card"><strong>Plan</strong><pre>{snap.plan ? JSON.stringify(snap.plan,null,2).slice(0,800) : "— no plan yet"}</pre></div>
         <div className="agent-card"><strong>Progress</strong><pre>Current: {snap.task?.currentStep || "—"}{"\n"}Observations: {(snap.observations||[]).length}</pre></div>

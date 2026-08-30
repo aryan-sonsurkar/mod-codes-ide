@@ -1,5 +1,6 @@
 "use client";
 import { createContextRequest, selectContext } from "../ai/contextIntelligence";
+import { detectMilestoneCompletion } from "./completion";
 
 export const LIFECYCLE_STATES = {
   idle: "idle",
@@ -35,6 +36,7 @@ export function createProjectLifecycleOrchestrator({
   let projectData = null;
   let inspectionResult = null;
   let contextSelection = null;
+  let completionAssessment = null;
   let proposedMemoryUpdate = null;
   let error = null;
   let agentUnsub = null;
@@ -52,6 +54,7 @@ export function createProjectLifecycleOrchestrator({
       projectData,
       inspectionResult,
       contextSelection,
+      completionAssessment,
       proposedMemoryUpdate,
       error,
       agentState: agentOrchestrator.getSnapshot ? agentOrchestrator.getSnapshot().state : null,
@@ -89,6 +92,21 @@ export function createProjectLifecycleOrchestrator({
           milestoneId: milestone.id,
           requires: ["Accept", "Edit", "Reject"],
         };
+      }
+      // Run completion detection (read-only, no filesystem/Git writes)
+      try {
+        const changeset = agentSnap.changeset || agentSnap.task?.changeset || null;
+        completionAssessment = detectMilestoneCompletion({
+          milestone,
+          projectData,
+          changeset: changeset || agentOrchestrator.getSnapshot().changeset,
+          tests: null,
+          inspection: inspectionResult,
+          gitState: inspectionResult?.gitSafety ? { clean: inspectionResult.gitSafety === "normal" } : null,
+          agentState: agentSnap.state,
+        });
+      } catch {
+        completionAssessment = null;
       }
       emit();
     }
@@ -130,6 +148,7 @@ export function createProjectLifecycleOrchestrator({
     projectData = modcodesData;
     inspectionResult = null;
     contextSelection = null;
+    completionAssessment = null;
     proposedMemoryUpdate = null;
     error = null;
     setState(LIFECYCLE_STATES.preparing);

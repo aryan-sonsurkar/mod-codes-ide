@@ -62,6 +62,14 @@ export default function RoadmapWorkspace({ modcodesData, onUpdate, tree, lifecyc
           {lifecycleSnap.state === "review" && <span> Review changes (Save Gate)</span>}
           {lifecycleSnap.error && <div className="error">Error: {lifecycleSnap.error}</div>}
           {lifecycleSnap.state === "executing" && <button onClick={() => lifecycle.cancel()}>Cancel</button>}
+          {lifecycleSnap.completionAssessment && (
+            <div className="completion-assessment" style={{marginTop:8,padding:8,background:"var(--surface-bg)",borderRadius:6,border:"1px solid var(--border-color)"}}>
+              <strong>Assessment: {lifecycleSnap.completionAssessment.status} ({Math.round(lifecycleSnap.completionAssessment.confidence*100)}%)</strong>
+              <div>{lifecycleSnap.completionAssessment.summary}</div>
+              <div>{lifecycleSnap.completionAssessment.blockers.length} blocker(s)</div>
+              <button onClick={()=>{}}>Review Assessment</button>
+            </div>
+          )}
         </div>
       )}
       <div className="milestones">
