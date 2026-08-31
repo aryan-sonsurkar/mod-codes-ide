@@ -11,6 +11,7 @@ import Onboarding, { isOnboardingCompleted } from "../Onboarding/Onboarding";
 
 function loadProjects() {
   try {
+    if (typeof localStorage === "undefined") return [];
     const savedProjects = localStorage.getItem("modcodes-projects");
     return savedProjects === null ? [] : JSON.parse(savedProjects);
   } catch (error) {
@@ -19,12 +20,14 @@ function loadProjects() {
 }
 
 export default function Workspace() {
-  const [projects, setProjects] = useState(loadProjects);
+  const [projects, setProjects] = useState(() => loadProjects());
   const [selectedProjectId, setSelectedProjectId] = useState(
-    () => loadWorkspace()?.projectId || null
+    () => { try { return loadWorkspace()?.projectId || null; } catch { return null; } }
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingCompleted());
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !isOnboardingCompleted(); } catch { return false; }
+  });
 
   const { toast } = useToast();
 
@@ -101,7 +104,7 @@ export default function Workspace() {
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
 
   return (
-<div className="workspace">
+<div className="workspace" suppressHydrationWarning>
   {showOnboarding && (
     <Onboarding
       onComplete={() => setShowOnboarding(false)}
