@@ -43,13 +43,14 @@ import {
   loadWorkspace,
   saveWorkspace,
 } from "../../../lib/workspace/workspaceStorage";
+import { buildRecoveryPlan } from "../../../lib/workspace/workspaceRecovery";
+
 function collectFileCount(node) {
   if (!node) return 0;
   if (node.kind === "file") return 1;
   if (!node.children) return 0;
   return node.children.reduce((sum, child) => sum + collectFileCount(child), 0);
 }
-import { buildRecoveryPlan } from "../../../lib/workspace/workspaceRecovery";
 import { collectFilePaths } from "../../../lib/diagnostics/resolve";
 import { useTabs } from "../../../hooks/useTabs";
 import { useDiagnostics } from "../../../hooks/useDiagnostics";
@@ -91,6 +92,7 @@ export default function IdeWorkspace({ selectedProject }) {
   const [tree, setTree] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const { layout, setLayout, toggleLeftPanel, startResize } = useWorkspaceLayout();
+  const { settings } = useSettings();
   const [revealRequest, setRevealRequest] = useState(null);
   const [explorerRevealRequest, setExplorerRevealRequest] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -1047,8 +1049,7 @@ export default function IdeWorkspace({ selectedProject }) {
       diagnostics,
       budget,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- settings from context is stable and correctly triggers re-render
-  }, [activePath, activeTab, tabs, diagnostics, settings, getSelectionForAi]);
+  }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget, getSelectionForAi]);
 
   const triggerAiAction = useCallback(
     (actionId) => {
