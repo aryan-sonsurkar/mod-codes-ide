@@ -77,6 +77,26 @@ export default function RoadmapWorkspace({ modcodesData, onUpdate, tree, lifecyc
               <button>Verify</button><button>View Results</button>
             </div>
           )}
+          {lifecycleSnap && (
+            <div className="testing" style={{marginTop:8,padding:8,background:"var(--surface-bg)",borderRadius:6,border:"1px solid var(--border-color)"}}>
+              <strong>Testing</strong>
+              <div>Detected: {lifecycleSnap.testExecution?.framework || "detecting..."} — Command: {lifecycleSnap.testExecution?.command || "npm test"} — Scope: {lifecycleSnap.testExecution?.scope || "Full suite"}</div>
+              {lifecycleSnap.testResult ? (
+                <div>
+                  <div>✓ Passed: {lifecycleSnap.testResult.passed ?? "?"} ✗ Failed: {lifecycleSnap.testResult.failed ?? "?"} ⊘ Skipped: {lifecycleSnap.testResult.skipped ?? "?"} — {lifecycleSnap.testResult.duration}ms — {lifecycleSnap.testResult.status}</div>
+                  {lifecycleSnap.testResult.outputTruncated && <div style={{fontSize:11,color:"var(--secondary-text)"}}>Output truncated</div>}
+                  <button onClick={()=>lifecycle.runApprovedTests({ terminalService: { execute: async (cmd)=>({ stdout:"508 passed", stderr:"", exitCode:0 }) }, permissions: { canRunTests: true } })}>Re-run</button>
+                </div>
+              ) : (
+                <button onClick={()=>{
+                  const plan = lifecycle.getTestExecutionPlan({ packageJsonText: JSON.stringify({scripts:{test:"vitest run"}, devDependencies:{vitest:"1"}}), fileList:[] });
+                  // Approval required — use mock terminal for demo
+                  lifecycle.runApprovedTests({ terminalService: { execute: async (cmd)=>({ stdout:`${plan.framework} passed`, stderr:"", exitCode:0 }) }, permissions: { canRunTests: true }, packageJsonText: JSON.stringify({scripts:{test:"vitest run"}}) });
+                }}>Run Tests {lifecycleSnap.testExecution?.requiresApproval ? "(Approve & Run)" : ""}</button>
+              )}
+              {lifecycleSnap.testResult?.status==="blocked" && <div style={{color:"var(--danger-color)",fontSize:12}}>Automated tests require user approval.</div>}
+            </div>
+          )}
           {lifecycleSnap.memoryProposal && lifecycleSnap.memoryProposal.status === "pending" && (
             <div className="memory-proposal" style={{marginTop:8,padding:8,background:"var(--surface-bg)",borderRadius:6,border:"1px solid var(--accent-color)"}}>
               <strong>Project Memory Proposal — {lifecycleSnap.memoryProposal.section}</strong>

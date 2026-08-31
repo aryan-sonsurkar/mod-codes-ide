@@ -3,6 +3,7 @@ import { createContextRequest, selectContext } from "../ai/contextIntelligence";
 import { detectMilestoneCompletion } from "./completion";
 import { verifyMilestone } from "./verification";
 import { createProgressProposal, PROPOSAL_STATUSES, acceptProposal, editProposal, rejectProposal } from "./memoryProposal";
+import { discoverTestConfig, createTestExecutionPlan, executeApprovedTests } from "../testing/testExecution";
 
 export const LIFECYCLE_STATES = {
   idle: "idle",
@@ -41,6 +42,8 @@ export function createProjectLifecycleOrchestrator({
   let completionAssessment = null;
   let verification = null;
   let memoryProposal = null;
+  let testExecution = null;
+  let testResult = null;
   let proposedMemoryUpdate = null;
   let error = null;
   let agentUnsub = null;
@@ -61,6 +64,8 @@ export function createProjectLifecycleOrchestrator({
       completionAssessment,
       verification,
       memoryProposal,
+      testExecution,
+      testResult,
       proposedMemoryUpdate: memoryProposal || proposedMemoryUpdate, // backward compat
       error,
       agentState: agentOrchestrator.getSnapshot ? agentOrchestrator.getSnapshot().state : null,
@@ -201,6 +206,8 @@ export function createProjectLifecycleOrchestrator({
     completionAssessment = null;
     verification = null;
     memoryProposal = null;
+    testExecution = null;
+    testResult = null;
     proposedMemoryUpdate = null;
     error = null;
     setState(LIFECYCLE_STATES.preparing);
@@ -355,6 +362,48 @@ export function createProjectLifecycleOrchestrator({
     return getSnapshot();
   }
 
+  function getTestExecutionPlan({ packageJsonText, fileList, workingDirectory } = {}) {
+    const plan = createTestExecutionPlan({ milestone, projectData, packageJsonText, fileList, workingDirectory });
+    testExecution = plan;
+    emit();
+    return plan;
+  }
+
+  async function runApprovedTests({ terminalService, permissions, packageJsonText, fileList, workingDirectory, timeoutMs, signal } = {}) {
+    const plan = testExecution || createTestExecutionPlan({ milestone, projectData, packageJsonText, fileList, workingDirectory, timeoutMs });
+    testExecution = plan;
+    emit();
+    const result = await executeApprovedTests({ plan, terminalService, permissions, timeoutMs: timeoutMs || plan.timeout, signal });
+    testResult = result;
+    // Feed fresh test evidence into verification (M156) — re-verify
+    try {
+      const testsForVerification = {
+        passing: result.passed ?? 0,
+        failing: result.failed ?? 0,
+        missing: result.unknown ? 1 : 0,
+        total: (result.passed||0)+(result.failed||0),
+      };
+      const changeset = agentOrchestrator.getSnapshot().changeset;
+      verification = verifyMilestone({
+        milestone,
+        assessment: completionAssessment,
+        projectData,
+        inspection: inspectionResult,
+        tests: testsForVerification,
+        gitState: inspectionResult?.gitSafety ? { clean: inspectionResult.gitSafety === "normal" } : null,
+        changeset,
+        permissions,
+      });
+      // Update memory proposal based on fresh verification (but not auto-save)
+      try {
+        const freshProposal = createProgressProposal({ milestone, verification, projectData });
+        if (freshProposal && !memoryProposal) memoryProposal = freshProposal;
+      } catch {}
+    } catch {}
+    emit();
+    return { plan, result, verification };
+  }
+
   if (hasDependencyCheck()) {
     throw new Error("Lifecycle dependency violation");
   }
@@ -373,6 +422,8 @@ export function createProjectLifecycleOrchestrator({
     acceptMemoryProposal,
     editMemoryProposal,
     rejectMemoryProposal,
+    getTestExecutionPlan,
+    runApprovedTests,
     states: LIFECYCLE_STATES,
   };
 }
