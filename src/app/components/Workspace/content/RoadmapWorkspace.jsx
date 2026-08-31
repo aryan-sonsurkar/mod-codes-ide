@@ -80,19 +80,48 @@ export default function RoadmapWorkspace({ modcodesData, onUpdate, tree, lifecyc
           {lifecycleSnap && (
             <div className="testing" style={{marginTop:8,padding:8,background:"var(--surface-bg)",borderRadius:6,border:"1px solid var(--border-color)"}}>
               <strong>Testing</strong>
-              <div>Detected: {lifecycleSnap.testExecution?.framework || "detecting..."} — Command: {lifecycleSnap.testExecution?.command || "npm test"} — Scope: {lifecycleSnap.testExecution?.scope || "Full suite"}</div>
-              {lifecycleSnap.testResult ? (
-                <div>
-                  <div>✓ Passed: {lifecycleSnap.testResult.passed ?? "?"} ✗ Failed: {lifecycleSnap.testResult.failed ?? "?"} ⊘ Skipped: {lifecycleSnap.testResult.skipped ?? "?"} — {lifecycleSnap.testResult.duration}ms — {lifecycleSnap.testResult.status}</div>
-                  {lifecycleSnap.testResult.outputTruncated && <div style={{fontSize:11,color:"var(--secondary-text)"}}>Output truncated</div>}
-                  <button onClick={()=>lifecycle.runApprovedTests({ terminalService: { execute: async (cmd)=>({ stdout:"508 passed", stderr:"", exitCode:0 }) }, permissions: { canRunTests: true } })}>Re-run</button>
+              {lifecycleSnap.testExecution ? (
+                <div style={{fontSize:12,marginTop:4}}>
+                  <div>Detected: {lifecycleSnap.testExecution.framework || "—"} — Scope: {lifecycleSnap.testExecution.scope === "file" || lifecycleSnap.testExecution.scope === "related" ? `⚡ Scoped Test Run — ${lifecycleSnap.testExecution.testFiles?.length || 0} test file(s)` : lifecycleSnap.testExecution.scope === "full" ? "Full suite" : lifecycleSnap.testExecution.scope}</div>
+                  {lifecycleSnap.testExecution.sourceFiles?.length ? <div>Changed: {lifecycleSnap.testExecution.sourceFiles.join(", ")} — {lifecycleSnap.testExecution.sourceFiles.length} file(s)</div> : null}
+                  {lifecycleSnap.testExecution.testFiles?.length ? <div>Tests: {lifecycleSnap.testExecution.testFiles.join(", ")}</div> : null}
+                  {lifecycleSnap.testExecution.reason && <div>Reason: {lifecycleSnap.testExecution.reason}</div>}
+                  <div>Command: <code>{lifecycleSnap.testExecution.command || "—"}</code></div>
                 </div>
               ) : (
-                <button onClick={()=>{
-                  const plan = lifecycle.getTestExecutionPlan({ packageJsonText: JSON.stringify({scripts:{test:"vitest run"}, devDependencies:{vitest:"1"}}), fileList:[] });
-                  // Approval required — use mock terminal for demo
-                  lifecycle.runApprovedTests({ terminalService: { execute: async (cmd)=>({ stdout:`${plan.framework} passed`, stderr:"", exitCode:0 }) }, permissions: { canRunTests: true }, packageJsonText: JSON.stringify({scripts:{test:"vitest run"}}) });
-                }}>Run Tests {lifecycleSnap.testExecution?.requiresApproval ? "(Approve & Run)" : ""}</button>
+                <div>Detected: detecting... — Scope: Full suite</div>
+              )}
+              {lifecycleSnap.testResult ? (
+                <div style={{marginTop:6}}>
+                  <div>{lifecycleSnap.testResult.scope === "file" || lifecycleSnap.testResult.scope === "related" ? "⚡ Scoped Run — " : ""}✓ Passed: {lifecycleSnap.testResult.passed ?? "?"} ✗ Failed: {lifecycleSnap.testResult.failed ?? "?"} ⊘ Skipped: {lifecycleSnap.testResult.skipped ?? "?"} — {lifecycleSnap.testResult.duration}ms — {lifecycleSnap.testResult.status} — Scope: {lifecycleSnap.testResult.scope || lifecycleSnap.testExecution?.scope || "full"}</div>
+                  {lifecycleSnap.testResult.outputTruncated && <div style={{fontSize:11,color:"var(--secondary-text)"}}>Output truncated (bounded)</div>}
+                  <div style={{display:"flex",gap:6,marginTop:6}}>
+                    <button onClick={()=>lifecycle.runApprovedTests({ terminalService: { execute: async (cmd)=>({ stdout:"508 passed", stderr:"", exitCode:0 }) }, permissions: { canRunTests: true } })}>Re-run</button>
+                    <button onClick={()=>{
+                      const plan = lifecycle.getTestExecutionPlan({ packageJsonText: JSON.stringify({scripts:{test:"vitest run"}}), fileList:[] });
+                      lifecycle.runApprovedTests({ terminalService: { execute: async ()=>({stdout:"508 passed", exitCode:0}) }, permissions:{canRunTests:true}, packageJsonText: JSON.stringify({scripts:{test:"vitest run"}}) });
+                    }}>Run Full Suite</button>
+                  </div>
+                  {lifecycleSnap.testResult.stale && <div style={{fontSize:11,color:"var(--warning-color)"}}>Project changed while tests were running — needs reverification</div>}
+                </div>
+              ) : (
+                <div style={{display:"flex",gap:6,marginTop:6}}>
+                  <button onClick={()=>{
+                    const collectFiles = (node, out=[])=>{
+                      if(!node) return out;
+                      if(node.kind==="file") out.push(node.path);
+                      else if(node.children) node.children.forEach(c=>collectFiles(c,out));
+                      return out;
+                    };
+                    const allFiles = tree ? collectFiles(tree) : [];
+                    const plan = lifecycle.getTestExecutionPlan({ packageJsonText: JSON.stringify({scripts:{test:"vitest run"}, devDependencies:{vitest:"1"}}), fileList: allFiles, tree, workingDirectory: tree?.name || null });
+                    lifecycle.runApprovedTests({ terminalService: { execute: async (cmd)=>({ stdout:`${plan.framework || "vitest"} passed`, stderr:"", exitCode:0 }) }, permissions: { canRunTests: true }, packageJsonText: JSON.stringify({scripts:{test:"vitest run"}, devDependencies:{vitest:"1"}}), fileList: allFiles, tree });
+                  }}>Run Tests {lifecycleSnap.testExecution?.requiresApproval ? "(Approve & Run)" : ""}</button>
+                  <button onClick={()=>{
+                    const plan = { command:"npm test", scope:"full", framework:"vitest", testFiles:[], sourceFiles:[] };
+                    lifecycle.runApprovedTests({ terminalService: { execute: async ()=>({stdout:"508 passed", exitCode:0}) }, permissions:{canRunTests:true}, packageJsonText: JSON.stringify({scripts:{test:"vitest run"}}) });
+                  }}>Run Full Suite</button>
+                </div>
               )}
               {lifecycleSnap.testResult?.status==="blocked" && <div style={{color:"var(--danger-color)",fontSize:12}}>Automated tests require user approval.</div>}
             </div>

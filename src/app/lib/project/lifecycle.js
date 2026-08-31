@@ -3,7 +3,7 @@ import { createContextRequest, selectContext } from "../ai/contextIntelligence";
 import { detectMilestoneCompletion } from "./completion";
 import { verifyMilestone } from "./verification";
 import { createProgressProposal, PROPOSAL_STATUSES, acceptProposal, editProposal, rejectProposal } from "./memoryProposal";
-import { discoverTestConfig, createTestExecutionPlan, executeApprovedTests } from "../testing/testExecution";
+import { discoverTestConfig, createTestExecutionPlan, executeApprovedTests, createScopedTestPlan, getCachedTestResult, setCachedTestResult } from "../testing/testExecution";
 
 export const LIFECYCLE_STATES = {
   idle: "idle",
@@ -362,19 +362,56 @@ export function createProjectLifecycleOrchestrator({
     return getSnapshot();
   }
 
-  function getTestExecutionPlan({ packageJsonText, fileList, workingDirectory } = {}) {
-    const plan = createTestExecutionPlan({ milestone, projectData, packageJsonText, fileList, workingDirectory });
+  function getTestExecutionPlan({ packageJsonText, fileList, workingDirectory, tree, fileContents, workspaceGraph } = {}) {
+    // Try scoped first if we have changeset source files
+    const changeset = agentOrchestrator.getSnapshot().changeset;
+    const hasSourceFiles = changeset && (Array.isArray(changeset.operations) ? changeset.operations.length : Array.isArray(changeset.changes) ? changeset.changes.length : 0);
+    let plan = null;
+    if (hasSourceFiles) {
+      try {
+        const scoped = createScopedTestPlan({ milestone, projectData, changeset, packageJsonText, fileList, tree, workspaceGraph, fileContents, workingDirectory, timeoutMs: null });
+        if (scoped && scoped.scope !== "unknown" && scoped.available) {
+          plan = scoped;
+        }
+      } catch {}
+    }
+    if (!plan) plan = createTestExecutionPlan({ milestone, projectData, packageJsonText, fileList, workingDirectory });
     testExecution = plan;
     emit();
     return plan;
   }
 
-  async function runApprovedTests({ terminalService, permissions, packageJsonText, fileList, workingDirectory, timeoutMs, signal } = {}) {
-    const plan = testExecution || createTestExecutionPlan({ milestone, projectData, packageJsonText, fileList, workingDirectory, timeoutMs });
+  async function runApprovedTests({ terminalService, permissions, packageJsonText, fileList, workingDirectory, timeoutMs, signal, tree, fileContents, workspaceGraph } = {}) {
+    let plan = testExecution;
+    if (!plan || !plan.command) {
+      plan = getTestExecutionPlan({ packageJsonText, fileList, workingDirectory, tree, fileContents, workspaceGraph, timeoutMs });
+    }
+    // Cache check — avoid duplicate execution, but invalidate if source changed
+    const cached = getCachedTestResult(plan);
+    const sourceChanged = (() => {
+      const cs = agentOrchestrator.getSnapshot().changeset;
+      const paths = cs ? (cs.operations||cs.changes||[]).map((o)=>o.path).join(",") : "";
+      const key = `${plan.command}|${plan.scope}|${(plan.testFiles||[]).join(",")}|${paths}`;
+      const prev = plan._cachePaths || "";
+      return prev !== paths;
+    })();
+    if (cached && !sourceChanged) {
+      testResult = cached;
+      emit();
+      return { plan, result: cached, verification, cached: true };
+    }
+    // Capture test start state for concurrent edit detection
+    const testStartPaths = new Set((agentOrchestrator.getSnapshot().changeset?.operations || agentOrchestrator.getSnapshot().changeset?.changes || []).map((o)=>o.path));
+    plan._cachePaths = Array.from(testStartPaths).join(",");
     testExecution = plan;
     emit();
     const result = await executeApprovedTests({ plan, terminalService, permissions, timeoutMs: timeoutMs || plan.timeout, signal });
+    // Concurrent edit check: if relevant files changed during execution, mark stale
+    const testEndPaths = new Set((agentOrchestrator.getSnapshot().changeset?.operations || agentOrchestrator.getSnapshot().changeset?.changes || []).map((o)=>o.path));
+    const changedDuring = [...testEndPaths].some((p)=>!testStartPaths.has(p)) || [...testStartPaths].some((p)=>!testEndPaths.has(p));
+    if (changedDuring) result.stale = true;
     testResult = result;
+    if (!result.stale) setCachedTestResult(plan, result);
     // Feed fresh test evidence into verification (M156) — re-verify
     try {
       const testsForVerification = {

@@ -203,3 +203,151 @@ export async function executeApprovedTests({ plan, terminalService, permissions,
     framework: plan.framework,
   };
 }
+
+// M159 Scoped Testing
+const SUPPORTED_SCOPED_FRAMEWORKS = new Set(["vitest", "jest"]);
+
+export function isScopedSelectorSafe(framework, fileList) {
+  if (!framework || !SUPPORTED_SCOPED_FRAMEWORKS.has(String(framework).toLowerCase())) return false;
+  if (!Array.isArray(fileList) || fileList.length === 0) return false;
+  // integration/e2e files often contain .integration or e2e — treat as unsafe to isolate
+  const hasIntegration = fileList.some((f) => /integration|e2e/i.test(String(f)));
+  if (hasIntegration) return false;
+  return true;
+}
+
+function testFileCandidates(allFiles) {
+  return (allFiles || []).filter((f) => /\.test\.(js|ts|jsx|tsx)$/.test(f) || /\.spec\.(js|ts|jsx|tsx)$/.test(f));
+}
+
+export function mapSourceFilesToTests({ sourceFiles, allFiles, workspaceGraph, fileContents } = {}) {
+  const tests = testFileCandidates(allFiles);
+  const sourceSet = new Set((sourceFiles || []).map((s) => String(s)));
+  const graph = workspaceGraph || null;
+  const result = [];
+
+  for (const test of tests) {
+    const base = test.replace(/\.test\.(js|ts|jsx|tsx)$/, "").replace(/\.spec\.(js|ts|jsx|tsx)$/, "");
+    let reason = null;
+    let sourceMatch = null;
+
+    // 1. exact filename match
+    for (const src of sourceSet) {
+      const srcBase = src.replace(/\.(js|ts|jsx|tsx)$/, "");
+      if (srcBase === base) { reason = "Direct test file match"; sourceMatch = src; break; }
+    }
+    // 2. directory relationship
+    if (!reason) {
+      for (const src of sourceSet) {
+        const srcDir = src.split("/").slice(0, -1).join("/");
+        const testDir = test.split("/").slice(0, -1).join("/");
+        if (srcDir && srcDir === testDir && test.includes(src.split("/").pop().replace(/\.(js|ts|jsx|tsx)$/,"").slice(0,5))) { reason = "Directory relationship"; sourceMatch = src; break; }
+      }
+    }
+    // 3. imports / graph
+    if (!reason && graph && graph.edges) {
+      for (const src of sourceSet) {
+        const importsTest = graph.edges.some((e) => e.from === test && e.to === src);
+        const testImportsSrc = graph.edges.some((e) => e.from === test && e.to === src);
+        if (importsTest || testImportsSrc) { reason = "Test imports changed source file"; sourceMatch = src; break; }
+      }
+    }
+    // 4. fileContents import check fallback
+    if (!reason && fileContents) {
+      const content = fileContents.get ? fileContents.get(test) : null;
+      if (typeof content === "string") {
+        for (const src of sourceSet) if (content.includes(src.split("/").pop())) { reason = "Test imports changed source file"; sourceMatch = src; break; }
+      }
+    }
+    if (reason) result.push({ testFile: test, sourceFiles: sourceMatch ? [sourceMatch] : [], reason, evidence: [reason] });
+  }
+
+  // Filter out weak substring-only matches already handled; if no strong evidence, return empty to force fallback
+  return result;
+}
+
+function buildScopedCommand(discovered, testFiles) {
+  if (!discovered || !discovered.command || !testFiles.length) return discovered ? discovered.command : null;
+  const framework = String(discovered.framework || "").toLowerCase();
+  if (framework === "vitest") {
+    // Use npx vitest run <files> for safe scoped execution
+    return `npx vitest run ${testFiles.join(" ")}`;
+  }
+  if (framework === "jest") {
+    return `npx jest ${testFiles.join(" ")}`;
+  }
+  if (framework === "pytest") {
+    return `pytest ${testFiles.join(" ")}`;
+  }
+  // fallback: npm test -- <files> (supported by vitest/jest via npm)
+  if (discovered.rawCommand) {
+    return `${discovered.command} -- ${testFiles.join(" ")}`;
+  }
+  return discovered.command;
+}
+
+const testCache = new Map();
+function cacheKey(plan) {
+  return `${plan.command}|${plan.scope}|${(plan.testFiles||[]).join(",")}|${plan.framework}`;
+}
+
+export function createScopedTestPlan({ milestone, projectData, changeset, packageJsonText, fileList, tree, workspaceGraph, fileContents, workingDirectory, timeoutMs } = {}) {
+  const sourceFiles = (() => {
+    if (!changeset) return [];
+    if (Array.isArray(changeset.operations)) return changeset.operations.map((o)=>o.path).filter(Boolean);
+    if (Array.isArray(changeset.changes)) return changeset.changes.map((c)=>c.path).filter(Boolean);
+    return [];
+  })();
+
+  const discovered = discoverTestConfig({ packageJsonText, fileList });
+  if (!discovered.command) {
+    return { command: null, scope: "unknown", sourceFiles, testFiles: [], reason: discovered.reason, evidence: [], available: false, framework: null, requiresApproval: true };
+  }
+
+  const allFiles = fileList || [];
+  const mapped = mapSourceFilesToTests({ sourceFiles, allFiles, workspaceGraph, fileContents });
+
+  if (!sourceFiles.length) {
+    return { command: discovered.command, scope: "full", sourceFiles, testFiles: [], reason: "No changed files — full suite", evidence: ["no changed files"], framework: discovered.framework, available: true, requiresApproval: true, timeout: timeoutMs || DEFAULT_TIMEOUT_MS, workingDirectory: workingDirectory || null };
+  }
+  if (mapped.length === 0) {
+    return { command: discovered.command, scope: "full", sourceFiles, testFiles: [], reason: "Unable to establish a safe file-scoped test set", evidence: ["no reliable mapping"], framework: discovered.framework, available: true, requiresApproval: true, timeout: timeoutMs || DEFAULT_TIMEOUT_MS, workingDirectory: workingDirectory || null };
+  }
+  if (!isScopedSelectorSafe(discovered.framework, mapped.map((m)=>m.testFile))) {
+    return { command: discovered.command, scope: "full", sourceFiles, testFiles: [], reason: "Framework does not support safe selectors or integration test detected", evidence: ["unsupported selector"], framework: discovered.framework, available: true, requiresApproval: true, timeout: timeoutMs || DEFAULT_TIMEOUT_MS, workingDirectory: workingDirectory || null };
+  }
+
+  const testFiles = mapped.map((m)=>m.testFile);
+  const command = buildScopedCommand(discovered, testFiles);
+  const safe = isCommandSafe(command);
+  if (!safe.safe) {
+    return { command: discovered.command, scope: "full", sourceFiles, testFiles: [], reason: safe.reason, evidence: ["unsafe scoped command"], framework: discovered.framework, available: true, requiresApproval: true, timeout: timeoutMs || DEFAULT_TIMEOUT_MS, workingDirectory: workingDirectory || null };
+  }
+
+  return {
+    command,
+    rawCommand: discovered.rawCommand,
+    scope: testFiles.length === 1 ? "file" : "related",
+    sourceFiles,
+    testFiles,
+    reason: mapped[0]?.reason || "Direct test file match",
+    evidence: mapped.flatMap((m)=>m.evidence),
+    framework: discovered.framework,
+    available: true,
+    requiresApproval: true,
+    timeout: timeoutMs || DEFAULT_TIMEOUT_MS,
+    workingDirectory: workingDirectory || null,
+  };
+}
+
+export function getCachedTestResult(plan) {
+  const key = cacheKey(plan);
+  return testCache.get(key) || null;
+}
+
+export function setCachedTestResult(plan, result) {
+  const key = cacheKey(plan);
+  testCache.set(key, result);
+}
+
+export function clearTestCache() { testCache.clear(); }
