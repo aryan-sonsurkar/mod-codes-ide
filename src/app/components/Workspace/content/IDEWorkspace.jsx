@@ -239,7 +239,7 @@ export default function IdeWorkspace({ selectedProject }) {
     if (!tree) {
       return { nodes: [], edges: [] };
     }
-    const files = collectFilePaths(tree);
+    const files = Array.from(collectFilePaths(tree));
     return buildWorkspaceGraph({
       files,
       getAnalysis: (path) => {

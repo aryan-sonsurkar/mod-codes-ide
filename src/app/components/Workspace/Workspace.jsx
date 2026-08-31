@@ -9,25 +9,33 @@ import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
 import { useToast } from "../../contexts/ToastContext";
 import Onboarding, { isOnboardingCompleted } from "../Onboarding/Onboarding";
 
-function loadProjects() {
+function loadProjectsHydrated() {
   try {
     if (typeof localStorage === "undefined") return [];
-    const savedProjects = localStorage.getItem("modcodes-projects");
-    return savedProjects === null ? [] : JSON.parse(savedProjects);
-  } catch (error) {
-    return [];
-  }
+    const saved = localStorage.getItem("modcodes-projects");
+    return saved === null ? [] : JSON.parse(saved);
+  } catch { return []; }
+}
+
+function loadProjectIdHydrated() {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    return loadWorkspace()?.projectId || null;
+  } catch { return null; }
+}
+
+function loadOnboardingHydrated() {
+  try {
+    if (typeof localStorage === "undefined") return false;
+    return !isOnboardingCompleted();
+  } catch { return false; }
 }
 
 export default function Workspace() {
-  const [projects, setProjects] = useState(() => loadProjects());
-  const [selectedProjectId, setSelectedProjectId] = useState(
-    () => { try { return loadWorkspace()?.projectId || null; } catch { return null; } }
-  );
+  const [projects, setProjects] = useState(loadProjectsHydrated);
+  const [selectedProjectId, setSelectedProjectId] = useState(loadProjectIdHydrated);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    try { return !isOnboardingCompleted(); } catch { return false; }
-  });
+  const [showOnboarding, setShowOnboarding] = useState(loadOnboardingHydrated);
 
   const { toast } = useToast();
 
