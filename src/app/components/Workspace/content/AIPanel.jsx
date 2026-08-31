@@ -16,6 +16,7 @@ import {
   createHardwareProfile,
   createMessage,
   createModelRegistry,
+  createOllamaProvider,
   createStoredConversation,
   createTool,
   createToolRegistry,

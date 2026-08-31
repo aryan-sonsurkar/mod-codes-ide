@@ -112,7 +112,7 @@ export default function Workspace() {
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
 
   return (
-<div className="workspace" suppressHydrationWarning>
+<div className="workspace">
   {showOnboarding && (
     <Onboarding
       onComplete={() => setShowOnboarding(false)}
