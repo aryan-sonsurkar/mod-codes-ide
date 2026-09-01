@@ -24,6 +24,7 @@ import ResearchWorkspace from "./ResearchWorkspace";
 import PRDWorkspace from "./PRDWorkspace";
 import RoadmapWorkspace from "./RoadmapWorkspace";
 import AgentWorkspace from "./AgentWorkspace";
+import { IDESecondaryAd } from "../../Ads/AdContainer";
 import { loadModcodes, saveModcodes, ensureModcodes } from "../../../lib/project/service";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
 import { useAgentWorkspace } from "../../../hooks/useAgentWorkspace";
@@ -1501,6 +1502,8 @@ export default function IdeWorkspace({ selectedProject }) {
               />
             </div>
           )}
+
+          <IDESecondaryAd />
 
           {paletteOpen && (
             <CommandPalette

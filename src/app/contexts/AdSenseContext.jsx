@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { createAdSenseProvider } from "../../lib/ads/adSenseProvider";
+import { createAdSenseProvider } from "../lib/ads/adSenseProvider";
 
 const AdSenseContext = createContext(null);
 

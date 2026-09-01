@@ -4,6 +4,7 @@ import "./globals.css";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import ErrorBoundary from "./components/Diagnostics/ErrorBoundary";
+import AdsProvider from "./components/Ads/AdsProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -66,7 +67,9 @@ export default function RootLayout({ children }) {
         />
         <ErrorBoundary>
           <SettingsProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              <AdsProvider>{children}</AdsProvider>
+            </ToastProvider>
           </SettingsProvider>
         </ErrorBoundary>
       </body>

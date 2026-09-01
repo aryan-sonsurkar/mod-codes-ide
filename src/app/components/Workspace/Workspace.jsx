@@ -8,6 +8,7 @@ import { useState } from "react";
 import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
 import { useToast } from "../../contexts/ToastContext";
 import Onboarding, { isOnboardingCompleted } from "../Onboarding/Onboarding";
+import { ProjectOpenAd } from "../Ads/AdContainer";
 
 function loadProjectsHydrated() {
   try {
@@ -120,7 +121,10 @@ export default function Workspace() {
     />
   )}
   {selectedProject ? (
-    <IdeWorkspace selectedProject={selectedProject} />
+    <>
+      <ProjectOpenAd />
+      <IdeWorkspace selectedProject={selectedProject} />
+    </>
   ) : (
     <section className="workspace-content">
       <ProjectsPage

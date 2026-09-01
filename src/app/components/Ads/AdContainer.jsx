@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAdSense } from "../../contexts/AdSenseContext";
+import { canShowAd, recordAdShown } from "../../lib/ads/adFrequency";
 
 export function AdContainer({
   placement,
@@ -9,12 +10,17 @@ export function AdContainer({
   className = "",
   style = {},
   label = "Sponsored",
+  cooldownMs,
 }) {
   const adsense = useAdSense();
   const containerRef = useRef(null);
   const [adState, setAdState] = useState("idle");
   const [dismissed, setDismissed] = useState(false);
   const mountedRef = useRef(true);
+  const frequencyBlocked = useMemo(() => {
+    if (!adsense || !adsense.isAvailable || !adsense.consent) return false;
+    return !canShowAd(placement, cooldownMs);
+  }, [adsense, placement, cooldownMs]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -22,18 +28,21 @@ export function AdContainer({
   }, []);
 
   useEffect(() => {
-    if (!adsense || !adsense.isAvailable || !adsense.consent || dismissed) return;
+    if (!adsense || !adsense.isAvailable || !adsense.consent || dismissed || frequencyBlocked) return;
 
     const container = containerRef.current;
     if (!container) return;
 
     const result = adsense.provider.renderAd(container, { format, responsive });
+    if (result.ok) {
+      recordAdShown(placement);
+    }
     if (mountedRef.current) setAdState(result.ok ? "ready" : "error");
-  }, [adsense, format, responsive, dismissed]);
+  }, [adsense, format, responsive, dismissed, placement, frequencyBlocked]);
 
   const dismiss = useCallback(() => setDismissed(true), []);
 
-  if (dismissed) return null;
+  if (dismissed || frequencyBlocked) return null;
 
   return (
     <div
@@ -91,6 +100,7 @@ export function ProjectOpenAd() {
       placement="project-open"
       format="auto"
       responsive={true}
+      cooldownMs={5 * 60 * 1000}
       style={{
         margin: "8px 0",
         padding: "8px",
@@ -108,6 +118,7 @@ export function DashboardAd() {
       placement="dashboard"
       format="auto"
       responsive={true}
+      cooldownMs={10 * 60 * 1000}
       style={{
         margin: "16px 0",
         padding: "12px",
@@ -149,6 +160,7 @@ export function IDESecondaryAd() {
         placement="ide-secondary"
         format="horizontal"
         responsive={false}
+        cooldownMs={15 * 60 * 1000}
         style={{
           margin: "8px 0",
           padding: "8px",
