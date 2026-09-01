@@ -58,7 +58,7 @@ export default function RootLayout({ children }) {
       <body>
         <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8259194534475821"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
           crossOrigin="anonymous"
         />
         <ErrorBoundary>
