@@ -27,6 +27,9 @@ export const metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+  other: {
+    "google-adsense-account": "ca-pub-8259194534475821",
+  },
   openGraph: {
     title: "MODCODES — Browser IDE with Local AI",
     description:
