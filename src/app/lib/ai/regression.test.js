@@ -133,3 +133,36 @@ describe("regression: malformed provider outputs", () => {
     // tool registry validateArgs would reject
   });
 });
+
+describe("regression: write isolation", () => {
+  it("lifecycle has no writeFile import", async () => {
+    const src = await import("./../project/lifecycle.js");
+    const moduleKeys = Object.keys(src);
+    expect(moduleKeys).toContain("createProjectLifecycleOrchestrator");
+    expect(moduleKeys).toContain("LIFECYCLE_STATES");
+  });
+
+  it("memoryProposal has no writeFile import", async () => {
+    const src = await import("./../project/memoryProposal.js");
+    const moduleKeys = Object.keys(src);
+    expect(moduleKeys).toContain("createMemoryProposal");
+    expect(moduleKeys).toContain("PROPOSAL_STATUSES");
+    expect(moduleKeys).toContain("acceptProposal");
+  });
+
+  it("verification has no writeFile import", async () => {
+    const src = await import("./../project/verification.js");
+    const moduleKeys = Object.keys(src);
+    expect(moduleKeys).toContain("createVerificationPlan");
+    expect(moduleKeys).toContain("verifyMilestone");
+  });
+
+  it("testExecution has no writeFile import", async () => {
+    const src = await import("./../testing/testExecution.js");
+    const moduleKeys = Object.keys(src);
+    expect(moduleKeys).toContain("discoverTestConfig");
+    expect(moduleKeys).toContain("executeApprovedTests");
+    expect(moduleKeys).toContain("createScopedTestPlan");
+    expect(moduleKeys).toContain("isScopedSelectorSafe");
+  });
+});
