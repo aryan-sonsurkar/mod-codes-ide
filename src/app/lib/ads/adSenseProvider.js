@@ -27,11 +27,17 @@ function getConfig(overrides = {}) {
   }
 }
 
+export const CONSENT_STATES = {
+  UNKNOWN: "unknown",
+  ACCEPTED: "accepted",
+  DECLINED: "declined",
+};
+
 export function createAdSenseProvider(configOverrides = {}) {
   const config = getConfig(configOverrides);
   let scriptLoaded = false;
   let scriptError = false;
-  let consentGranted = !config.consentRequired;
+  let consentState = config.consentRequired ? CONSENT_STATES.UNKNOWN : CONSENT_STATES.ACCEPTED;
 
   function isAvailable() {
     return config.enabled && !!config.publisherId && !scriptError;
@@ -46,11 +52,23 @@ export function createAdSenseProvider(configOverrides = {}) {
   }
 
   function hasConsent() {
-    return consentGranted;
+    return consentState === CONSENT_STATES.ACCEPTED;
+  }
+
+  function getConsentState() {
+    return consentState;
   }
 
   function setConsent(granted) {
-    consentGranted = !!granted;
+    if (granted === true || granted === CONSENT_STATES.ACCEPTED) {
+      consentState = CONSENT_STATES.ACCEPTED;
+    } else if (granted === false || granted === CONSENT_STATES.DECLINED) {
+      consentState = CONSENT_STATES.DECLINED;
+    } else if (granted === CONSENT_STATES.UNKNOWN) {
+      consentState = CONSENT_STATES.UNKNOWN;
+    } else {
+      consentState = !!granted ? CONSENT_STATES.ACCEPTED : CONSENT_STATES.DECLINED;
+    }
   }
 
   function loadScript() {
@@ -114,7 +132,8 @@ export function createAdSenseProvider(configOverrides = {}) {
       publisherId: config.publisherId ? `ca-pub-${config.publisherId.slice(0, 4)}...` : null,
       testMode: config.testMode,
       consentRequired: config.consentRequired,
-      consentGranted,
+      consentState,
+      consentGranted: hasConsent(),
       scriptLoaded,
       scriptError,
       available: isAvailable(),
@@ -126,6 +145,7 @@ export function createAdSenseProvider(configOverrides = {}) {
     getPublisherId,
     isTestMode,
     hasConsent,
+    getConsentState,
     setConsent,
     loadScript,
     renderAd,

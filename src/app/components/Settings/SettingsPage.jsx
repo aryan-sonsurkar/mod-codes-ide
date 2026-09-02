@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
+import { useAdSense, CONSENT_STATES } from "../../contexts/AdSenseContext";
 import { createOllamaProvider } from "../../lib/ai";
 import { checkBridgeHealth, getBridgeToken, setBridgeToken } from "../../lib/terminal/backends/systemTerminalBackend";
 import DiagnosticsCenter from "../Diagnostics/DiagnosticsCenter";
@@ -11,6 +12,7 @@ const CATEGORIES = [
   { id: "files", label: "Files" },
   { id: "terminal", label: "Terminal" },
   { id: "ai", label: "AI & Coder" },
+  { id: "privacy", label: "Privacy" },
   { id: "advanced", label: "Advanced" },
   { id: "diagnostics", label: "Diagnostics" },
 ];
@@ -177,6 +179,113 @@ function ActionRow({ label, description, buttonLabel, onAction }) {
         {buttonLabel}
       </button>
     </div>
+  );
+}
+
+function PrivacySettings() {
+  const adsense = useAdSense();
+  const consentState = adsense?.consentState || CONSENT_STATES.UNKNOWN;
+  const isAvailable = adsense?.isAvailable || false;
+
+  const handleAccept = () => {
+    if (adsense) adsense.setConsent(CONSENT_STATES.ACCEPTED);
+  };
+
+  const handleDecline = () => {
+    if (adsense) adsense.setConsent(CONSENT_STATES.DECLINED);
+  };
+
+  const handleRevoke = () => {
+    if (adsense) adsense.setConsent(CONSENT_STATES.UNKNOWN);
+  };
+
+  return (
+    <>
+      <h3 className="settings-category-title">Privacy & Advertising</h3>
+      <p className="settings-category-description">
+        Control how MODCODES handles advertising and consent. Your files and code
+        never leave your machine.
+      </p>
+      <div className="settings-group">
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">AdSense available</span>
+            <span className="settings-row-description">
+              Whether Google AdSense is configured and reachable.
+            </span>
+          </div>
+          <span className={isAvailable ? "settings-connection-ok" : "settings-connection-error"}>
+            {isAvailable ? "Yes" : "No"}
+          </span>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">Consent state</span>
+            <span className="settings-row-description">
+              Your current advertising consent preference.
+            </span>
+          </div>
+          <span style={{
+            fontSize: "13px",
+            fontWeight: 500,
+            color: consentState === CONSENT_STATES.ACCEPTED ? "#22c55e" :
+                   consentState === CONSENT_STATES.DECLINED ? "#ef4444" : "#f59e0b",
+          }}>
+            {consentState === CONSENT_STATES.ACCEPTED ? "Accepted" :
+             consentState === CONSENT_STATES.DECLINED ? "Declined" : "Unknown"}
+          </span>
+        </div>
+        {isAvailable && (
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <span className="settings-row-label">Manage consent</span>
+              <span className="settings-row-description">
+                Accept, decline, or revoke advertising consent.
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {consentState !== CONSENT_STATES.ACCEPTED && (
+                <button
+                  type="button"
+                  className="settings-connection-button"
+                  onClick={handleAccept}
+                >
+                  Accept
+                </button>
+              )}
+              {consentState !== CONSENT_STATES.DECLINED && (
+                <button
+                  type="button"
+                  className="settings-connection-button"
+                  onClick={handleDecline}
+                >
+                  Decline
+                </button>
+              )}
+              {consentState !== CONSENT_STATES.UNKNOWN && (
+                <button
+                  type="button"
+                  className="settings-connection-button"
+                  onClick={handleRevoke}
+                >
+                  Revoke
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="settings-ai-note">
+          <strong>What we send:</strong> Ad requests may include page URL and
+          browser info. <strong>What we never send:</strong> source code,
+          .modcodes, prompts, AI context, terminal output, Git data, credentials,
+          API keys, or private keys.
+        </div>
+        <div className="settings-ai-note">
+          Consent is stored locally in your browser. You can change or revoke it
+          at any time. Declining or revoking consent disables personalized ads.
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -510,6 +619,10 @@ export default function SettingsPage() {
               </div>
             </div>
           </>
+        )}
+
+        {activeCategory === "privacy" && (
+          <PrivacySettings />
         )}
 
         {activeCategory === "advanced" && (

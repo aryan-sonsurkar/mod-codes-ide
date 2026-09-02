@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useAdSense } from "../../contexts/AdSenseContext";
+import { useAdSense, CONSENT_STATES } from "../../contexts/AdSenseContext";
 import { canShowAd, recordAdShown } from "../../lib/ads/adFrequency";
 
 export function AdContainer({
@@ -17,9 +17,12 @@ export function AdContainer({
   const [adState, setAdState] = useState("idle");
   const [dismissed, setDismissed] = useState(false);
   const mountedRef = useRef(true);
-  const frequencyBlocked = useMemo(() => {
-    if (!adsense || !adsense.isAvailable || !adsense.consent) return false;
-    return !canShowAd(placement, cooldownMs);
+
+  const shouldShow = useMemo(() => {
+    if (!adsense || !adsense.isAvailable) return false;
+    if (adsense.consentState !== CONSENT_STATES.ACCEPTED) return false;
+    if (!canShowAd(placement, cooldownMs)) return false;
+    return true;
   }, [adsense, placement, cooldownMs]);
 
   useEffect(() => {
@@ -28,7 +31,7 @@ export function AdContainer({
   }, []);
 
   useEffect(() => {
-    if (!adsense || !adsense.isAvailable || !adsense.consent || dismissed || frequencyBlocked) return;
+    if (!shouldShow || dismissed) return;
 
     const container = containerRef.current;
     if (!container) return;
@@ -38,11 +41,17 @@ export function AdContainer({
       recordAdShown(placement);
     }
     if (mountedRef.current) setAdState(result.ok ? "ready" : "error");
-  }, [adsense, format, responsive, dismissed, placement, frequencyBlocked]);
+  }, [adsense, format, responsive, dismissed, placement, shouldShow]);
+
+  useEffect(() => {
+    if (!shouldShow && adState === "ready" && containerRef.current) {
+      containerRef.current.innerHTML = "";
+    }
+  }, [shouldShow, adState]);
 
   const dismiss = useCallback(() => setDismissed(true), []);
 
-  if (dismissed || frequencyBlocked) return null;
+  if (dismissed || !shouldShow) return null;
 
   return (
     <div

@@ -1,52 +1,22 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { useAdSense } from "../../contexts/AdSenseContext";
-
-const CONSENT_KEY = "modcodes-ad-consent";
-
-function loadConsentState() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(CONSENT_KEY);
-    if (raw === "granted") return true;
-    if (raw === "denied") return false;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function saveConsentState(granted) {
-  try {
-    window.localStorage.setItem(CONSENT_KEY, granted ? "granted" : "denied");
-  } catch {}
-}
+import { useState, useCallback } from "react";
+import { useAdSense, CONSENT_STATES } from "../../contexts/AdSenseContext";
 
 export default function ConsentBanner() {
   const adsense = useAdSense();
   const [visible, setVisible] = useState(() => {
     if (typeof window === "undefined") return false;
     if (!adsense || !adsense.isAvailable) return false;
-    return loadConsentState() === null;
+    return adsense.consentState === CONSENT_STATES.UNKNOWN;
   });
 
-  useEffect(() => {
-    if (!adsense || !adsense.isAvailable) return;
-    const existing = loadConsentState();
-    if (existing !== null) {
-      adsense.setConsent(existing);
-    }
-  }, [adsense]);
-
   const handleAccept = useCallback(() => {
-    saveConsentState(true);
-    if (adsense) adsense.setConsent(true);
+    if (adsense) adsense.setConsent(CONSENT_STATES.ACCEPTED);
     setVisible(false);
   }, [adsense]);
 
   const handleDecline = useCallback(() => {
-    saveConsentState(false);
-    if (adsense) adsense.setConsent(false);
+    if (adsense) adsense.setConsent(CONSENT_STATES.DECLINED);
     setVisible(false);
   }, [adsense]);
 
