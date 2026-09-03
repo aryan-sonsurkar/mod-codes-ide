@@ -45,6 +45,8 @@ import AgentWorkflowDemo from "./AgentWorkflowDemo";
 import AISetup from "./AISetup";
 import { approvalRequestFor } from "../../../lib/ai/toolApproval";
 import { createActionHistory } from "../../../lib/ai/actionHistory";
+import { useUsageTracker } from "../../../hooks/useUsageTracker";
+import UsageIndicator from "../../Ads/UsageIndicator";
 
 const BROWSER_MODEL_ID = "bonsai-1.7b";
 
@@ -179,6 +181,10 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     []
   );
 
+  const { tracker, usage, trackUsage: recordUsage, checkLimit, getLimitStatus, refresh: refreshUsage } = useUsageTracker({
+    limits: settings.ai?.usageLimits || {},
+  });
+
   useEffect(() => {
     return () => {
       if (rafRef.current != null) {
@@ -186,6 +192,10 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       }
     };
   }, []);
+
+  useEffect(() => {
+    refreshUsage();
+  }, [refreshUsage]);
 
   const hardwareHint = useMemo(() => {
     const profile = createHardwareProfile();
@@ -636,6 +646,20 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         });
         if (result && result.stats) {
           setLastStats({ ...result.stats, model: modelId, provider: providerId });
+          const stats = result.stats;
+          const accounting = stats.outputTokens != null ? "actual" : "unknown";
+          recordUsage({
+            provider: providerId,
+            inputTokens: null,
+            outputTokens: stats.outputTokens ?? null,
+            totalTokens: stats.outputTokens ?? null,
+            accounting,
+          });
+        } else {
+          recordUsage({
+            provider: providerId,
+            accounting: "unknown",
+          });
         }
         const assistantMessage = createMessage({
           role: "assistant",
@@ -693,6 +717,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       settings.ai,
       excludedSources,
       persistConversation,
+      recordUsage,
     ]
   );
 
@@ -803,6 +828,11 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           </button>
         )}
       </div>
+
+      <UsageIndicator
+        usage={usage}
+        limitStatus={getLimitStatus()}
+      />
 
       <div className="ai-controls">
         <label className="ai-label" htmlFor="ai-provider-select">

@@ -30,6 +30,11 @@ export const DEFAULT_SETTINGS = {
     defaultModel: "",
     contextBudget: 24000,
     maxToolRounds: 2,
+    usageLimits: {
+      daily: null,
+      session: null,
+      project: null,
+    },
   },
 };
 
@@ -82,6 +87,25 @@ function sanitizeSettings(settings) {
   const provider =
     ai.provider === "browser-bonsai" ? "browser-bonsai" : "ollama";
 
+  const usageLimits = ai.usageLimits || {};
+  const sanitizedUsageLimits = {
+    daily: usageLimits.daily === null || usageLimits.daily === undefined
+      ? null
+      : Number.isFinite(usageLimits.daily) && usageLimits.daily > 0
+        ? Math.round(usageLimits.daily)
+        : null,
+    session: usageLimits.session === null || usageLimits.session === undefined
+      ? null
+      : Number.isFinite(usageLimits.session) && usageLimits.session > 0
+        ? Math.round(usageLimits.session)
+        : null,
+    project: usageLimits.project === null || usageLimits.project === undefined
+      ? null
+      : Number.isFinite(usageLimits.project) && usageLimits.project > 0
+        ? Math.round(usageLimits.project)
+        : null,
+  };
+
   const editor = settings.editor || {};
   const terminal = settings.terminal || {};
   const sanitizedEditor = {
@@ -110,6 +134,7 @@ function sanitizeSettings(settings) {
       defaultModel,
       contextBudget,
       maxToolRounds,
+      usageLimits: sanitizedUsageLimits,
     },
   };
 }
