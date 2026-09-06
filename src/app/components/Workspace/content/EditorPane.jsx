@@ -30,7 +30,10 @@ function EditorPaneInner({ tab, openPaths, onChange, onSave, revealRequest, focu
     return (
       <div className="editor-pane">
         <div className="editor-message">
-          No file open. Click a file in the explorer to open it as a tab.
+          <div className="empty-state-inline">
+            <p style={{fontSize:14,color:"var(--secondary-text)",marginBottom:8}}>No file open</p>
+            <p style={{fontSize:13,color:"var(--muted-text)"}}>Click a file in the explorer, or press <kbd style={{background:"var(--surface-bg)",padding:"2px 6px",borderRadius:4,border:"1px solid var(--border-color)",fontSize:12}}>Ctrl+P</kbd> to search files.</p>
+          </div>
         </div>
       </div>
     );

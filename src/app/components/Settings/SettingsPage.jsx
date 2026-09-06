@@ -135,7 +135,7 @@ function ConnectionRow({ value }) {
         message:
           result.error && typeof result.error.message === "string"
             ? result.error.message
-            : "Ollama is not reachable.",
+            : "Cannot reach Ollama. Is it running? Start with: ollama serve",
       });
     }
   };
@@ -547,9 +547,9 @@ export default function SettingsPage() {
           <>
             <h3 className="settings-category-title">AI & Coder</h3>
             <p className="settings-category-description">
-              Configure the local AI provider. ModCodes runs the model locally —
+              Configure the local AI provider. MODCODES runs the model locally —
               either through Ollama on this machine or fully in the browser on
-              your GPU. No cloud proxy is used.
+              your GPU. No cloud proxy is used. No code leaves your machine.
             </p>
             <div className="settings-group">
               <SelectRow

@@ -124,13 +124,13 @@ function buildToolRegistry(getContextData) {
 
 function statusLabel(status, providerId) {
   if (status === "checking") {
-    return "Checking…";
+    return "Checking connection…";
   }
   if (status === "connected") {
     return providerId === "browser-bonsai" ? "Bonsai ready" : "Ollama connected";
   }
   if (status === "not-ready") {
-    return "Download the Bonsai model to start";
+    return "Model not downloaded yet";
   }
   return providerId === "browser-bonsai" ? "Bonsai is not ready" : "Ollama is not reachable";
 }
@@ -995,7 +995,13 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           <div className="ai-empty">
             <Bot size={18} />
             <p>Ask about the current file or the open project.</p>
-            <p>Context is attached explicitly when you send a message.</p>
+            {status === "connected" ? (
+              <p className="ai-hint">Provider is ready. Type a message below to start.</p>
+            ) : status === "checking" ? (
+              <p className="ai-hint">Checking provider connection...</p>
+            ) : (
+              <p className="ai-hint">Set up Ollama or Bonsai in Settings to enable AI.</p>
+            )}
           </div>
         ) : (
           messages.map((message) => {

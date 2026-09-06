@@ -234,7 +234,7 @@ function BrowserAISectionBody({
 
           {state === MODEL_STATES.error && (
             <p className="ai-browser-message ai-browser-message-error">
-              {progress && progress.error ? progress.error : "The download failed."}
+              {progress && progress.error ? progress.error : "Download failed. Check your connection and try again."}
             </p>
           )}
 
@@ -284,7 +284,7 @@ function BrowserAISectionBody({
           </div>
         </div>
       ) : (
-        <p className="ai-browser-message">Bonsai is not available in this browser.</p>
+        <p className="ai-browser-message">Bonsai is not available in this browser. Try Chrome or Edge with WebGPU support.</p>
       )}
     </section>
   );

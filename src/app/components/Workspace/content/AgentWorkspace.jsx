@@ -70,16 +70,52 @@ export default function AgentWorkspace({ orchestrator, lifecycle }) {
         </div>
       )}
       <div className="agent-grid">
-        <div className="agent-card"><strong>Plan</strong><pre>{snap.plan ? JSON.stringify(snap.plan,null,2).slice(0,800) : "— no plan yet"}</pre></div>
-        <div className="agent-card"><strong>Progress</strong><pre>Current: {snap.task?.currentStep || "—"}{"\n"}Observations: {(snap.observations||[]).length}</pre></div>
-        <div className="agent-card"><strong>Files</strong><pre>{snap.changeset ? JSON.stringify(snap.changeset,null,2).slice(0,600) : "— no files yet"}</pre></div>
-        <div className="agent-card"><strong>Tests / Errors</strong><pre>{snap.observations?.map(o=>o.text||JSON.stringify(o)).join("\n").slice(0,600) || "—"}</pre></div>
+        <div className="agent-card">
+          <strong>Plan</strong>
+          {snap.plan ? (
+            <pre>{JSON.stringify(snap.plan,null,2).slice(0,800)}</pre>
+          ) : (
+            <div className="empty-state-inline">
+              <p>No plan yet. Start a milestone from the Roadmap to generate an execution plan.</p>
+            </div>
+          )}
+        </div>
+        <div className="agent-card">
+          <strong>Progress</strong>
+          {snap.task?.currentStep || (snap.observations||[]).length > 0 ? (
+            <pre>Current: {snap.task?.currentStep || "—"}{"\n"}Observations: {(snap.observations||[]).length}</pre>
+          ) : (
+            <div className="empty-state-inline">
+              <p>Waiting for execution to begin.</p>
+            </div>
+          )}
+        </div>
+        <div className="agent-card">
+          <strong>Files</strong>
+          {snap.changeset ? (
+            <pre>{JSON.stringify(snap.changeset,null,2).slice(0,600)}</pre>
+          ) : (
+            <div className="empty-state-inline">
+              <p>No file changes yet. Changes appear here when the agent modifies files.</p>
+            </div>
+          )}
+        </div>
+        <div className="agent-card">
+          <strong>Tests / Errors</strong>
+          {snap.observations?.length > 0 ? (
+            <pre>{snap.observations.map(o=>o.text||JSON.stringify(o)).join("\n").slice(0,600)}</pre>
+          ) : (
+            <div className="empty-state-inline">
+              <p>Observations and test results will appear here during execution.</p>
+            </div>
+          )}
+        </div>
       </div>
       <div className="agent-controls">
-        <button>Pause</button>
-        <button>Resume</button>
-        <button>Cancel</button>
-        <button className="primary">Review Changes</button>
+        <button aria-label="Pause agent execution">Pause</button>
+        <button aria-label="Resume agent execution">Resume</button>
+        <button aria-label="Cancel agent execution">Cancel</button>
+        <button className="primary" aria-label="Review proposed changes">Review Changes</button>
       </div>
       <p className="muted small">Permanent FS changes remain behind Save. Concurrent edits → Review / Keep mine / Keep agent / Merge.</p>
     </div>

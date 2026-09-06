@@ -55,45 +55,54 @@ export default function CreateProjectModal({ closeModal, addProject }) {
 
   return (
     <div>
-      <div className="backdrop" onClick={closeModal}></div>
-      <form className="ProjectModal" onSubmit={handleSubmit}>
+      <div className="backdrop" onClick={closeModal} aria-hidden="true"></div>
+      <form className="ProjectModal" onSubmit={handleSubmit} role="dialog" aria-modal="true" aria-label="Create new project">
         <h1>Create Project</h1>
 
-        <label className="labels">Project Name: </label>
+        <label className="labels" htmlFor="project-name">Project Name</label>
         <input
+          id="project-name"
           className="input"
           placeholder="My Awesome Project"
           value={projectName}
           onChange={(event) => setProjectName(event.target.value)}
+          required
         />
 
-        <label className="labels">Project Location: </label>
+        <label className="labels" htmlFor="project-location">Project Location</label>
         <div className="location-picker">
           <input
+            id="project-location"
             className="input"
             placeholder="Select a folder"
             value={projectLocation}
             readOnly
+            aria-describedby="location-hint"
           />
-          <button type="button" className="button" onClick={chooseProjectFolder}>
+          <button type="button" className="button" onClick={chooseProjectFolder} aria-label="Browse for project folder">
             Browse
           </button>
         </div>
+        <p id="location-hint" style={{color:"var(--muted-text)",fontSize:11,margin:"2px 0 0"}}>
+          Your browser will ask for folder access. Files stay on your machine.
+        </p>
 
-        <label className="labels">What are you bringing?</label>
+        <label className="labels" htmlFor="project-bringing">What are you bringing?</label>
         <select
+          id="project-bringing"
           className="input"
           value={bringing}
           onChange={(event) => setBringing(event.target.value)}
         >
-          <option value="idea">IDEA — I have an idea</option>
-          <option value="codebase">EXISTING CODEBASE</option>
-          <option value="hybrid">IDEA + EXISTING CODEBASE (hybrid)</option>
-          <option value="empty">EMPTY PROJECT</option>
+          <option value="idea">Idea — I have an idea for a project</option>
+          <option value="codebase">Existing Codebase — I have code already</option>
+          <option value="hybrid">Hybrid — Idea + existing code</option>
+          <option value="empty">Empty — Start from scratch</option>
         </select>
 
-        <label className="labels">Project Type: </label>
+        <label className="labels" htmlFor="project-type">Project Type</label>
         <select
+          id="project-type"
           className="input"
           value={projectType}
           onChange={(event) => setProjectType(event.target.value)}
@@ -107,21 +116,23 @@ export default function CreateProjectModal({ closeModal, addProject }) {
 
         <section className="gitrepo">
           <input
+            id="project-git"
             className="input"
             type="checkbox"
             checked={projectGit}
             onChange={(event) => setProjectGit(event.target.checked)}
-          ></input>
-          <label className="labels">Initialize Git Repository</label>
+          />
+          <label className="labels" htmlFor="project-git">Initialize Git Repository</label>
         </section>
         <section className="gitrepo">
           <input
+            id="project-github"
             className="input"
             type="checkbox"
             checked={githubRepo}
             onChange={(event) => setGithubRepo(event.target.checked)}
-          ></input>
-          <label className="labels">Create GitHub Repository (offered at creation)</label>
+          />
+          <label className="labels" htmlFor="project-github">Create GitHub Repository (offered at creation)</label>
         </section>
         <p style={{ color: "var(--secondary-text)", fontSize: "12px", margin: "4px 0 0" }}>
           {bringing === "idea" && "Flow: idea → research → PRD → roadmap → development. You can start coding earlier."}

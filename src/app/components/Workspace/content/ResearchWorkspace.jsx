@@ -43,7 +43,15 @@ export default function ResearchWorkspace({ modcodesData, onUpdate }) {
     } finally { setBusy(false); }
   }
 
-  if (!modcodesData) return <div className="research-ws">Load .modcodes to research.</div>;
+  if (!modcodesData) return (
+    <div className="research-ws">
+      <div className="empty-state">
+        <div className="empty-state-icon" aria-hidden="true">&#x1F50D;</div>
+        <h3>No project memory yet</h3>
+        <p>Research validates your project idea and finds relevant sources. Create a .modcodes file first to start researching.</p>
+      </div>
+    </div>
+  );
   return (
     <div className="research-ws">
       <h2>Research Workspace</h2>

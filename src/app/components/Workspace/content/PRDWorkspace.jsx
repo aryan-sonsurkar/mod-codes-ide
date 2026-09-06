@@ -5,7 +5,15 @@ import "./PRDWorkspace.css";
 
 export default function PRDWorkspace({ modcodesData, onUpdate }) {
   const [text, setText] = useState(() => String(modcodesData?.sections?.PRD || ""));
-  if (!modcodesData) return <div className="prd-ws">Load .modcodes.</div>;
+  if (!modcodesData) return (
+    <div className="prd-ws">
+      <div className="empty-state">
+        <div className="empty-state-icon" aria-hidden="true">&#x1F4CB;</div>
+        <h3>No project memory yet</h3>
+        <p>A PRD (Product Requirements Document) defines what your project should do. Create a .modcodes file first, then generate a PRD from your research.</p>
+      </div>
+    </div>
+  );
   function handleGenerate() {
     const next = buildPRDFromResearch({ modcodesData });
     setText(String(next.sections?.PRD || ""));

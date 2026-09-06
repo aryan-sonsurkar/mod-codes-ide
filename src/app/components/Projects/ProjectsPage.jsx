@@ -103,6 +103,7 @@ export default function ProjectsPage({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search projects..."
+          aria-label="Search projects"
         />
         <label className="projects-sort">
           <span className="projects-sort-label">Sort</span>
@@ -110,6 +111,7 @@ export default function ProjectsPage({
             className="projects-sort-select"
             value={sort}
             onChange={(event) => setSort(event.target.value)}
+            aria-label="Sort projects"
           >
             {SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -130,20 +132,27 @@ export default function ProjectsPage({
 
       {projects.length === 0 ? (
         <div className="projects-empty">
-          <p className="projects-empty-title">No projects yet</p>
-          <p className="projects-empty-text">
-            Create your first project to start building in the browser.
-          </p>
-          <button className="projects-new-button" onClick={onCreate}>
-            Create a project
-          </button>
+          <div className="empty-state">
+            <div className="empty-state-icon" aria-hidden="true">&#x1F4C1;</div>
+            <p className="projects-empty-title">No projects yet</p>
+            <p className="projects-empty-text">
+              Create your first project to start building in the browser.
+              Your files stay on your machine.
+            </p>
+            <button className="projects-new-button" onClick={onCreate}>
+              Create a project
+            </button>
+          </div>
         </div>
       ) : sorted.length === 0 ? (
         <div className="projects-empty">
-          <p className="projects-empty-title">No matching projects</p>
-          <p className="projects-empty-text">
-            Try a different search or clear the filters.
-          </p>
+          <div className="empty-state">
+            <div className="empty-state-icon" aria-hidden="true">&#x1F50D;</div>
+            <p className="projects-empty-title">No matching projects</p>
+            <p className="projects-empty-text">
+              Try a different search or clear the filters.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="projects-list">

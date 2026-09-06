@@ -76,11 +76,11 @@ import { useRankedContext } from "../../../hooks/useRankedContext";
 const STATUS_MESSAGES = {
   requesting: "Requesting access to this project's folder...",
   cancelled:
-    "Folder access was cancelled. ModCodes could not connect to the project directory.",
+    "Folder access was cancelled. MODCODES needs folder access to read and write project files.",
   unsupported:
-    "Your browser does not support the File System Access API. Please use a Chromium-based browser (Chrome or Edge).",
-  denied: "Permission to read this project's folder was denied.",
-  error: "ModCodes could not read this project's folder.",
+    "Your browser doesn't support the File System Access API. Please use Chrome or Edge to open projects.",
+  denied: "Permission to read this project's folder was denied. Please allow access when prompted.",
+  error: "MODCODES could not read this project's folder. The folder may have been moved or deleted.",
 };
 
 function clamp(value, min, max) {
@@ -1133,6 +1133,7 @@ export default function IdeWorkspace({ selectedProject }) {
           <button
             className="ide-header-button"
             title="Back to Projects"
+            aria-label="Back to Projects"
             onClick={() => router.push("/projects")}
           >
             Projects
@@ -1144,6 +1145,7 @@ export default function IdeWorkspace({ selectedProject }) {
                 : ""
             }`}
             title="Toggle Explorer panel (Ctrl+B)"
+            aria-label={layout.leftOpen && layout.leftTab === "explorer" ? "Close Explorer panel" : "Open Explorer panel"}
             onClick={() => toggleLeftPanel("explorer")}
           >
             {layout.leftOpen && layout.leftTab === "explorer"
@@ -1157,6 +1159,7 @@ export default function IdeWorkspace({ selectedProject }) {
                 : ""
             }`}
             title="Toggle Search panel"
+            aria-label={layout.leftOpen && layout.leftTab === "search" ? "Close Search panel" : "Open Search panel"}
             onClick={() => toggleLeftPanel("search")}
           >
             {layout.leftOpen && layout.leftTab === "search"
@@ -1168,6 +1171,7 @@ export default function IdeWorkspace({ selectedProject }) {
               layout.terminalOpen ? " ide-header-button-active" : ""
             }`}
             title="Toggle Terminal panel"
+            aria-label={layout.terminalOpen ? "Close Terminal panel" : "Open Terminal panel"}
             onClick={() =>
               setLayout((current) => ({
                 ...current,
@@ -1182,6 +1186,7 @@ export default function IdeWorkspace({ selectedProject }) {
               layout.rightOpen ? " ide-header-button-active" : ""
             }`}
             title="Toggle side panels"
+            aria-label={layout.rightOpen ? "Hide side panels" : "Show side panels"}
             onClick={() =>
               setLayout((current) => ({ ...current, rightOpen: !current.rightOpen }))
             }
@@ -1190,7 +1195,7 @@ export default function IdeWorkspace({ selectedProject }) {
           </button>
         </div>
       </header>
-      <div className="workspace-mode-bar" style={{display:"flex",gap:6,padding:"6px 0"}}>
+      <div className="workspace-mode-bar" role="tablist" aria-label="Workspace modes" style={{display:"flex",gap:6,padding:"6px 0"}}>
         {[
           ["code","Code"],
           ["overview","Overview"],
@@ -1199,7 +1204,7 @@ export default function IdeWorkspace({ selectedProject }) {
           ["roadmap","Roadmap"],
           ["agent","Agent"],
         ].map(([id,label])=>(
-          <button key={id} className={`ide-header-button${workspaceMode===id?" ide-header-button-active":""}`} onClick={()=>setWorkspaceMode(id)}>{label}</button>
+          <button key={id} role="tab" aria-selected={workspaceMode===id} className={`ide-header-button${workspaceMode===id?" ide-header-button-active":""}`} onClick={()=>setWorkspaceMode(id)}>{label}</button>
         ))}
         <span style={{marginLeft:"auto",color:"var(--secondary-text)",fontSize:12,alignSelf:"center"}}>Phase: {modcodesData?.project?.phase || "idea"} · .modcodes local</span>
       </div>
@@ -1690,12 +1695,18 @@ export default function IdeWorkspace({ selectedProject }) {
           />
         </>
       ) : (
-        <div className="ide-status">
+        <div className="ide-status" role="status" aria-live="polite">
+          {status === "requesting" && <span className="spinner" aria-hidden="true" />}
           <p>{STATUS_MESSAGES[status] || "Preparing..."}</p>
           {canRetry && (
             <button className="ide-retry-button" onClick={retry}>
               Request Access
             </button>
+          )}
+          {status === "unsupported" && (
+            <p style={{fontSize:12,color:"var(--muted-text)",margin:0}}>
+              Download <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer" style={{color:"var(--accent-color)"}}>Chrome</a> or <a href="https://www.microsoft.com/edge" target="_blank" rel="noopener noreferrer" style={{color:"var(--accent-color)"}}>Edge</a> to use MODCODES.
+            </p>
           )}
         </div>
       )}

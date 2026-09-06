@@ -7,7 +7,16 @@ import "./ProjectOverview.css";
 export default function ProjectOverview({ modcodesData, codebaseSnapshot, onContinue, onReview, onOpen, onPhaseChange }) {
   const reconciliation = useMemo(() => reconcileProjectMemory({ modcodesData, codebaseSnapshot }), [modcodesData, codebaseSnapshot]);
   if (!modcodesData) {
-    return <div className="project-overview">No project memory. Create .modcodes to start.</div>;
+    return (
+      <div className="project-overview">
+        <div className="empty-state">
+          <div className="empty-state-icon" aria-hidden="true">&#x1F4DD;</div>
+          <h3>No project memory yet</h3>
+          <p>Project memory (.modcodes) tracks your project&apos;s phase, milestones, and decisions. The editor works without it, but recommendations and lifecycle features require it.</p>
+          <button className="primary" style={{marginTop:12}} onClick={onOpen}>Open Project</button>
+        </div>
+      </div>
+    );
   }
   const phase = String(modcodesData.project?.phase || "idea");
   const label = PHASE_LABELS[phase] || phase;

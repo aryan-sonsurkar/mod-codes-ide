@@ -15,17 +15,18 @@ export default function ConfirmDialog({
   }
 
   return (
-    <div className="confirm-overlay" onClick={onCancel}>
+    <div className="confirm-overlay" onClick={onCancel} role="presentation">
       <div
         className="confirm-dialog"
-        role="dialog"
+        role="alertdialog"
         aria-modal="true"
+        aria-labelledby={title ? "confirm-dialog-title" : undefined}
         onClick={(event) => event.stopPropagation()}
       >
-        {title && <p className="confirm-title">{title}</p>}
+        {title && <p className="confirm-title" id="confirm-dialog-title">{title}</p>}
         <div className="confirm-message">{message}</div>
         <div className="confirm-actions">
-          <button className="confirm-button" onClick={onCancel}>
+          <button className="confirm-button" onClick={onCancel} autoFocus>
             {cancelLabel}
           </button>
           <button

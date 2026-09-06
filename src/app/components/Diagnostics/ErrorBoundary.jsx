@@ -115,14 +115,15 @@ export default class ErrorBoundary extends Component {
     if (this.state.hasError) {
       const { title, message, detail, actions } = classifyError(this.state.error);
       return (
-        <div className="error-boundary" role="alert">
+        <div className="error-boundary" role="alert" aria-live="assertive">
+          <div className="error-boundary-icon" aria-hidden="true">⚠</div>
           <h2>{title}</h2>
           <p>{message}</p>
           {detail && <p className="error-boundary-detail">{detail}</p>}
           <div className="error-boundary-actions">
             {actions.includes("retry") && (
               <button type="button" className="error-boundary-retry" onClick={this.handleRetry}>
-                Retry
+                Try Again
               </button>
             )}
             {actions.includes("reload") && (
@@ -135,6 +136,13 @@ export default class ErrorBoundary extends Component {
                 Reset Settings
               </button>
             )}
+            <button
+              type="button"
+              className="error-boundary-retry"
+              onClick={() => { if (typeof window !== "undefined") window.location.href = "/projects"; }}
+            >
+              Go to Projects
+            </button>
           </div>
           {this.props.fallback}
         </div>

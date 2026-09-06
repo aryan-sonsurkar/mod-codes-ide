@@ -155,9 +155,18 @@ export default function RoadmapWorkspace({ modcodesData, onUpdate, tree, lifecyc
             <strong>{m.id}: {m.goal}</strong>
             <button onClick={()=>handleStart(m)}>Start Milestone</button>
           </div>
-        )) : <p className="muted">No milestones parsed — Generate first.</p>}
+        )) : (
+          <div className="empty-state">
+            <div className="empty-state-icon" aria-hidden="true">&#x1F4C5;</div>
+            <h3>No milestones yet</h3>
+            <p>A roadmap breaks your project into milestones. Generate one from your PRD to start tracking progress.</p>
+          </div>
+        )}
       </div>
-      <pre className="roadmap-pre">{view || "— no roadmap yet. Generate."}</pre>
+      <pre className="roadmap-pre">{view || ""}</pre>
+      {!view && milestones.length === 0 && (
+        <p className="muted" style={{fontSize:13,textAlign:"center",padding:"12px 0"}}>Click &ldquo;Generate Roadmap from PRD&rdquo; above to create your first roadmap.</p>
+      )}
     </div>
   );
 }
