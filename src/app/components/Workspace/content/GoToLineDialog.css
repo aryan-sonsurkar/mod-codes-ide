@@ -13,7 +13,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 320px;
+  width: calc(100vw - 32px);
+  max-width: 320px;
   padding: 10px 12px;
   background-color: var(--surface-bg);
   border: solid 2px var(--border-color);

@@ -6,6 +6,8 @@ export default function AgentWorkspace({ orchestrator, lifecycle }) {
   const [snap, setSnap] = useState(() => orchestrator ? orchestrator.getSnapshot() : { state: "idle", task: { title: "Idle" }, plan: null, observations: [], changeset: null });
   const [lifecycleSnap, setLifecycleSnap] = useState(() => lifecycle ? lifecycle.getSnapshot() : null);
   const [showContext, setShowContext] = useState(false);
+  const [showAssessment, setShowAssessment] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
 
   useEffect(() => {
     if (!orchestrator || !orchestrator.subscribe) return;
@@ -57,16 +59,26 @@ export default function AgentWorkspace({ orchestrator, lifecycle }) {
       )}
       {lifecycleSnap && lifecycleSnap.completionAssessment && (
         <div className="agent-context" style={{marginTop:8}}>
-          <strong>Milestone Assessment: {lifecycleSnap.completionAssessment.status}</strong>
-          <div>{lifecycleSnap.completionAssessment.completed}/{lifecycleSnap.completionAssessment.total} supported • {lifecycleSnap.completionAssessment.blockers.length} blocker(s)</div>
-          <button>View Assessment</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <strong>Milestone Assessment: {lifecycleSnap.completionAssessment.status}</strong>
+            <span>{lifecycleSnap.completionAssessment.completed}/{lifecycleSnap.completionAssessment.total} supported · {lifecycleSnap.completionAssessment.blockers.length} blocker(s)</span>
+            <button onClick={() => setShowAssessment(v => !v)}>{showAssessment ? "Hide" : "View Assessment"}</button>
+          </div>
+          {showAssessment && (
+            <pre style={{marginTop:6,maxHeight:200,overflow:"auto"}}>{JSON.stringify(lifecycleSnap.completionAssessment, null, 2)}</pre>
+          )}
         </div>
       )}
       {lifecycleSnap && lifecycleSnap.verification && (
         <div className="agent-context" style={{marginTop:8}}>
-          <strong>Verification: {lifecycleSnap.verification.status}</strong>
-          <div>✓ {lifecycleSnap.verification.passed} passed ✗ {lifecycleSnap.verification.failed} failed ? {lifecycleSnap.verification.unknown} unknown</div>
-          <button>View Results</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <strong>Verification: {lifecycleSnap.verification.status}</strong>
+            <span>✓ {lifecycleSnap.verification.passed} passed · ✗ {lifecycleSnap.verification.failed} failed · ? {lifecycleSnap.verification.unknown} unknown</span>
+            <button onClick={() => setShowVerification(v => !v)}>{showVerification ? "Hide" : "View Results"}</button>
+          </div>
+          {showVerification && (
+            <pre style={{marginTop:6,maxHeight:200,overflow:"auto"}}>{JSON.stringify(lifecycleSnap.verification, null, 2)}</pre>
+          )}
         </div>
       )}
       <div className="agent-grid">
@@ -112,10 +124,49 @@ export default function AgentWorkspace({ orchestrator, lifecycle }) {
         </div>
       </div>
       <div className="agent-controls">
-        <button aria-label="Pause agent execution">Pause</button>
-        <button aria-label="Resume agent execution">Resume</button>
-        <button aria-label="Cancel agent execution">Cancel</button>
-        <button className="primary" aria-label="Review proposed changes">Review Changes</button>
+        {(snap.state === "executing" || snap.state === "planning" || snap.state === "observing") && (
+          <button
+            aria-label="Cancel agent execution"
+            onClick={() => {
+              if (lifecycle && typeof lifecycle.cancel === "function") lifecycle.cancel();
+              else if (orchestrator && typeof orchestrator.cancel === "function") orchestrator.cancel();
+            }}
+          >
+            Cancel
+          </button>
+        )}
+        {snap.state === "awaitingApproval" && snap.plan && (
+          <button
+            className="primary"
+            aria-label="Approve plan and start execution"
+            onClick={() => {
+              if (lifecycle && typeof lifecycle.approvePlan === "function") lifecycle.approvePlan();
+              else if (orchestrator && typeof orchestrator.approvePlan === "function") orchestrator.approvePlan();
+            }}
+          >
+            Approve Plan
+          </button>
+        )}
+        {snap.state === "awaitingReview" && snap.changeset && (
+          <button
+            className="primary"
+            aria-label="Review proposed changes"
+            onClick={() => {
+              if (lifecycle && typeof lifecycle.reviewChanges === "function") lifecycle.reviewChanges();
+            }}
+          >
+            Review Changes
+          </button>
+        )}
+        {snap.state === "completed" && (
+          <span className="status-badge status-badge-success">Task completed</span>
+        )}
+        {snap.state === "cancelled" && (
+          <span className="status-badge status-badge-warning">Cancelled by user</span>
+        )}
+        {snap.state === "failed" && (
+          <span className="status-badge status-badge-danger">Failed</span>
+        )}
       </div>
       <p className="muted small">Permanent FS changes remain behind Save. Concurrent edits → Review / Keep mine / Keep agent / Merge.</p>
     </div>

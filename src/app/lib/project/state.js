@@ -45,7 +45,6 @@ export function projectHealth({ modcodesData, fileCount, lastModified }) {
   return {
     stale,
     ageDays: Math.floor(ageDays),
-    architectureMatches: true, // until graph reconcile says otherwise
     fileCount: typeof fileCount === "number" ? fileCount : null,
   };
 }
