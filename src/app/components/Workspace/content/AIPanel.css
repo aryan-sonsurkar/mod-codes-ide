@@ -99,8 +99,27 @@
   color: var(--muted-text);
   font-size: var(--text-xs);
   font-weight: 600;
-  letter-spacing: 0.5px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-refresh-models {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: var(--muted-text);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.ai-refresh-models:hover {
+  color: var(--accent-color);
 }
 
 .ai-model-select {
@@ -495,6 +514,59 @@
 
 .ai-browser-button-secondary {
   color: var(--muted-text);
+}
+
+.ai-browser-device-lost {
+  padding: 8px;
+  border: 1px solid var(--danger-color);
+  border-radius: var(--radius-sm);
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.ai-browser-adapter-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+  border-top: dashed 1px var(--border-color);
+}
+
+.ai-browser-adapter-detail {
+  color: var(--muted-text);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.ai-browser-storage-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--warning-color, #f59e0b);
+  border-radius: var(--radius-sm);
+  background-color: rgba(245, 158, 11, 0.05);
+  color: var(--warning-color, #f59e0b);
+  font-size: var(--text-xs);
+}
+
+.ai-browser-confirm-evict {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-browser-confirm-text {
+  color: var(--muted-text);
+  font-size: var(--text-xs);
+}
+
+.ai-browser-button-danger {
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+}
+
+.ai-browser-button-danger:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.1);
 }
 
 .ai-browser-ready {

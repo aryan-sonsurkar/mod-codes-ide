@@ -33,7 +33,17 @@ async function streamRequest(provider, request, onDelta) {
   let text = "";
   const toolCalls = [];
   let stats = null;
+  let lastChunkTime = Date.now();
+  const STALL_TIMEOUT_MS = 60000;
   for await (const chunk of stream) {
+    const now = Date.now();
+    if (now - lastChunkTime > STALL_TIMEOUT_MS) {
+      throw new AiError(
+        AI_ERRORS.network,
+        "Stream timed out — no data received for 60 seconds."
+      );
+    }
+    lastChunkTime = now;
     if (chunk && chunk.type === "text" && typeof chunk.text === "string") {
       text += chunk.text;
       if (typeof onDelta === "function") {
@@ -83,6 +93,7 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
   let selectedModel = typeof model === "string" && model.length > 0 ? model : null;
   let controller = null;
   let active = false;
+  let generationPhase = "idle";
 
   function history() {
     return messages.map(toHistoryEntry);
@@ -94,6 +105,7 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
       model: selectedModel,
       messages: history(),
       active,
+      generationPhase,
     };
   }
 
@@ -154,10 +166,14 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
 
     controller = new AbortController();
     active = true;
+    generationPhase = "thinking";
 
     let partial = "";
     const handleDelta = (text) => {
       partial = text;
+      if (generationPhase !== "streaming") {
+        generationPhase = "streaming";
+      }
       if (typeof onDelta === "function") {
         onDelta(text);
       }
@@ -176,6 +192,7 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
 
         if (toolCalls.length === 0) {
           const message = addMessage("assistant", text);
+          generationPhase = "idle";
           return {
             ok: true,
             text,
@@ -187,6 +204,7 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
         rounds += 1;
         if (rounds > maxRounds) {
           const message = addMessage("assistant", text);
+          generationPhase = "idle";
           return {
             ok: true,
             text,
@@ -207,6 +225,7 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
 
         const results = [];
         for (const call of toolCalls) {
+          generationPhase = "tool-calling";
           let result;
           if (typeof toolRunner === "function") {
             try {
@@ -248,6 +267,7 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
       if (normalized.code === AI_ERRORS.cancelled && partial.length > 0) {
         addMessage("assistant", partial);
       }
+      generationPhase = "idle";
       throw normalized;
     } finally {
       active = false;
@@ -260,6 +280,7 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
       controller.abort();
     }
     active = false;
+    generationPhase = "idle";
   }
 
   function clear() {
@@ -279,5 +300,6 @@ export function createAiSession({ provider, model = null, systemPrompt = null } 
     sendMessage,
     stop,
     clear,
+    get generationPhase() { return generationPhase; },
   };
 }

@@ -20,6 +20,7 @@ import {
   createStoredConversation,
   createTool,
   createToolRegistry,
+  describeAiError,
   describeDeviceTier,
   detectWebGpuCapability,
   executeToolCall,
@@ -31,8 +32,10 @@ import {
   parseReferencesFromText,
   recommendModels,
   saveConversations,
+  watchDeviceLost,
 } from "../../../lib/ai";
 import { useSettings } from "../../../contexts/SettingsContext";
+import { PROVIDER_STATES, providerStateLabel, providerStateClass } from "../../../lib/ai/providerStates";
 import BrowserAISection from "./BrowserAISection";
 import AIContextInspector from "./AIContextInspector";
 import AIReferences from "./AIReferences";
@@ -123,16 +126,15 @@ function buildToolRegistry(getContextData) {
 }
 
 function statusLabel(status, providerId) {
-  if (status === "checking") {
-    return "Checking connection…";
-  }
-  if (status === "connected") {
-    return providerId === "browser-bonsai" ? "Bonsai ready" : "Ollama connected";
-  }
-  if (status === "not-ready") {
-    return "Model not downloaded yet";
-  }
-  return providerId === "browser-bonsai" ? "Bonsai is not ready" : "Ollama is not reachable";
+  return providerStateLabel(status, providerId);
+}
+
+function formatModelSize(bytes) {
+  if (!bytes || bytes <= 0) return "";
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return `${gb.toFixed(1)} GB`;
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(0)} MB`;
 }
 
 export default function AIPanel({ getContextData, externalPrompt = null, onApplyDiff = null, onNavigate = null }) {
@@ -140,7 +142,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
   const [providerId, setProviderId] = useState(
     settings.ai?.provider === "browser-bonsai" ? "browser-bonsai" : "ollama"
   );
-  const [status, setStatus] = useState("checking");
+  const [status, setStatus] = useState(PROVIDER_STATES.unknown);
   const [version, setVersion] = useState(null);
   const [models, setModels] = useState([]);
   const [modelId, setModelId] = useState("");
@@ -151,6 +153,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
   const [generationState, setGenerationState] = useState(CONVERSATION_STATES.idle);
   const [contextPreview, setContextPreview] = useState(null);
   const [retryToken, setRetryToken] = useState(0);
+  const [refreshModelsToken, setRefreshModelsToken] = useState(0);
   const [toolActivity, setToolActivity] = useState(null);
   const [capability, setCapability] = useState(null);
   const [browserModelInfo, setBrowserModelInfo] = useState(null);
@@ -190,12 +193,30 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       if (rafRef.current != null) {
         window.cancelAnimationFrame(rafRef.current);
       }
+      if (sessionRef.current && typeof sessionRef.current.stop === "function") {
+        sessionRef.current.stop();
+      }
+      if (browserRuntimeRef.current && typeof browserRuntimeRef.current.dispose === "function") {
+        browserRuntimeRef.current.dispose();
+      }
     };
   }, []);
 
   useEffect(() => {
     refreshUsage();
   }, [refreshUsage]);
+
+  useEffect(() => {
+    return () => {
+      if (browserRuntimeRef.current) {
+        try {
+          browserRuntimeRef.current.dispose?.();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
 
   const hardwareHint = useMemo(() => {
     const profile = createHardwareProfile();
@@ -249,13 +270,53 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
   }, [cacheProvider, refreshBrowserModel]);
 
   useEffect(() => {
+    if (!capability || !capability.device) {
+      return;
+    }
+    const { promise } = watchDeviceLost(capability.device);
+    if (!promise) {
+      return;
+    }
+    let active = true;
+    promise.then((reason) => {
+      if (!active) return;
+      setCapability((prev) => prev ? { ...prev, state: "lost", reason } : prev);
+      if (providerId === "browser-bonsai") {
+        setStatus(PROVIDER_STATES.unavailable);
+      }
+    }).catch(() => {
+      if (!active) return;
+      setCapability((prev) => prev ? { ...prev, state: "lost", reason: "error" } : prev);
+      if (providerId === "browser-bonsai") {
+        setStatus(PROVIDER_STATES.unavailable);
+      }
+    });
+    return () => { active = false; };
+  }, [capability, providerId]);
+
+  const handleReinitializeWebGpu = useCallback(async () => {
+    setStatus(PROVIDER_STATES.checking);
+    try {
+      const detected = await detectWebGpuCapability();
+      setCapability(detected);
+      if (isWebGpuAvailable(detected)) {
+        setRetryToken((t) => t + 1);
+      } else {
+        setStatus(PROVIDER_STATES.unsupported);
+      }
+    } catch {
+      setStatus(PROVIDER_STATES.unavailable);
+    }
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     window.setTimeout(async () => {
       if (!active) {
         return;
       }
-      setStatus("checking");
+      setStatus(PROVIDER_STATES.checking);
       setModels([]);
       setVersion(null);
 
@@ -267,15 +328,15 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       let provider;
       if (providerId === "browser-bonsai") {
         if (!capability || !isWebGpuAvailable(capability)) {
-          setStatus("unavailable");
+          setStatus(PROVIDER_STATES.unsupported);
           return;
         }
         if (!browserModelInfo) {
-          setStatus("checking");
+          setStatus(PROVIDER_STATES.checking);
           return;
         }
         if (!browserModelReady) {
-          setStatus("not-ready");
+          setStatus(PROVIDER_STATES.busy);
           return;
         }
         if (!browserRuntimeRef.current) {
@@ -298,11 +359,11 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         return;
       }
       if (!connection.ok) {
-        setStatus(providerId === "browser-bonsai" ? "unavailable" : "unavailable");
+        setStatus(PROVIDER_STATES.unavailable);
         return;
       }
 
-      setStatus("connected");
+      setStatus(PROVIDER_STATES.ready);
       if (providerId === "browser-bonsai") {
         setVersion(null);
       } else {
@@ -352,6 +413,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     capability,
     browserModelInfo,
     browserRegistry,
+    refreshModelsToken,
   ]);
 
   useEffect(() => {
@@ -368,14 +430,56 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     }
   }, [messages, streamingText]);
 
+  useEffect(() => {
+    if (providerId !== "ollama" || status !== PROVIDER_STATES.ready) {
+      return;
+    }
+    let active = true;
+    let timer = null;
+    let backoffMs = 1000;
+    const maxBackoff = 30000;
+    const heartbeat = async () => {
+      if (!active) return;
+      try {
+        const provider = createOllamaProvider({ baseUrl: settings.ai?.baseUrl });
+        const result = await provider.testConnection();
+        if (!active) return;
+        if (result.ok) {
+          backoffMs = 1000;
+          timer = window.setTimeout(heartbeat, 30000);
+        } else {
+          setStatus(PROVIDER_STATES.unavailable);
+        }
+      } catch {
+        if (!active) return;
+        setStatus(PROVIDER_STATES.unavailable);
+      }
+    };
+    timer = window.setTimeout(heartbeat, 30000);
+    return () => {
+      active = false;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [providerId, status, settings.ai?.baseUrl]);
+
   const handleProviderChange = useCallback(
     (next) => {
       if (next === providerId) {
         return;
       }
+      if (sessionRef.current && typeof sessionRef.current.stop === "function") {
+        sessionRef.current.stop();
+      }
+      if (providerId === "browser-bonsai" && sessionRef.current?.provider) {
+        const oldProvider = sessionRef.current.provider;
+        if (typeof oldProvider.dispose === "function") {
+          oldProvider.dispose().catch(() => {});
+        }
+      }
       setProviderId(next);
       updateSetting("ai", "provider", next);
       sessionRef.current = null;
+      setStatus(PROVIDER_STATES.checking);
       setMessages([]);
       setContextPreview(null);
       setToolActivity(null);
@@ -557,7 +661,16 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     async (promptContent) => {
       const content = typeof promptContent === "string" ? promptContent.trim() : input.trim();
       const session = sessionRef.current;
-      if (!content || sending || !session || status !== "connected") {
+      if (!content || sending || !session || status !== PROVIDER_STATES.ready) {
+        return;
+      }
+
+      const limitCheck = checkLimit();
+      if (!limitCheck.allowed) {
+        setMessages((current) => [
+          ...current,
+          createMessage({ role: "error", content: limitCheck.reason || "Usage limit reached." }),
+        ]);
         return;
       }
       const sourceMap = {
@@ -684,8 +797,8 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
             ]);
           }
         } else {
-          const message =
-            error && typeof error.message === "string" ? error.message : "The AI request failed.";
+          const description = describeAiError(error);
+          const message = description.hint || error?.message || "The AI request failed.";
           setMessages((current) => [
             ...current,
             createMessage({ role: "error", content: message }),
@@ -725,7 +838,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     if (!externalPrompt || typeof externalPrompt.content !== "string" || externalPrompt.content.length === 0) {
       return;
     }
-    if (status !== "connected" || sending) {
+    if (status !== PROVIDER_STATES.ready || sending) {
       return;
     }
     const timer = window.setTimeout(() => {
@@ -750,45 +863,46 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     []
   );
 
-  const connectionClass =
-    status === "connected"
-      ? "ai-status-ok"
-      : status === "checking"
-        ? ""
-        : "ai-status-error";
+  const connectionClass = providerStateClass(status);
 
   const inputDisabled =
-    status !== "connected" ||
+    status !== PROVIDER_STATES.ready ||
     (providerId === "browser-bonsai" &&
       !(browserModelInfo && browserModelInfo.state === MODEL_STATES.downloaded));
 
   const modelStatusLabel = (() => {
-    if (status === "checking") {
+    if (status === PROVIDER_STATES.checking) {
       return "Loading model…";
     }
-    if (status === "connected" && models.length > 0) {
+    if (status === PROVIDER_STATES.ready && models.length > 0) {
       return "Model ready";
     }
-    if (status === "not-ready") {
+    if (status === PROVIDER_STATES.busy) {
       return "Model downloading";
     }
-    if (status === "unavailable") {
+    if (status === PROVIDER_STATES.unavailable) {
       return "Provider unavailable";
     }
-    if (status === "connected" && models.length === 0) {
+    if (status === PROVIDER_STATES.ready && models.length === 0) {
       return providerId === "ollama" ? "No model available" : "Model unavailable";
     }
     return null;
   })();
 
-  const generationLabel =
-    generationState === CONVERSATION_STATES.generating
-      ? "Generating…"
-      : generationState === CONVERSATION_STATES.cancelled
-        ? "Cancelled"
-        : generationState === CONVERSATION_STATES.error
-          ? "Error"
-          : null;
+  const generationLabel = (() => {
+    if (generationState === CONVERSATION_STATES.cancelled) {
+      return "Generation interrupted";
+    }
+    if (generationState === CONVERSATION_STATES.error) {
+      return "Error";
+    }
+    if (!sending) return null;
+    const phase = sessionRef.current?.generationPhase;
+    if (phase === "tool-calling") return "Calling tool…";
+    if (phase === "streaming") return "Streaming response…";
+    if (phase === "thinking") return "Thinking…";
+    return "Generating…";
+  })();
 
   return (
     <div className="ai-panel">
@@ -817,7 +931,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
             Clear
           </button>
         )}
-        {status === "unavailable" && (
+        {status === PROVIDER_STATES.unavailable && (
           <button
             type="button"
             className="ai-retry"
@@ -850,12 +964,22 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
 
         <label className="ai-label" htmlFor="ai-model-select">
           Model
+          {providerId === "ollama" && status === PROVIDER_STATES.ready && (
+            <button
+              type="button"
+              className="ai-refresh-models"
+              onClick={() => setRefreshModelsToken((t) => t + 1)}
+              title="Refresh model list"
+            >
+              <RefreshCw size={11} />
+            </button>
+          )}
         </label>
         <select
           id="ai-model-select"
           className="ai-model-select"
           value={modelId}
-          disabled={status !== "connected" || models.length === 0}
+          disabled={status !== PROVIDER_STATES.ready || models.length === 0}
           onChange={(event) => setModelId(event.target.value)}
         >
           {models.length === 0 ? (
@@ -863,12 +987,12 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           ) : (
             models.map((model) => (
               <option key={model.id} value={model.id}>
-                {model.name}
+                {model.name}{model.size ? ` (${formatModelSize(model.size)})` : ""}
               </option>
             ))
           )}
         </select>
-        {providerId === "browser-bonsai" && status === "not-ready" && (
+        {providerId === "browser-bonsai" && status === PROVIDER_STATES.busy && (
           <p className="ai-hint">
             Download the Bonsai model above, then it will be ready to chat.
             <button
@@ -880,7 +1004,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
             </button>
           </p>
         )}
-        {providerId === "ollama" && status === "connected" && models.length === 0 && (
+        {providerId === "ollama" && status === PROVIDER_STATES.ready && models.length === 0 && (
           <p className="ai-hint">
             Install a model with <code>ollama pull &lt;model&gt;</code>, for
             example <code>qwen2.5-coder:7b</code>, then retry.
@@ -908,9 +1032,10 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         capability={capability}
         registry={browserRegistry}
         onStateChange={handleBrowserStateChange}
+        onReinitialize={handleReinitializeWebGpu}
       />
 
-      {(status === "unavailable" || status === "not-ready") && <AISetup providerId={providerId} />}
+      {(status === PROVIDER_STATES.unavailable || status === PROVIDER_STATES.busy) && <AISetup providerId={providerId} />}
 
       {contextPreview && (
         <div className="ai-context">
@@ -960,9 +1085,9 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       <div className="ai-tools">
         <ShieldCheck size={12} />
         <span>Read-only tools: current file, diagnostics, open files</span>
-        {toolActivity && (
+        {toolActivity && toolActivity.length > 0 && (
           <span className="ai-tools-active">
-            Used: {toolActivity.join(", ")}
+            Running: {toolActivity.join(", ")}
           </span>
         )}
       </div>
@@ -995,9 +1120,9 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           <div className="ai-empty">
             <Bot size={18} />
             <p>Ask about the current file or the open project.</p>
-            {status === "connected" ? (
+            {status === PROVIDER_STATES.ready ? (
               <p className="ai-hint">Provider is ready. Type a message below to start.</p>
-            ) : status === "checking" ? (
+            ) : status === PROVIDER_STATES.checking ? (
               <p className="ai-hint">Checking provider connection...</p>
             ) : (
               <p className="ai-hint">Set up Ollama or Bonsai in Settings to enable AI.</p>
@@ -1046,7 +1171,12 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         )}
         {sending && !streamingText && (
           <div className="ai-message ai-message-assistant ai-message-thinking" aria-live="polite">
-            Thinking<span className="ai-caret" aria-hidden="true" />
+            {(() => {
+              const phase = sessionRef.current?.generationPhase;
+              if (phase === "tool-calling") return "Calling tool…";
+              return "Thinking…";
+            })()}
+            <span className="ai-caret" aria-hidden="true" />
           </div>
         )}
         {appliedDiffId && (
@@ -1062,7 +1192,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           className="ai-input"
           rows={2}
           placeholder={
-            status === "connected"
+            status === PROVIDER_STATES.ready
               ? "Ask about your code..."
               : providerId === "browser-bonsai"
                 ? "Download the Bonsai model to chat"
@@ -1088,7 +1218,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
             type="button"
             className="ai-send"
             onClick={handleSend}
-            disabled={!input.trim() || status !== "connected"}
+            disabled={!input.trim() || status !== PROVIDER_STATES.ready}
             title="Send"
           >
             <Send size={14} />

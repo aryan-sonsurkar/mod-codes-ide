@@ -4,6 +4,7 @@ import {
   AiError,
   createAiSession,
   createChatResult,
+  describeAiError,
   errorChunk,
   textChunk,
   toolChunk,
@@ -377,5 +378,104 @@ describe("createAiSession tool loop", () => {
       .history()
       .filter((message) => Array.isArray(message.tool_calls));
     expect(assistantToolMessages).toHaveLength(2);
+  });
+
+  it("exposes generationPhase on snapshot", () => {
+    const session = createAiSession({ provider: chatProvider(), model: "test" });
+    const snap = session.snapshot();
+    expect(snap.generationPhase).toBe("idle");
+  });
+
+  it("generationPhase returns to idle after completion", async () => {
+    const session = createAiSession({ provider: chatProvider(), model: "test" });
+    await session.sendMessage({ content: "hello" });
+    expect(session.generationPhase).toBe("idle");
+    expect(session.snapshot().generationPhase).toBe("idle");
+  });
+
+  it("generationPhase returns to idle after cancel", async () => {
+    const session = createAiSession({ provider: chatProvider(), model: "test" });
+    const err = new AiError(AI_ERRORS.cancelled, "cancelled");
+    const failProvider = chatProvider({
+      chat: async () => { throw err; },
+    });
+    const session2 = createAiSession({ provider: failProvider, model: "test" });
+    try { await session2.sendMessage({ content: "hello" }); } catch {}
+    expect(session2.generationPhase).toBe("idle");
+  });
+});
+
+describe("describeAiError", () => {
+  it("returns default for null", () => {
+    const result = describeAiError(null);
+    expect(result.title).toBeTruthy();
+    expect(result.retryable).toBe(false);
+  });
+
+  it("returns user-friendly info for each error code", () => {
+    for (const code of Object.values(AI_ERRORS)) {
+      const err = new AiError(code, "test");
+      const result = describeAiError(err);
+      expect(result.title).toBeTruthy();
+      expect(typeof result.hint).toBe("string");
+      expect(typeof result.retryable).toBe("boolean");
+    }
+  });
+
+  it("includes message in hint when available", () => {
+    const err = new AiError(AI_ERRORS.unavailable, "Custom message");
+    const result = describeAiError(err);
+    expect(result.hint).toBe("Custom message");
+  });
+
+  it("marks retryable errors correctly", () => {
+    const retryableCodes = [
+      AI_ERRORS.unavailable,
+      AI_ERRORS.connectionFailed,
+      AI_ERRORS.timeout,
+      AI_ERRORS.network,
+      AI_ERRORS.rateLimited,
+      AI_ERRORS.notReady,
+    ];
+    for (const code of retryableCodes) {
+      const err = new AiError(code, "test");
+      const result = describeAiError(err);
+      expect(result.retryable).toBe(true);
+    }
+    const nonRetryable = [AI_ERRORS.cancelled, AI_ERRORS.invalidRequest, AI_ERRORS.modelNotFound];
+    for (const code of nonRetryable) {
+      const err = new AiError(code, "test");
+      const result = describeAiError(err);
+      expect(result.retryable).toBe(false);
+    }
+  });
+});
+
+describe("createAiSession generation phase transitions", () => {
+  it("transitions through phases during streaming", async () => {
+    const phases = [];
+    let resolveStream;
+    const streamingProvider = chatProvider({
+      streamChat: async function* () {
+        phases.push("streaming-start");
+        yield { type: "text", text: "Hello" };
+        phases.push("streaming-delta");
+        yield { type: "done" };
+      },
+    });
+    const session = createAiSession({ provider: streamingProvider, model: "test" });
+    const result = await session.sendMessage({ content: "hi" });
+    expect(result.ok).toBe(true);
+    expect(session.generationPhase).toBe("idle");
+  });
+
+  it("returns idle after error", async () => {
+    const session = createAiSession({ provider: chatProvider(), model: "test" });
+    const errProvider = chatProvider({
+      chat: async () => { throw new AiError(AI_ERRORS.network, "fail"); },
+    });
+    const session2 = createAiSession({ provider: errProvider, model: "test" });
+    try { await session2.sendMessage({ content: "hi" }); } catch {}
+    expect(session2.generationPhase).toBe("idle");
   });
 });

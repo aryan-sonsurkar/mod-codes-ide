@@ -19,6 +19,7 @@ import {
   mapRuntimeError,
 } from "./runtime";
 import { describeCapability, detectWebGpuCapability, isWebGpuAvailable } from "./webgpu";
+import { PROVIDER_STATES } from "../providerStates";
 
 function toHistoryMessage(message) {
   const entry = { role: message.role, content: message.content ?? "" };
@@ -53,6 +54,15 @@ export function createBrowserBonsaiProvider({
   defaultModelId = "bonsai-1.7b",
 } = {}) {
   const engines = new Map();
+  let currentState = PROVIDER_STATES.unknown;
+
+  function setState(next) {
+    currentState = next;
+  }
+
+  function getState() {
+    return currentState;
+  }
 
   async function ensureRuntime() {
     if (!runtime) {
@@ -160,6 +170,7 @@ export function createBrowserBonsaiProvider({
     if (typeof registry.markLoading === "function") {
       registry.markLoading(modelId);
     }
+    setState(PROVIDER_STATES.busy);
     try {
       const model = info.model;
       const engine = await rt.createEngine({
@@ -176,11 +187,13 @@ export function createBrowserBonsaiProvider({
       if (typeof registry.markReady === "function") {
         registry.markReady(modelId);
       }
+      setState(PROVIDER_STATES.ready);
       return entry;
     } catch (error) {
       if (typeof registry.fail === "function") {
         registry.fail(modelId, error);
       }
+      setState(PROVIDER_STATES.unavailable);
       throw mapRuntimeError(error);
     }
   }
@@ -246,15 +259,18 @@ export function createBrowserBonsaiProvider({
   }
 
   async function testConnection() {
+    setState(PROVIDER_STATES.checking);
     try {
       const capability = await getCapability();
       if (isWebGpuAvailable(capability)) {
+        setState(PROVIDER_STATES.ready);
         return {
           ok: true,
           message: describeCapability(capability),
           capability,
         };
       }
+      setState(PROVIDER_STATES.unsupported);
       return {
         ok: false,
         error: new AiError(
@@ -265,6 +281,7 @@ export function createBrowserBonsaiProvider({
         capability,
       };
     } catch (error) {
+      setState(PROVIDER_STATES.unavailable);
       return { ok: false, error: normalizeAiError(error, AI_ERRORS.unsupported) };
     }
   }
@@ -280,17 +297,43 @@ export function createBrowserBonsaiProvider({
       }
     }
     engines.clear();
+    setState(PROVIDER_STATES.unknown);
+  }
+
+  async function unloadModel(modelId) {
+    const id = typeof modelId === "string" && modelId.length > 0 ? modelId : defaultModelId;
+    if (!engines.has(id)) {
+      return { unloaded: false };
+    }
+    if (typeof registry.markUnloading === "function") {
+      registry.markUnloading(id);
+    }
+    const entry = engines.get(id);
+    engines.delete(id);
+    try {
+      if (entry && entry.engine && typeof entry.engine.dispose === "function") {
+        await entry.engine.dispose();
+      }
+    } catch {
+      // ignore disposal errors
+    }
+    if (typeof registry.finishDownload === "function") {
+      await registry.finishDownload(id);
+    }
+    return { unloaded: true };
   }
 
   return {
     id: BONSAI_PROVIDER_ID,
     name: BONSAI_PROVIDER_NAME,
     getCapabilities,
+    getState,
     getModels,
     getModelInfo,
     chat,
     streamChat,
     testConnection,
     dispose,
+    unloadModel,
   };
 }

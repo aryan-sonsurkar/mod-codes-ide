@@ -1,4 +1,4 @@
-export { AI_ERRORS, AiError, aiError, isAiError, normalizeAiError } from "./errors";
+export { AI_ERRORS, AiError, aiError, isAiError, normalizeAiError, describeAiError } from "./errors";
 export { AiModel, createModel, isKnownCapability } from "./model";
 export { createAiRequest, normalizeMessage, normalizeMessages } from "./request";
 export {
@@ -185,6 +185,8 @@ export {
   detectWebGpuCapability,
   isWebGpuAvailable,
   describeCapability,
+  describeAdapterInfo,
+  describeAdapterLimits,
 } from "./browser";
 export {
   BONSAI_MODEL_TIERS,

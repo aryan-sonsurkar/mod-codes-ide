@@ -11,11 +11,19 @@ import {
 import { parseJsonLines } from "../streaming";
 import { registerProvider } from "../registry";
 import { serializeContextItems } from "../context";
+import { PROVIDER_STATES } from "../providerStates";
+import { CAPABILITIES } from "../capabilities";
 
 export const OLLAMA_PROVIDER_ID = "ollama";
 export const OLLAMA_PROVIDER_NAME = "Ollama";
 export const OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434";
-export const OLLAMA_CAPABILITIES = ["chat", "streaming", "cancellation", "local", "statistics"];
+export const OLLAMA_CAPABILITIES = [
+  CAPABILITIES.chat,
+  CAPABILITIES.streaming,
+  CAPABILITIES.cancellation,
+  CAPABILITIES.local,
+  CAPABILITIES.statistics,
+];
 export const OLLAMA_REQUEST_TIMEOUT_MS = 60_000;
 
 export const OLLAMA_OPTION_KEYS = [
@@ -422,6 +430,17 @@ export function createOllamaProvider(options = {}) {
       ? options.contextLength
       : null;
 
+  let currentState = PROVIDER_STATES.unknown;
+  let modelCount = 0;
+
+  function setState(next) {
+    currentState = next;
+  }
+
+  function getState() {
+    return currentState;
+  }
+
   async function getModels() {
     const payload = await fetchJson(baseUrl, "/api/tags", {
       method: "GET",
@@ -430,7 +449,14 @@ export function createOllamaProvider(options = {}) {
     const entries = Array.isArray(payload && payload.models)
       ? payload.models
       : [];
-    return entries.map((entry) => toModel(entry, { contextLength })).filter(Boolean);
+    const models = entries.map((entry) => toModel(entry, { contextLength })).filter(Boolean);
+    modelCount = models.length;
+    if (currentState === PROVIDER_STATES.ready && modelCount === 0) {
+      setState(PROVIDER_STATES.idle);
+    } else if (currentState === PROVIDER_STATES.idle && modelCount > 0) {
+      setState(PROVIDER_STATES.ready);
+    }
+    return models;
   }
 
   function getCapabilities() {
@@ -443,16 +469,19 @@ export function createOllamaProvider(options = {}) {
   }
 
   async function testConnection() {
+    setState(PROVIDER_STATES.checking);
     try {
       const payload = await fetchJson(baseUrl, "/api/version", {
         method: "GET",
         timeoutMs,
       });
+      setState(PROVIDER_STATES.ready);
       return {
         ok: true,
         version: typeof payload.version === "string" ? payload.version : null,
       };
     } catch (error) {
+      setState(PROVIDER_STATES.unavailable);
       return { ok: false, error: normalizeAiError(error) };
     }
   }
@@ -488,6 +517,7 @@ export function createOllamaProvider(options = {}) {
     id: OLLAMA_PROVIDER_ID,
     name: OLLAMA_PROVIDER_NAME,
     getCapabilities,
+    getState,
     getModels,
     chat,
     streamChat,

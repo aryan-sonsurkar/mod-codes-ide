@@ -1,8 +1,17 @@
 import { AI_ERRORS, AiError, normalizeAiError } from "../errors";
+import { CAPABILITIES } from "../capabilities";
 
 export const BONSAI_PROVIDER_ID = "browser-bonsai";
 export const BONSAI_PROVIDER_NAME = "Bonsai (in-browser)";
-export const BONSAI_CAPABILITIES = ["chat", "streaming", "tools", "browser", "local", "cancellation", "statistics"];
+export const BONSAI_CAPABILITIES = [
+  CAPABILITIES.chat,
+  CAPABILITIES.streaming,
+  CAPABILITIES.tools,
+  CAPABILITIES.browser,
+  CAPABILITIES.local,
+  CAPABILITIES.cancellation,
+  CAPABILITIES.statistics,
+];
 
 /**
  * The runtime adapter contract the provider depends on. The Web Worker (M52)

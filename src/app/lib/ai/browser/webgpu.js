@@ -175,3 +175,34 @@ export function describeCapability(capability) {
       return "WebGPU status is unknown.";
   }
 }
+
+export function describeAdapterInfo(capability) {
+  if (!capability || !capability.info) {
+    return null;
+  }
+  const { vendor, architecture, description, device } = capability.info;
+  const parts = [];
+  if (vendor) parts.push(`Vendor: ${vendor}`);
+  if (architecture) parts.push(`Architecture: ${architecture}`);
+  if (description) parts.push(`GPU: ${description}`);
+  if (device) parts.push(`Device: ${device}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+export function describeAdapterLimits(capability) {
+  if (!capability || !capability.limits) {
+    return null;
+  }
+  const { maxBufferSize, maxStorageBufferBindingSize } = capability.limits;
+  const parts = [];
+  if (maxBufferSize) parts.push(`Buffer: ${formatBytesForLimit(maxBufferSize)}`);
+  if (maxStorageBufferBindingSize) parts.push(`Storage: ${formatBytesForLimit(maxStorageBufferBindingSize)}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+function formatBytesForLimit(bytes) {
+  if (!Number.isFinite(bytes)) return "?";
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+  return `${(bytes / 1024).toFixed(0)} KB`;
+}

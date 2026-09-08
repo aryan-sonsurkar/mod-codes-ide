@@ -1,12 +1,8 @@
 import { AI_ERRORS, AiError } from "./errors";
+import { PROVIDER_STATES } from "./providerStates";
+import { CAPABILITIES } from "./capabilities";
 
-export const KNOWN_PROVIDER_CAPABILITIES = new Set([
-  "chat",
-  "streaming",
-  "tools",
-  "embeddings",
-  "vision",
-]);
+export const KNOWN_PROVIDER_CAPABILITIES = new Set(Object.values(CAPABILITIES));
 
 export function normalizeProviderCapabilities(capabilities) {
   return [...new Set(capabilities)].filter((capability) =>
@@ -75,10 +71,12 @@ export function assertProviderShape(provider) {
  *   id: string;
  *   name: string;
  *   getCapabilities(): ProviderCapabilities;
+ *   getState?(): ProviderState;  // returns a PROVIDER_STATES value
  *   getModels(): Promise<AiModel[]>;
  *   chat(request: AiRequest): Promise<ChatResult>;
  *   streamChat?(request: AiRequest): Promise<AsyncIterable<StreamChunk>>;
  *   testConnection?(): Promise<{ ok: boolean }>;
+ *   dispose?(): Promise<void>;
  * }
  *
  * Providers never leak raw fetch errors; all failures are normalized to

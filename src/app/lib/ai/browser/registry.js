@@ -7,6 +7,7 @@ export const MODEL_STATES = {
   downloaded: "downloaded",
   loading: "loading",
   ready: "ready",
+  unloading: "unloading",
   error: "error",
   evicted: "evicted",
   incompatible: "incompatible",
@@ -135,6 +136,12 @@ export function createModelRegistry({
     markReady(id) {
       if (hasModel(id)) {
         transient.set(id, MODEL_STATES.ready);
+        emit(id);
+      }
+    },
+    markUnloading(id) {
+      if (hasModel(id)) {
+        transient.set(id, MODEL_STATES.unloading);
         emit(id);
       }
     },
