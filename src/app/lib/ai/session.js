@@ -1,4 +1,4 @@
-import { AI_ERRORS, AiError, normalizeAiError } from "./index";
+import { AI_ERRORS, AiError, normalizeAiError } from "./errors";
 
 function validateProvider(provider) {
   if (!provider || typeof provider.chat !== "function") {
