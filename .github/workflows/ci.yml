@@ -41,7 +41,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run test:unit
+      - run: npm run test
 
   test-e2e:
     name: E2E Tests
