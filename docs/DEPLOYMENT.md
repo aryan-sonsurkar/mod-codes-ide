@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **Node.js**: >= 18.18.0
+- **Node.js**: >= 20.9.0
 - **npm**: included with Node.js
 - **Browser**: Chrome or Edge (recommended) for full File System Access API + WebGPU support
 
