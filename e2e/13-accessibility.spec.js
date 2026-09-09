@@ -55,7 +55,7 @@ test.describe("Accessibility Smoke Tests", () => {
   test("consent banner buttons have correct semantics", async ({ modcodesPage: page }) => {
     await navigateToProjects(page);
     await page.evaluate(() => {
-      try { localStorage.removeItem("modcodes-adsense-consent"); } catch {}
+      try { localStorage.removeItem("modcodes-ad-consent"); } catch {}
     });
     await page.waitForTimeout(2000);
     const acceptBtn = page.locator("button", { hasText: /accept/i }).first();

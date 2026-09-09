@@ -35,19 +35,19 @@ async function injectOnboardingCompleted(page) {
 
 async function injectConsentAccepted(page) {
   await page.addInitScript(() => {
-    try { localStorage.setItem("modcodes-adsense-consent", "accepted"); } catch {}
+    try { localStorage.setItem("modcodes-ad-consent", "accepted"); } catch {}
   });
 }
 
 async function injectConsentDeclined(page) {
   await page.addInitScript(() => {
-    try { localStorage.setItem("modcodes-adsense-consent", "declined"); } catch {}
+    try { localStorage.setItem("modcodes-ad-consent", "declined"); } catch {}
   });
 }
 
 async function injectConsentUnknown(page) {
   await page.addInitScript(() => {
-    try { localStorage.removeItem("modcodes-adsense-consent"); } catch {}
+    try { localStorage.removeItem("modcodes-ad-consent"); } catch {}
   });
 }
 
@@ -74,7 +74,7 @@ async function getProjects(page) {
 
 async function getConsentState(page) {
   return page.evaluate(() => {
-    try { return localStorage.getItem("modcodes-adsense-consent") || "unknown"; }
+    try { return localStorage.getItem("modcodes-ad-consent") || "unknown"; }
     catch { return "unknown"; }
   });
 }
@@ -277,6 +277,9 @@ async function mockAdSense(page) {
     window.adsbygoogle = window.adsbygoogle || [];
     window.adsbygoogle.push = () => {};
   });
+  await page.route("**/pagead2.googlesyndication.com/**", (route) =>
+    route.abort()
+  );
 }
 
 async function waitForAppReady(page) {

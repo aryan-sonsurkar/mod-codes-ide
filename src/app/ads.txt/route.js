@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const PUBLISHER_ID = process.env.ADSENSE_PUBLISHER_ID || "";
+const PUBLISHER_ID = process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID || "";
 
 export async function GET() {
   if (!PUBLISHER_ID) {

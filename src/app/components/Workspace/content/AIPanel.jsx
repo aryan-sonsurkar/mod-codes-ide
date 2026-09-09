@@ -167,6 +167,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
   const [activeConversationId, setActiveConversationId] = useState(null);
   const actionHistoryRef = useRef(createActionHistory({ limit: 50 }));
   const [actionEntries, setActionEntries] = useState([]);
+  const [generationPhase, setGenerationPhase] = useState(null);
 
   const sessionRef = useRef(null);
   const streamRef = useRef("");
@@ -704,6 +705,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       }
       setSending(true);
       setGenerationState(CONVERSATION_STATES.generating);
+      setGenerationPhase("thinking");
       setStreamingText("");
       streamRef.current = "";
       setMessages((current) => [
@@ -743,9 +745,13 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
             });
           },
           onTool: ({ toolCalls }) => {
+            setGenerationPhase("tool-calling");
             setToolActivity(toolCalls.map((call) => call.toolName));
           },
           onDelta: (text) => {
+            if (generationPhase !== "streaming") {
+              setGenerationPhase("streaming");
+            }
             pendingTextRef.current = text;
             if (rafRef.current == null) {
               rafRef.current = window.requestAnimationFrame(() => {
@@ -811,6 +817,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           rafRef.current = null;
         }
         setSending(false);
+        setGenerationPhase(null);
         setStreamingText("");
         streamRef.current = "";
         pendingTextRef.current = "";
@@ -831,6 +838,8 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       excludedSources,
       persistConversation,
       recordUsage,
+      checkLimit,
+      generationPhase,
     ]
   );
 
@@ -897,11 +906,10 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       return "Error";
     }
     if (!sending) return null;
-    const phase = sessionRef.current?.generationPhase;
-    if (phase === "tool-calling") return "Calling tool…";
-    if (phase === "streaming") return "Streaming response…";
-    if (phase === "thinking") return "Thinking…";
-    return "Generating…";
+    if (generationPhase === "tool-calling") return "Calling tool\u2026";
+    if (generationPhase === "streaming") return "Streaming response\u2026";
+    if (generationPhase === "thinking") return "Thinking\u2026";
+    return "Generating\u2026";
   })();
 
   return (
@@ -1172,9 +1180,8 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         {sending && !streamingText && (
           <div className="ai-message ai-message-assistant ai-message-thinking" aria-live="polite">
             {(() => {
-              const phase = sessionRef.current?.generationPhase;
-              if (phase === "tool-calling") return "Calling tool…";
-              return "Thinking…";
+              if (generationPhase === "tool-calling") return "Calling tool\u2026";
+              return "Thinking\u2026";
             })()}
             <span className="ai-caret" aria-hidden="true" />
           </div>

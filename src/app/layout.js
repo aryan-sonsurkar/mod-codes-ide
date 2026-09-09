@@ -5,6 +5,9 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import ErrorBoundary from "./components/Diagnostics/ErrorBoundary";
 import AdsProvider from "./components/Ads/AdsProvider";
+import AdSenseConfig from "./components/Ads/AdSenseConfig";
+
+const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID || "";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +32,7 @@ export const metadata = {
     icon: "/favicon.ico",
   },
   other: {
-    "google-adsense-account": "ca-pub-8259194534475821",
+    ...(ADSENSE_ID ? { "google-adsense-account": ADSENSE_ID } : {}),
   },
   openGraph: {
     title: "MODCODES — Browser IDE with Local AI",
@@ -60,14 +63,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
-        <Script
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8259194534475821"
-          strategy="beforeInteractive"
-          crossOrigin="anonymous"
-        />
+        {ADSENSE_ID && (
+          <Script
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_ID}`}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
         <ErrorBoundary>
           <SettingsProvider>
             <ToastProvider>
+              <AdSenseConfig />
               <AdsProvider>{children}</AdsProvider>
             </ToastProvider>
           </SettingsProvider>
