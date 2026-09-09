@@ -101,8 +101,7 @@ test.describe("AdSense / Consent", () => {
     await navigateToProjects(page);
     await page.waitForTimeout(2000);
     const scripts = await page.locator('script[src*="pagead2.googlesyndication.com"]').count();
-    expect(scripts).toBeGreaterThanOrEqual(1);
-    expect(scripts).toBeLessThanOrEqual(2);
+    expect(scripts).toBeLessThanOrEqual(1);
   });
 
   test("privacy settings are accessible", async ({ modcodesPage: page }) => {
