@@ -6,15 +6,15 @@
 ## Measurements
 
 ### Build Performance
-- **Build time**: ~6.8s (Turbopack)
+- **Build time**: ~12s (Turbopack, next@16.3.4)
 - **Static pages generated**: 4
-- **TypeScript check**: 154ms
+- **TypeScript check**: 22ms
 - **Bundle analysis**: Not run (no @next/bundle-analyzer)
 
 ### Test Performance
-- **Vitest**: 880+ tests in ~5s
-- **Playwright E2E**: 151 tests in 16.1m (CI, single worker)
-- **ESLint**: ~60s (cold)
+- **Vitest**: 887 tests in ~5s
+- **Playwright E2E**: 151 tests in ~16m (CI, single worker)
+- **ESLint**: ~10s (warm)
 
 ### Runtime Performance
 - **Landing page**: Static (prerendered)

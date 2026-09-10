@@ -24,6 +24,20 @@ MODCODES is a local-first IDE. Your code never leaves your machine.
 - Ollama requests — localhost only, never leaves your machine
 - Bonsai requests — browser WebGPU, never leaves your machine
 
+## Dependency Security
+
+**Last audited**: 2026-09-10
+**Next.js**: 16.3.4 (upgraded from 16.2.9 to remediate 11 advisories)
+**npm audit**: 0 vulnerabilities (production and dev)
+
+### Remediated in M172
+- next@16.2.9 → 16.3.4 (11 advisories including 2 critical RCE)
+- postcss (transitive, fixed by next upgrade)
+- sharp (transitive, fixed by next upgrade)
+- browserslist (transitive, fixed by npm audit fix)
+- baseline-browser-mapping (transitive, fixed by npm audit fix)
+- brace-expansion, js-yaml (dev-only, fixed by npm audit fix)
+
 ## Security Headers
 
 Configured in `next.config.mjs`:
@@ -31,7 +45,7 @@ Configured in `next.config.mjs`:
 - `X-Content-Type-Options: nosniff` — prevents MIME sniffing
 - `Referrer-Policy: strict-origin-when-cross-origin` — limits referrer leakage
 - `Permissions-Policy` — disables camera, microphone, geolocation
-- `X-XSS-Protection: 1; mode=block` — legacy XSS filter
+- `X-XSS-Protection: 1; mode=block` — legacy XSS filter (retained for older browsers)
 
 ## Content Security Policy
 
@@ -40,13 +54,27 @@ Not currently enforced. A CSP may be added in a future release. Key consideratio
 - WebGPU/Bonsai worker uses dynamic imports
 - AdSense requires specific script sources
 
+## Code Security Audit
+
+**Last audited**: 2026-09-10
+
+- No `dangerouslySetInnerHTML` usage
+- No `eval()` or `new Function()` usage
+- No `document.write` usage
+- `innerHTML` used only to clear containers (empty string assignment)
+- All `process.env` variables properly scoped (NEXT_PUBLIC_ for client, server-only for API routes)
+- No server-side secrets exposed to client bundles
+- AI-generated content treated as untrusted
+
 ## Known Risks
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| Bridge token in localStorage | Medium | Token is for localhost:8787 only, random 64-char hex |
-| No CSP headers | Medium | Security headers (X-Frame-Options etc.) partially compensate |
+| No CSP headers | Medium | Security headers (X-Frame-Options etc.) partially compensate. CSP deferred due to Monaco `eval()` requirement. |
+| Bridge token in localStorage | Low | Token is for localhost:8787 only, random 256-bit hex, token-gated pairing |
+| Terminal bridge executes shell commands | Low | Localhost-only, token-gated, user-initiated |
 | AI conversations in localStorage | Low | Client-only, no server persistence |
+| Research pipeline fetches user-provided URLs | Low | Browser same-origin policy mitigates SSRF. URLs validated via `new URL()`. |
 | AdSense script loaded unconditionally | Low | Script fires but no ads render without consent + config |
 
 ## Reporting Security Issues

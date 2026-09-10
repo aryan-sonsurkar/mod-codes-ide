@@ -60,4 +60,37 @@ describe("health endpoint", () => {
     expect(typeof res.body.version).toBe("string");
     expect(res.body.version.length).toBeGreaterThan(0);
   });
+
+  it("does not expose secrets or environment variables", async () => {
+    const { GET } = await import("./route.js");
+    const res = await GET();
+    const keys = Object.keys(res.body);
+    expect(keys).not.toContain("env");
+    expect(keys).not.toContain("secrets");
+    expect(keys).not.toContain("tokens");
+    expect(JSON.stringify(res.body)).not.toContain("NEXT_PUBLIC");
+    expect(JSON.stringify(res.body)).not.toContain("PRIVATE");
+  });
+
+  it("response shape is stable", async () => {
+    const { GET } = await import("./route.js");
+    const res = await GET();
+    expect(Object.keys(res.body).sort()).toEqual([
+      "environment",
+      "services",
+      "status",
+      "timestamp",
+      "uptime",
+      "version",
+    ]);
+  });
+
+  it("does not return hardcoded version string", async () => {
+    const { GET } = await import("./route.js");
+    const res = await GET();
+    expect(typeof res.body.version).toBe("string");
+    expect(res.body.version.length).toBeGreaterThan(0);
+    expect(res.body.version).not.toBe("unknown");
+    expect(res.body.version).not.toBe("");
+  });
 });
