@@ -116,7 +116,16 @@ export default function Workspace() {
 <div className="workspace">
   {showOnboarding && (
     <Onboarding
-      onComplete={() => setShowOnboarding(false)}
+      onComplete={(result) => {
+        if (result && result.aiChoice && result.aiChoice !== "skip") {
+          try {
+            const saved = JSON.parse(localStorage.getItem("modcodes-settings") || "{}");
+            saved.ai = { ...saved.ai, provider: result.aiChoice };
+            localStorage.setItem("modcodes-settings", JSON.stringify(saved));
+          } catch {}
+        }
+        setShowOnboarding(false);
+      }}
       onSkip={() => setShowOnboarding(false)}
     />
   )}

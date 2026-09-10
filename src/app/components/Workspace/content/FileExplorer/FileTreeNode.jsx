@@ -99,7 +99,7 @@ export default function FileTreeNode({
 
       {isDirectory && isExpanded && !hasChildren && (
         <div className="tree-empty" style={{ paddingLeft: 24 + depth * 16 }}>
-          Empty
+          {node.readError ? `Cannot read: ${node.readError}` : "Empty"}
         </div>
       )}
     </div>

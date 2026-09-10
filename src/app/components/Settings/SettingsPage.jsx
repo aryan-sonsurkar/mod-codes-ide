@@ -57,7 +57,8 @@ function NumberRow({ label, description, value, min, max, onChange, suffix }) {
           onChange={(event) => {
             const next = Number(event.target.value);
             if (Number.isFinite(next)) {
-              onChange(next);
+              const clamped = min != null && max != null ? Math.min(Math.max(next, min), max) : next;
+              onChange(clamped);
             }
           }}
         />

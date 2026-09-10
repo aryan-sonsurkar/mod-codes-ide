@@ -21,10 +21,6 @@ export const LIFECYCLE_STATES = {
   blocked: "blocked",
 };
 
-function hasDependencyCheck() {
-  return false;
-}
-
 export function createProjectLifecycleOrchestrator({
   agentOrchestrator,
   inspectCodebase: inspectFn,
@@ -439,10 +435,6 @@ export function createProjectLifecycleOrchestrator({
     } catch {}
     emit();
     return { plan, result, verification };
-  }
-
-  if (hasDependencyCheck()) {
-    throw new Error("Lifecycle dependency violation");
   }
 
   return {

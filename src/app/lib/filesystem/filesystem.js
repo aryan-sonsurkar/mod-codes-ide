@@ -68,6 +68,7 @@ async function readDirectoryNode(handle, path, depth) {
     }
   } catch (error) {
     node.children = [];
+    node.readError = error?.message || "unreadable";
   }
 
   sortEntries(node.children);

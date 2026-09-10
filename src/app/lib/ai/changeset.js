@@ -95,7 +95,7 @@ function updateOperation(changeset, operationId, status) {
 }
 
 export function creationRequiresApproval(operation) {
-  return operation.operation !== CHANGESET_OPERATIONS.modify || true;
+  return operation.operation !== CHANGESET_OPERATIONS.modify;
 }
 
 export function canApply(changeset) {

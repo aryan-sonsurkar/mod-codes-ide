@@ -8,9 +8,11 @@ import TabBar from "./TabBar";
 import SearchPanel from "./SearchPanel";
 import ProblemsPanel from "./ProblemsPanel";
 import OutlinePanel from "./OutlinePanel";
-import GraphPanel from "./GraphPanel";
-import GitPanel from "./GitPanel";
-import AIPanel from "./AIPanel";
+import dynamic from "next/dynamic";
+
+const GraphPanel = dynamic(() => import("./GraphPanel"), { ssr: false });
+const GitPanel = dynamic(() => import("./GitPanel"), { ssr: false });
+const AIPanel = dynamic(() => import("./AIPanel"), { ssr: false });
 import CommandPalette from "./CommandPalette";
 import TerminalPanel from "./TerminalPanel";
 import GoToLineDialog from "./GoToLineDialog";
