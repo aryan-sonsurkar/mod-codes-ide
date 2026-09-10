@@ -12,7 +12,7 @@
 - **Bundle analysis**: Not run (no @next/bundle-analyzer)
 
 ### Test Performance
-- **Vitest**: 870 tests in 5.15s
+- **Vitest**: 880+ tests in ~5s
 - **Playwright E2E**: 151 tests in 16.1m (CI, single worker)
 - **ESLint**: ~60s (cold)
 

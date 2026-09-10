@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const version = process.env.npm_package_version || "0.1.0";
+  const version = process.env.npm_package_version || "unknown";
   const env = process.env.NODE_ENV || "development";
   const uptime = typeof process !== "undefined" ? Math.floor(process.uptime()) : 0;
 

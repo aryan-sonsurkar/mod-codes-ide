@@ -20,7 +20,7 @@
 - Long strings truncated
 
 ### Health Endpoint
-- `/api/health` — version, environment, uptime, error count, service status
+- `/api/health` — version, environment, uptime, service status
 
 ## What is NOT Monitored
 

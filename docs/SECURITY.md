@@ -51,4 +51,4 @@ Not currently enforced. A CSP may be added in a future release. Key consideratio
 
 ## Reporting Security Issues
 
-Open an issue at https://github.com/anomalyco/opencode/issues with the "security" label.
+Open an issue at https://github.com/aryan-sonsurkar/mod-codes-ide/issues with the "security" label.

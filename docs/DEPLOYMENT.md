@@ -28,7 +28,7 @@ npm run test:e2e  # end-to-end tests (playwright)
 
 | Variable | Required | Description |
 |---|---|---|
-| `ADSENSE_PUBLISHER_ID` | No | Google AdSense publisher ID. Without this, `/ads.txt` returns 404 and no ads load. |
+| `NEXT_PUBLIC_ADSENSE_PUBLISHER_ID` | No | Google AdSense publisher ID. Without this, `/ads.txt` returns 404 and no ads load. |
 | `MODCODES_BRIDGE_PORT` | No | Port for the terminal bridge server (default: 8787). |
 
 Copy `.env.example` to `.env.local` and fill in values as needed.
@@ -41,7 +41,7 @@ Copy `.env.example` to `.env.local` and fill in values as needed.
 2. Framework: Next.js (auto-detected)
 3. Build command: `npm run build` (auto-detected)
 4. Output: `.next` (auto-detected)
-5. Set `ADSENSE_PUBLISHER_ID` in Vercel environment variables if ads are enabled
+5. Set `NEXT_PUBLIC_ADSENSE_PUBLISHER_ID` in Vercel environment variables if ads are enabled
 
 ### Self-Hosted
 
@@ -59,7 +59,7 @@ MODCODES is a client-side application. No Docker setup is required for basic dep
 ## Health Check
 
 - **Endpoint**: `GET /api/health`
-- **Response**: `{ "status": "ok", "timestamp": "...", "version": "0.1.0" }`
+- **Response**: `{ "status": "ok", "version": "...", "environment": "...", "timestamp": "...", "uptime": ..., "services": { "ads": "..." } }`
 
 ## Security Headers
 
