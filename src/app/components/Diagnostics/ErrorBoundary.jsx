@@ -1,5 +1,6 @@
 "use client";
 import { Component } from "react";
+import { captureError } from "../../lib/observability/errorCollector.js";
 import "./DiagnosticsCenter.css";
 
 function classifyError(error) {
@@ -83,9 +84,10 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    if (typeof console !== "undefined" && console.error) {
-      console.error("MODCODES error boundary:", error, info);
-    }
+    captureError(error, {
+      source: "ErrorBoundary",
+      componentStack: info?.componentStack || null,
+    });
   }
 
   handleRetry = () => {

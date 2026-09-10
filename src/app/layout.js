@@ -6,6 +6,7 @@ import { ToastProvider } from "./contexts/ToastContext";
 import ErrorBoundary from "./components/Diagnostics/ErrorBoundary";
 import AdsProvider from "./components/Ads/AdsProvider";
 import AdSenseConfig from "./components/Ads/AdSenseConfig";
+import ObservabilityInit from "./components/Diagnostics/ObservabilityInit";
 
 const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID || "";
 
@@ -63,6 +64,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
+        <ObservabilityInit />
         {ADSENSE_ID && (
           <Script
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_ID}`}

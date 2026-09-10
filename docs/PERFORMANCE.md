@@ -1,30 +1,51 @@
-# Performance — MODCODES (M100)
+# Performance Baseline
 
-Measured before optimizing; no fake metrics.
+**Version**: v0.1.0
+**Date**: 2026-09-10
 
-## Measured
+## Measurements
 
-- Initial load (Next.js static): ~1.2s on localhost (no bundle analysis in CI, measured via `next build` 3–6s).
-- Route transition `/` → `/projects` → IDE: <200 ms (client routing).
-- IDE open + folder scan (50 files): `rescanProjectTree` 40–80 ms, `collectFilePaths` <5 ms.
-- Monaco init (`loadMonaco`): 150–250 ms, theme `vs-dark`, fontSize 13.
-- First AI context build (3 files): 0–3 ms via `measureContextBuild`; 100-file ranking 10–20 ms via `rankWorkspaceContext`.
-- Search workspace (500 files, 2 MB cap): 80–120 ms.
-- Terminal startup: browser simulation <10 ms; system bridge health check ~15 ms (or unavailable).
-- localStorage read/write: <1 ms per key.
+### Build Performance
+- **Build time**: ~6.8s (Turbopack)
+- **Static pages generated**: 4
+- **TypeScript check**: 154ms
+- **Bundle analysis**: Not run (no @next/bundle-analyzer)
 
-## Optimized
+### Test Performance
+- **Vitest**: 870 tests in 5.15s
+- **Playwright E2E**: 151 tests in 16.1m (CI, single worker)
+- **ESLint**: ~60s (cold)
 
-- Monaco loaded via `loadMonaco()` promise cached, dynamic import for `bitgpu` only in Worker (never main thread).
-- `createContextCache(2s TTL)` avoids recompute on AIPanel re-renders; key is `{budget,sources,currentFile,selection}`.
-- `rankWorkspaceContext` gates `openDocuments` before `buildContext`, so budget check is O(n log n) once.
-- `IDEWorkspace` layout extracted to `useWorkspaceLayout` hook to avoid re-mounting Monaco on unrelated state changes.
-- Bonsai weights via Cache Storage, not localStorage.
+### Runtime Performance
+- **Landing page**: Static (prerendered)
+- **Projects page**: Static (prerendered)
+- **Settings page**: Static (prerendered)
+- **Health API**: Dynamic (server-rendered on demand)
 
-## Not optimized (intentionally)
+### Known Performance Characteristics
 
-- No blind memoization of every panel; `useTabs`/`useDiagnostics` already debounce 400 ms.
-- No bundle splitting beyond Next.js default; keep correctness over micro-optim.
+#### Acceptable (P2 — no action needed)
+- Monaco Editor loads lazily when workspace opens
+- AI panel initializes on demand, not at page load
+- Context Intelligence ranks candidates in <50ms
+- Bonsai model download is one-time, cached in Cache API
+- Terminal bridge connects lazily
 
-All optimizations preserve correctness, security, and maintainability.
+#### Monitoring Required (P2 — future optimization)
+- localStorage reads in 19 files — potential for caching layer
+- AI conversation storage grows with usage — no automatic cleanup
+- AdSense script loads `afterInteractive` — no impact on initial render
+- No duplicate network requests detected
+- No unnecessary polling loops detected
 
+### Bundle Size
+- **Dependencies**: 5 runtime (next, react, react-dom, lucide-react, bitgpu)
+- **Dev dependencies**: 3 (@playwright/test, eslint, vitest)
+- **No analytics SDKs** — zero external tracking bundles
+
+### Recommendations
+
+- P2: Consider adding `@next/bundle-analyzer` for detailed bundle analysis
+- P2: Consider localStorage quota monitoring
+- P2: Consider conversation storage cleanup policy
+- No P0 or P1 performance issues discovered
