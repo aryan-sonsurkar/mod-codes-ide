@@ -1,26 +1,40 @@
 # MODCODES
 
-<p align="center">
-  <h1 align="center">MODCODES</h1>
+[![Release](https://img.shields.io/github/v/release/aryan-sonsurkar/mod-codes-ide)](https://github.com/aryan-sonsurkar/mod-codes-ide/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg](./LICENSE))
+[![Live Demo](https://img.shields.io/badge/demo-live-00d4ff)](https://mod-codes-ide.vercel.app)
 
-  <p align="center">
-    An AI-Powered Development Environment Built Completely From Scratch
-  </p>
+**A local-first, AI-powered software engineering workspace.** Research → PRD → Roadmap → Agent lifecycle, project memory, and approval-gated changes — with Bonsai (WebGPU) and Ollama (local) as the sole AI providers. No cloud lock-in.
 
-  <p align="center">
-    Learning Software Engineering by Engineering a Modern IDE
-  </p>
-</p>
+🌐 **Live:** [mod-codes-ide.vercel.app](https://mod-codes-ide.vercel.app) · 📦 **Latest:** [v0.1.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.1.0)
 
 ---
 
 ## About
 
-MODCODES is my flagship software engineering project where I am building a modern AI-powered Integrated Development Environment (IDE) completely from scratch.
+MODCODES is my flagship software engineering project: a browser IDE for
+AI-assisted development, built AI-assisted. AI accelerates drafting; I own
+architecture, debugging, and every shipped line.
 
-The objective is not to clone existing editors but to understand how professional developer tools are architected, engineered, and scaled.
+**v0.1.0 (current):** full project lifecycle (Research → PRD → Roadmap →
+Agent), `.modcodes` Markdown-first project memory, approval gates and save
+gates, responsive desktop/tablet/mobile, AdSense with privacy consent.
 
-Every feature is built incrementally while learning the underlying computer science, software engineering, frontend architecture, and system design concepts.
+**Quality gates at release:** 151/151 Playwright E2E · 845 Vitest unit tests ·
+ESLint clean · security scan clean · CI on every push.
+
+**Stack:** Next.js 16 · React 19 · Node ≥ 20.9 · Bonsai (WebGPU) · Ollama (local).
+
+## Quickstart
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. For local AI, install
+[Ollama](https://ollama.com) and pull a model — the app runs without it,
+AI features enable when a provider is available.
 
 ---
 
@@ -163,9 +177,10 @@ Building MODCODES is helping me develop skills in:
 
 ---
 
-# Development Philosophy
+## Development Philosophy
 
-This project is intentionally built without relying on AI-generated implementations.
+This project is built AI-assisted. AI accelerates drafting; I own
+architecture, debugging, and every shipped line.
 
 The goal is to understand:
 
@@ -174,9 +189,8 @@ The goal is to understand:
 - How scalable architectures are created.
 - How professional engineering teams build software.
 
-Learning is prioritized over speed.
-
-Understanding is prioritized over copying.
+Speed comes from AI, understanding comes from debugging. Shipping is
+prioritized — and everything shipped is mine to explain.
 
 ---
 
