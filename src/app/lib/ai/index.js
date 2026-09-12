@@ -132,7 +132,9 @@ export {
   saveConversations,
   createStoredConversation,
   clearConversations,
+  searchConversations,
   CONVERSATION_STORAGE_KEY,
+  CONVERSATION_STORAGE_VERSION,
 } from "./conversationStorage";
 export {
   CAPABILITIES,
@@ -166,6 +168,14 @@ export {
   createAgentSession,
   resetAgentIdsForTests,
 } from "./agentTask";
+export {
+  ORCHESTRATOR_STATES,
+  createAgentOrchestrator,
+} from "./agentOrchestrator";
+export {
+  createPlanner,
+  validateAgentPlan,
+} from "./agentPlanner";
 export {
   rankWorkspaceContext,
 } from "./relevanceRanking";
@@ -242,6 +252,8 @@ export {
   createToolRegistry,
   executeToolCall,
   BUILTIN_READONLY_TOOLS,
+  BUILTIN_WRITE_TOOLS,
+  ALL_BUILTIN_TOOLS,
   getBuiltinTool,
 } from "./tools";
 export {

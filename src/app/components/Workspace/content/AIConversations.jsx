@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { MessageSquare, Plus, Trash2, Edit2, X } from "lucide-react";
+import { useState, useMemo } from "react";
+import { MessageSquare, Plus, Trash2, Edit2, X, Search } from "lucide-react";
 
 export default function AIConversations({
   conversations,
@@ -10,6 +10,8 @@ export default function AIConversations({
   onRename,
   onDelete,
   onClearAll,
+  searchQuery,
+  onSearchChange,
 }) {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState("");
@@ -26,6 +28,18 @@ export default function AIConversations({
     setEditingId(null);
   };
 
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery || typeof searchQuery !== "string") return conversations;
+    const lower = searchQuery.toLowerCase().trim();
+    if (!lower) return conversations;
+    return conversations.filter((c) => {
+      if (c.title && c.title.toLowerCase().includes(lower)) return true;
+      return (c.messages || []).some(
+        (m) => typeof m.content === "string" && m.content.toLowerCase().includes(lower)
+      );
+    });
+  }, [conversations, searchQuery]);
+
   return (
     <div className="ai-conversations">
       <div className="ai-conversations-header">
@@ -35,11 +49,37 @@ export default function AIConversations({
           New
         </button>
       </div>
-      {conversations.length === 0 ? (
-        <p className="ai-conversations-empty">No conversations yet. Start a new one.</p>
+      {conversations.length > 0 && (
+        <div className="ai-conversations-search">
+          <Search size={12} />
+          <input
+            type="text"
+            placeholder="Search conversations..."
+            value={searchQuery || ""}
+            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+            aria-label="Search conversations"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="ai-conversations-search-clear"
+              onClick={() => onSearchChange && onSearchChange("")}
+              aria-label="Clear search"
+            >
+              <X size={10} />
+            </button>
+          )}
+        </div>
+      )}
+      {filteredConversations.length === 0 ? (
+        <p className="ai-conversations-empty">
+          {conversations.length === 0
+            ? "No conversations yet. Start a new one."
+            : "No matching conversations."}
+        </p>
       ) : (
         <ul className="ai-conversations-list" role="list">
-          {conversations.map((conversation) => (
+          {filteredConversations.map((conversation) => (
             <li key={conversation.id} className={`ai-conversation-item ${conversation.id === activeId ? "ai-conversation-active" : ""}`}>
               {editingId === conversation.id ? (
                 <input

@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./AIPanel.css";
-import { Bot, Cpu, RefreshCw, Send, ShieldCheck, Square, Copy, Check } from "lucide-react";
+import { Bot, Cpu, RefreshCw, Send, ShieldCheck, Square, Copy, Check, Zap } from "lucide-react";
 import {
   AI_ERRORS,
+  ALL_BUILTIN_TOOLS,
   BUILTIN_READONLY_TOOLS,
   CONVERSATION_STATES,
   MODEL_STATES,
@@ -33,6 +34,9 @@ import {
   recommendModels,
   saveConversations,
   watchDeviceLost,
+  ORCHESTRATOR_STATES,
+  createAgentOrchestrator,
+  createPlanner,
 } from "../../../lib/ai";
 import { useSettings } from "../../../contexts/SettingsContext";
 import { PROVIDER_STATES, providerStateLabel, providerStateClass } from "../../../lib/ai/providerStates";
@@ -45,6 +49,7 @@ import AIConversations from "./AIConversations";
 import AIProviderCapabilities from "./AIProviderCapabilities";
 import AIActionHistory from "./AIActionHistory";
 import AgentWorkflowDemo from "./AgentWorkflowDemo";
+import AgentProgress from "./AgentProgress";
 import AISetup from "./AISetup";
 import { approvalRequestFor } from "../../../lib/ai/toolApproval";
 import { createActionHistory } from "../../../lib/ai/actionHistory";
@@ -70,9 +75,10 @@ const SYSTEM_PROMPT =
   "ModCodes AI is a coding assistant inside a browser-based IDE. " +
   "Help with the code in the open project. Use the editor context attached to " +
   "the conversation when it is relevant, and keep answers concise. " +
-  "You only produce text replies: you cannot run commands or modify files. " +
-  "You may use the available read-only tools to inspect the current file, " +
-  "diagnostics, or open files when it would help answer the question.";
+  "You can read and modify files using the available tools. Use ide.search and " +
+  "ide.read-file to understand the codebase before making changes. Use " +
+  "ide.apply-patch for targeted edits or ide.write-file to rewrite entire files. " +
+  "Always explain what you are doing before using a write tool.";
 
 function toolExecuteFor(id, getContextData) {
   const data = () => (typeof getContextData === "function" ? getContextData() : {});
@@ -107,6 +113,66 @@ function toolExecuteFor(id, getContextData) {
           .filter(Boolean);
         return paths.length > 0 ? paths.join("\n") : "No files are open.";
       };
+    case "ide.search":
+      return async (args) => {
+        const query = (args && args.query || "").toLowerCase();
+        if (!query) return "No query provided.";
+        const docs = Array.isArray(data().openDocuments) ? data().openDocuments : [];
+        const results = [];
+        for (const doc of docs) {
+          const path = typeof doc === "string" ? doc : (doc.path || doc.uri || "");
+          const content = typeof doc === "object" ? (doc.content || "") : "";
+          if (content.toLowerCase().includes(query) || path.toLowerCase().includes(query)) {
+            const lines = content.split("\n");
+            const matchingLines = [];
+            for (let i = 0; i < lines.length; i++) {
+              if (lines[i].toLowerCase().includes(query)) {
+                matchingLines.push(`  Line ${i + 1}: ${lines[i].trim()}`);
+              }
+            }
+            results.push(`${path}\n${matchingLines.join("\n")}`);
+          }
+        }
+        return results.length > 0 ? results.join("\n\n") : `No results found for "${query}".`;
+      };
+    case "ide.read-file":
+      return async (args) => {
+        const targetPath = args && args.path;
+        if (!targetPath) return "No file path provided.";
+        const current = data().currentFile;
+        if (current && current.path === targetPath) {
+          return current.content || `File ${targetPath} has no content.`;
+        }
+        const docs = Array.isArray(data().openDocuments) ? data().openDocuments : [];
+        for (const doc of docs) {
+          const docPath = typeof doc === "string" ? doc : (doc.path || doc.uri || "");
+          if (docPath === targetPath) {
+            return typeof doc === "object" ? (doc.content || "") : "";
+          }
+        }
+        return `File not found: ${targetPath}`;
+      };
+    case "ide.write-file":
+      return async (args) => {
+        if (typeof window !== "undefined" && window.__modcodesWriteFile) {
+          return await window.__modcodesWriteFile(args.path, args.content);
+        }
+        return { ok: false, code: "noHandler", error: "Write handler not available." };
+      };
+    case "ide.apply-patch":
+      return async (args) => {
+        if (typeof window !== "undefined" && window.__modcodesApplyPatch) {
+          return await window.__modcodesApplyPatch(args.path, args.original, args.replacement);
+        }
+        return { ok: false, code: "noHandler", error: "Patch handler not available." };
+      };
+    case "ide.create-file":
+      return async (args) => {
+        if (typeof window !== "undefined" && window.__modcodesCreateFile) {
+          return await window.__modcodesCreateFile(args.path, args.content);
+        }
+        return { ok: false, code: "noHandler", error: "Create handler not available." };
+      };
     default:
       return async () => "Tool is not available.";
   }
@@ -114,7 +180,7 @@ function toolExecuteFor(id, getContextData) {
 
 function buildToolRegistry(getContextData) {
   const registry = createToolRegistry();
-  for (const definition of BUILTIN_READONLY_TOOLS) {
+  for (const definition of ALL_BUILTIN_TOOLS) {
     registry.registerTool(
       createTool({
         ...definition,
@@ -137,7 +203,7 @@ function formatModelSize(bytes) {
   return `${mb.toFixed(0)} MB`;
 }
 
-export default function AIPanel({ getContextData, externalPrompt = null, onApplyDiff = null, onNavigate = null }) {
+export default function AIPanel({ getContextData, externalPrompt = null, onApplyDiff = null, onNavigate = null, projectId = null }) {
   const { settings, updateSetting } = useSettings();
   const [providerId, setProviderId] = useState(
     settings.ai?.provider === "browser-bonsai" ? "browser-bonsai" : "ollama"
@@ -163,11 +229,15 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
   const [contextForInspector, setContextForInspector] = useState(null);
   const [pendingApproval, setPendingApproval] = useState(null);
   const [appliedDiffId, setAppliedDiffId] = useState(null);
-  const [conversations, setConversations] = useState(() => loadConversations());
+  const [conversations, setConversations] = useState(() => loadConversations(projectId));
   const [activeConversationId, setActiveConversationId] = useState(null);
+  const [conversationSearchQuery, setConversationSearchQuery] = useState("");
   const actionHistoryRef = useRef(createActionHistory({ limit: 50 }));
   const [actionEntries, setActionEntries] = useState([]);
   const [generationPhase, setGenerationPhase] = useState(null);
+  const [agentMode, setAgentMode] = useState(false);
+  const [agentSnapshot, setAgentSnapshot] = useState(null);
+  const orchestratorRef = useRef(null);
 
   const sessionRef = useRef(null);
   const streamRef = useRef("");
@@ -401,6 +471,22 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       if (!toolRegistryRef.current) {
         toolRegistryRef.current = buildToolRegistry(getContextData);
       }
+
+      if (!orchestratorRef.current) {
+        orchestratorRef.current = createAgentOrchestrator({
+          maxSteps: 8,
+          maxToolRounds: 4,
+          contextBudget: 24000,
+          timeoutMs: 120000,
+          planner: createPlanner({ maxSteps: 8, provider, model: defaultModel }),
+          toolRegistry: toolRegistryRef.current,
+          provider,
+          model: defaultModel,
+        });
+        orchestratorRef.current.subscribe((snap) => {
+          setAgentSnapshot({ ...snap });
+        });
+      }
     }, 0);
 
     return () => {
@@ -513,13 +599,14 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         provider: providerId,
         model: modelId,
         messages: nextMessages,
+        projectId,
       });
       const next = [record, ...conversations].slice(0, 20);
       setConversations(next);
-      saveConversations(next);
+      saveConversations(next, projectId);
       setActiveConversationId(record.id);
     },
-    [conversations, providerId, modelId]
+    [conversations, providerId, modelId, projectId]
   );
 
   const handleCreateConversation = useCallback(() => {
@@ -556,30 +643,157 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     (id, title) => {
       const next = conversations.map((c) => (c.id === id ? { ...c, title, updatedAt: Date.now() } : c));
       setConversations(next);
-      saveConversations(next);
+      saveConversations(next, projectId);
     },
-    [conversations]
+    [conversations, projectId]
   );
 
   const handleDeleteConversation = useCallback(
     (id) => {
       const next = conversations.filter((c) => c.id !== id);
       setConversations(next);
-      saveConversations(next);
+      saveConversations(next, projectId);
       if (activeConversationId === id) {
         handleClearConversation();
         setActiveConversationId(null);
       }
     },
-    [conversations, activeConversationId, handleClearConversation]
+    [conversations, activeConversationId, handleClearConversation, projectId]
   );
 
   const handleClearAllConversations = useCallback(() => {
     setConversations([]);
-    saveConversations([]);
+    saveConversations([], projectId);
     handleClearConversation();
     setActiveConversationId(null);
-  }, [handleClearConversation]);
+  }, [handleClearConversation, projectId]);
+
+  const handleRunAgent = useCallback(async () => {
+    const content = input.trim();
+    if (!content || !orchestratorRef.current || status !== PROVIDER_STATES.ready) return;
+    setInput("");
+    setAgentMode(true);
+    setSending(true);
+    setGenerationState(CONVERSATION_STATES.generating);
+    setGenerationPhase("thinking");
+    setMessages((current) => [
+      ...current,
+      createMessage({ role: "user", content: `[Agent] ${content}` }),
+    ]);
+    try {
+      const context = getContextData ? getContextData() : {};
+      await orchestratorRef.current.runAgentLoop({
+        title: content,
+        description: null,
+        context,
+        autoApprove: false,
+        onStepComplete: ({ step, observation, index, total }) => {
+          setGenerationPhase("tool-calling");
+          setToolActivity([observation.tool]);
+        },
+        execFn: async ({ toolName, args }) => {
+          return executeToolCall({
+            registry: toolRegistryRef.current,
+            toolName,
+            args,
+            permission: "read",
+          });
+        },
+      });
+      const snap = orchestratorRef.current.getSnapshot();
+      if (snap.state === "awaitingApproval" || snap.state === "awaitingReview") {
+        setMessages((current) => [
+          ...current,
+          createMessage({
+            role: "assistant",
+            content: snap.state === "awaitingApproval"
+              ? "Plan ready. Review and approve to continue."
+              : `Changeset ready with ${(snap.changeset?.operations || []).length} file(s). Review above.`,
+          }),
+        ]);
+      } else if (snap.state === "completed") {
+        setMessages((current) => [
+          ...current,
+          createMessage({ role: "assistant", content: "Agent completed. Save files to write changes to disk." }),
+        ]);
+      } else {
+        setMessages((current) => [
+          ...current,
+          createMessage({ role: "assistant", content: `Agent finished with state: ${snap.state}.` }),
+        ]);
+      }
+      persistConversation([...messages, createMessage({ role: "assistant", content: "Agent task completed." })]);
+    } catch (error) {
+      const msg = error?.message || "Agent failed.";
+      setMessages((current) => [
+        ...current,
+        createMessage({ role: "error", content: msg }),
+      ]);
+      setGenerationState(CONVERSATION_STATES.error);
+    } finally {
+      setSending(false);
+      setGenerationPhase(null);
+      setToolActivity(null);
+    }
+  }, [input, status, getContextData, messages, persistConversation]);
+
+  const handleAgentApprove = useCallback(() => {
+    if (!orchestratorRef.current) return;
+    try {
+      orchestratorRef.current.approvePlan();
+      setMessages((current) => [
+        ...current,
+        createMessage({ role: "user", content: "[Agent] Plan approved. Executing..." }),
+      ]);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleAgentReject = useCallback(() => {
+    if (!orchestratorRef.current) return;
+    orchestratorRef.current.rejectPlan("User rejected plan");
+    setAgentMode(false);
+    setMessages((current) => [
+      ...current,
+      createMessage({ role: "user", content: "[Agent] Plan rejected." }),
+    ]);
+  }, []);
+
+  const handleAgentCancel = useCallback(() => {
+    if (!orchestratorRef.current) return;
+    orchestratorRef.current.cancel();
+    setAgentMode(false);
+  }, []);
+
+  const handleAgentAcceptChangeset = useCallback(() => {
+    if (!orchestratorRef.current) return;
+    const snap = orchestratorRef.current.getSnapshot();
+    const ops = snap.changeset?.operations || [];
+    for (const op of ops) {
+      if (onApplyDiff && op.original != null && op.proposed != null) {
+        onApplyDiff({ path: op.path, original: op.original, proposed: op.proposed });
+      }
+    }
+    orchestratorRef.current.complete();
+    setAgentMode(false);
+    setMessages((current) => [
+      ...current,
+      createMessage({ role: "assistant", content: `Applied ${ops.length} file(s). Save to write to disk.` }),
+    ]);
+  }, [onApplyDiff]);
+
+  const handleAgentRejectChangeset = useCallback(() => {
+    if (!orchestratorRef.current) return;
+    orchestratorRef.current.cancel();
+    setAgentMode(false);
+  }, []);
+
+  const handleAgentOpenFile = useCallback((op) => {
+    if (onNavigate && op?.path) {
+      onNavigate({ path: op.path });
+    }
+  }, [onNavigate]);
 
   const handleToggleSource = useCallback((type) => {
     setExcludedSources((current) => {
@@ -726,14 +940,14 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
               ? { num_ctx: models.find((model) => model.id === modelId).contextLength }
               : {},
           maxToolRounds: settings.ai?.maxToolRounds ?? 2,
-          tools: BUILTIN_READONLY_TOOLS,
+          tools: ALL_BUILTIN_TOOLS,
           toolRunner: async ({ toolName, arguments: args }) => {
             const tool = toolRegistryRef.current?.getTool
               ? toolRegistryRef.current.getTool(toolName)
               : null;
             const permission = tool ? tool.permission : "read";
             const request = approvalRequestFor({ toolName, permission, args });
-            if (request.requiresApproval && permission !== "read") {
+            if (request.requiresApproval) {
               setPendingApproval(request);
               return { ok: false, code: "approvalRequired", error: "Tool approval required" };
             }
@@ -741,7 +955,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
               registry: toolRegistryRef.current,
               toolName,
               args,
-              permission: "read",
+              permission,
             });
           },
           onTool: ({ toolCalls }) => {
@@ -1077,6 +1291,8 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         onRename={handleRenameConversation}
         onDelete={handleDeleteConversation}
         onClearAll={handleClearAllConversations}
+        searchQuery={conversationSearchQuery}
+        onSearchChange={setConversationSearchQuery}
       />
 
       <AIActionHistory
@@ -1090,9 +1306,21 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
 
       <AgentWorkflowDemo getContextData={getContextData} onApplyDiff={onApplyDiff} onNavigate={onNavigate} />
 
+      {agentSnapshot && (agentMode || agentSnapshot.state !== "idle") && (
+        <AgentProgress
+          snapshot={agentSnapshot}
+          onApprove={handleAgentApprove}
+          onReject={handleAgentReject}
+          onCancel={handleAgentCancel}
+          onAcceptChangeset={handleAgentAcceptChangeset}
+          onRejectChangeset={handleAgentRejectChangeset}
+          onOpenFile={handleAgentOpenFile}
+        />
+      )}
+
       <div className="ai-tools">
         <ShieldCheck size={12} />
-        <span>Read-only tools: current file, diagnostics, open files</span>
+        <span>Tools: read + write (with approval)</span>
         {toolActivity && toolActivity.length > 0 && (
           <span className="ai-tools-active">
             Running: {toolActivity.join(", ")}
@@ -1200,7 +1428,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           rows={2}
           placeholder={
             status === PROVIDER_STATES.ready
-              ? "Ask about your code..."
+              ? agentMode ? "Describe the task for the agent..." : "Ask about your code..."
               : providerId === "browser-bonsai"
                 ? "Download the Bonsai model to chat"
                 : "Start Ollama to chat"
@@ -1211,7 +1439,11 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              handleSend();
+              if (event.ctrlKey || event.metaKey) {
+                handleRunAgent();
+              } else {
+                handleSend();
+              }
             }
           }}
         />
@@ -1221,16 +1453,28 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
             Stop
           </button>
         ) : (
-          <button
-            type="button"
-            className="ai-send"
-            onClick={handleSend}
-            disabled={!input.trim() || status !== PROVIDER_STATES.ready}
-            title="Send"
-          >
-            <Send size={14} />
-            Send
-          </button>
+          <>
+            <button
+              type="button"
+              className="ai-send ai-send-agent"
+              onClick={handleRunAgent}
+              disabled={!input.trim() || status !== PROVIDER_STATES.ready}
+              title="Run as agent (Ctrl+Enter)"
+            >
+              <Zap size={14} />
+              Agent
+            </button>
+            <button
+              type="button"
+              className="ai-send"
+              onClick={handleSend}
+              disabled={!input.trim() || status !== PROVIDER_STATES.ready}
+              title="Send"
+            >
+              <Send size={14} />
+              Send
+            </button>
+          </>
         )}
       </div>
     </div>

@@ -112,10 +112,21 @@ function SelectRow({ label, description, value, options, onChange }) {
   );
 }
 
+function isLocalhost() {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return h === "localhost" || h === "127.0.0.1" || h === "::1";
+}
+
 function ConnectionRow({ value }) {
   const [state, setState] = useState({ kind: "idle" });
+  const localhost = isLocalhost();
 
   const handleTest = async () => {
+    if (!localhost) {
+      setState({ kind: "error", message: "Local services (Ollama) are only reachable when the app runs on localhost. Run: npm run dev" });
+      return;
+    }
     setState({ kind: "checking" });
     let provider;
     try {
@@ -146,7 +157,9 @@ function ConnectionRow({ value }) {
       <div className="settings-row-info">
         <span className="settings-row-label">Test connection</span>
         <span className="settings-row-description">
-          Checks that Ollama is reachable at the configured URL.
+          {localhost
+                ? "Checks that Ollama is reachable at the configured URL."
+                : "Ollama requires the app to run locally. Deployed apps cannot reach 127.0.0.1."}
         </span>
       </div>
       <div className="settings-connection-control">
@@ -160,9 +173,9 @@ function ConnectionRow({ value }) {
           type="button"
           className="settings-connection-button"
           onClick={handleTest}
-          disabled={state.kind === "checking"}
+          disabled={state.kind === "checking" || !localhost}
         >
-          {state.kind === "checking" ? "Testing…" : "Test"}
+          {state.kind === "checking" ? "Testing…" : localhost ? "Test" : "Local only"}
         </button>
       </div>
     </div>
@@ -329,6 +342,10 @@ export default function SettingsPage() {
   };
 
   const handleTestBridge = async () => {
+    if (!isLocalhost()) {
+      setBridgeStatus({ kind: "error", message: "The terminal bridge is only reachable when the app runs on localhost. Run: npm run dev" });
+      return;
+    }
     setBridgeStatus({ kind: "checking" });
     const result = await checkBridgeHealth();
     if (result.ok) {
@@ -527,13 +544,13 @@ export default function SettingsPage() {
               <div className="settings-row">
                 <div className="settings-row-info">
                   <span className="settings-row-label">Test bridge</span>
-                  <span className="settings-row-description">Checks http://127.0.0.1:8787/health with the stored token.</span>
+                  <span className="settings-row-description">{isLocalhost() ? "Checks http://127.0.0.1:8787/health with the stored token." : "The bridge is only reachable from localhost. Run: npm run dev"}</span>
                 </div>
                 <div className="settings-connection-control">
                   {bridgeStatus.kind === "ok" && <span className="settings-connection-ok">{bridgeStatus.message}</span>}
                   {bridgeStatus.kind === "error" && <span className="settings-connection-error">{bridgeStatus.message}</span>}
-                  <button type="button" className="settings-connection-button" onClick={handleTestBridge} disabled={bridgeStatus.kind === "checking"}>
-                    {bridgeStatus.kind === "checking" ? "Testing…" : "Test"}
+                  <button type="button" className="settings-connection-button" onClick={handleTestBridge} disabled={bridgeStatus.kind === "checking" || !isLocalhost()}>
+                    {bridgeStatus.kind === "checking" ? "Testing…" : isLocalhost() ? "Test" : "Local only"}
                   </button>
                 </div>
               </div>
@@ -553,6 +570,11 @@ export default function SettingsPage() {
               your GPU. No cloud proxy is used. No code leaves your machine.
             </p>
             <div className="settings-group">
+              {!isLocalhost() && (
+                <div className="settings-remote-notice">
+                  <strong>Remote deployment detected.</strong> Ollama and the terminal bridge are local services only reachable from localhost. Run <code>npm run dev</code> locally to use them. Bonsai (in-browser AI) works from any deployment.
+                </div>
+              )}
               <SelectRow
                 label="Provider"
                 description="Ollama uses a local server; Bonsai runs entirely in this browser tab."

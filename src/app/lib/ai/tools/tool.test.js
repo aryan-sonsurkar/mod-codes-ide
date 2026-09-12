@@ -9,6 +9,8 @@ import {
   createToolRegistry,
   executeToolCall,
   BUILTIN_READONLY_TOOLS,
+  BUILTIN_WRITE_TOOLS,
+  ALL_BUILTIN_TOOLS,
   getBuiltinTool,
 } from "./index";
 
@@ -307,5 +309,61 @@ describe("built-in read-only tools", () => {
     expect(ids).toContain("ide.current-file");
     expect(ids).toContain("ide.diagnostics");
     expect(ids).toContain("ide.open-files");
+  });
+});
+
+describe("built-in write tools", () => {
+  it("defines write-permission tools", () => {
+    expect(BUILTIN_WRITE_TOOLS.length).toBeGreaterThan(0);
+    for (const tool of BUILTIN_WRITE_TOOLS) {
+      expect(tool.permission).toBe("write");
+      expect(tool.readOnly).toBe(false);
+      expect(typeof tool.id).toBe("string");
+      expect(typeof tool.name).toBe("string");
+    }
+  });
+
+  it("includes write-file, apply-patch, create-file", () => {
+    const ids = BUILTIN_WRITE_TOOLS.map((tool) => tool.id);
+    expect(ids).toContain("ide.write-file");
+    expect(ids).toContain("ide.apply-patch");
+    expect(ids).toContain("ide.create-file");
+  });
+
+  it("ALL_BUILTIN_TOOLS includes both read and write tools", () => {
+    expect(ALL_BUILTIN_TOOLS.length).toBe(
+      BUILTIN_READONLY_TOOLS.length + BUILTIN_WRITE_TOOLS.length
+    );
+    const allIds = ALL_BUILTIN_TOOLS.map((t) => t.id);
+    expect(allIds).toContain("ide.current-file");
+    expect(allIds).toContain("ide.write-file");
+    expect(allIds).toContain("ide.apply-patch");
+    expect(allIds).toContain("ide.create-file");
+    expect(allIds).toContain("ide.search");
+    expect(allIds).toContain("ide.read-file");
+  });
+
+  it("getBuiltinTool finds write tools", () => {
+    expect(getBuiltinTool("ide.write-file")).toEqual(
+      expect.objectContaining({ id: "ide.write-file", permission: "write" })
+    );
+    expect(getBuiltinTool("ide.apply-patch")).toEqual(
+      expect.objectContaining({ id: "ide.apply-patch", permission: "write" })
+    );
+  });
+
+  it("write tools require path and content parameters", () => {
+    const writeFile = getBuiltinTool("ide.write-file");
+    expect(writeFile.parameters.required).toContain("path");
+    expect(writeFile.parameters.required).toContain("content");
+
+    const createFile = getBuiltinTool("ide.create-file");
+    expect(createFile.parameters.required).toContain("path");
+    expect(createFile.parameters.required).toContain("content");
+
+    const applyPatch = getBuiltinTool("ide.apply-patch");
+    expect(applyPatch.parameters.required).toContain("path");
+    expect(applyPatch.parameters.required).toContain("original");
+    expect(applyPatch.parameters.required).toContain("replacement");
   });
 });

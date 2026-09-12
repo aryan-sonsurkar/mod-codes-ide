@@ -21,6 +21,7 @@ export const OLLAMA_CAPABILITIES = [
   CAPABILITIES.chat,
   CAPABILITIES.streaming,
   CAPABILITIES.cancellation,
+  CAPABILITIES.tools,
   CAPABILITIES.local,
   CAPABILITIES.statistics,
 ];

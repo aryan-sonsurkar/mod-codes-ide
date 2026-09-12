@@ -3,6 +3,24 @@ import { createAgentOrchestrator } from "./agentOrchestrator";
 import { createPlanner } from "./agentPlanner";
 import { createToolRegistry, createTool } from "./tools";
 
+function makeFullRegistry() {
+  const registry = createToolRegistry();
+  const tools = [
+    { id: "ide.current-file", execute: async () => "current file content" },
+    { id: "ide.open-files", execute: async () => "src/a.js\nsrc/b.js" },
+    { id: "ide.diagnostics", execute: async () => "No diagnostics." },
+    { id: "ide.search", execute: async () => "search results" },
+    { id: "ide.read-file", execute: async (args) => `Content of ${args.path || "file"}` },
+    { id: "ide.write-file", execute: async () => ({ ok: true }) },
+    { id: "ide.apply-patch", execute: async () => ({ ok: true }) },
+    { id: "ide.create-file", execute: async () => ({ ok: true }) },
+  ];
+  for (const def of tools) {
+    registry.registerTool(createTool({ id: def.id, name: def.id, permission: "read", execute: def.execute }));
+  }
+  return registry;
+}
+
 describe("agent orchestrator", () => {
   it("flows start -> plan -> approve -> changeset -> complete", async () => {
     const registry = createToolRegistry();
@@ -29,5 +47,61 @@ describe("agent orchestrator", () => {
     const orch = createAgentOrchestrator({ maxSteps: 2, planner: createPlanner({ maxSteps: 2 }) });
     await orch.startTask({ title: "Test bug" });
     expect(orch.getSnapshot().task.steps.length).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("agent orchestrator runAgentLoop", () => {
+  it("runs through all steps automatically when autoApprove is true", async () => {
+    const steps = [];
+    const registry = makeFullRegistry();
+
+    const orch = createAgentOrchestrator({
+      maxSteps: 5,
+      planner: createPlanner({ maxSteps: 3 }),
+      toolRegistry: registry,
+    });
+
+    const result = await orch.runAgentLoop({
+      title: "Fix the bug",
+      autoApprove: true,
+      onStepComplete: ({ step, observation, index, total }) => {
+        steps.push({ step: step.title, tool: observation.tool, index, total });
+      },
+    });
+
+    expect(["completed", "awaitingReview"].includes(result.state)).toBe(true);
+    expect(steps.length).toBeGreaterThan(0);
+    expect(result.observations.length).toBeGreaterThan(0);
+  });
+
+  it("stops at awaitingApproval when autoApprove is false", async () => {
+    const registry = makeFullRegistry();
+
+    const orch = createAgentOrchestrator({
+      maxSteps: 3,
+      planner: createPlanner({ maxSteps: 3 }),
+      toolRegistry: registry,
+    });
+
+    const result = await orch.runAgentLoop({
+      title: "Fix the bug",
+      autoApprove: false,
+    });
+
+    expect(result.state).toBe("awaitingApproval");
+  });
+
+  it("cancels mid-loop", async () => {
+    const registry = makeFullRegistry();
+
+    const orch = createAgentOrchestrator({
+      maxSteps: 10,
+      planner: createPlanner({ maxSteps: 5 }),
+      toolRegistry: registry,
+    });
+
+    await orch.startTask({ title: "Fix the bug in login" });
+    orch.cancel();
+    expect(orch.getSnapshot().state).toBe("cancelled");
   });
 });

@@ -3,9 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import "./IDEWorkspace.css";
 import FileExplorer from "./FileExplorer/FileExplorer";
-import EditorPane from "./EditorPane";
-import TabBar from "./TabBar";
+import EditorGroupSplit from "./EditorGroupSplit";
 import SearchPanel from "./SearchPanel";
+import { useEditorGroups } from "../../../hooks/useEditorGroups";
+import "./EditorGroup.css";
 import ProblemsPanel from "./ProblemsPanel";
 import OutlinePanel from "./OutlinePanel";
 import dynamic from "next/dynamic";
@@ -236,6 +237,25 @@ export default function IdeWorkspace({ selectedProject }) {
     handleTabMenuAction,
   } = useTabs({ readFile, writeFile });
 
+  const {
+    groups,
+    focusedGroupId,
+    focusedGroup,
+    splitDirection,
+    openInGroup,
+    closeInGroup,
+    activateInGroup,
+    splitRight,
+    splitDown,
+    closeGroup,
+    focusGroup,
+    remapPath: remapGroupPath,
+    dropPath: dropGroupPath,
+    getGroupLayout,
+    focusNextGroup,
+    focusPreviousGroup,
+  } = useEditorGroups({ tabs, openFile });
+
   const { diagnostics } = useDiagnostics({ tabs, activePath, tree });
 
   const workspaceGraph = useMemo(() => {
@@ -375,6 +395,7 @@ export default function IdeWorkspace({ selectedProject }) {
         projectId: selectedProject.id,
         openTabs: tabs.map((tab) => ({ path: tab.path, name: tab.name })),
         activePath,
+        editorGroups: getGroupLayout(),
       });
     }, 300);
 
@@ -383,7 +404,7 @@ export default function IdeWorkspace({ selectedProject }) {
         window.clearTimeout(persistTimer.current);
       }
     };
-  }, [status, tabs, activePath, selectedProject?.id]);
+  }, [status, tabs, activePath, selectedProject?.id, groups, getGroupLayout]);
 
   function retry() {
     resetEditor();
@@ -433,6 +454,7 @@ export default function IdeWorkspace({ selectedProject }) {
     const result = await renameEntry(path, newName);
     if (result.ok) {
       remapOpenTabs(path, result.path);
+      remapGroupPath(path, result.path);
       await refreshProjectTree();
     }
     return result;
@@ -442,6 +464,7 @@ export default function IdeWorkspace({ selectedProject }) {
     const result = await deleteEntry(path);
     if (result.ok) {
       dropTabsForPath(path);
+      dropGroupPath(path);
       await refreshProjectTree();
     }
     return result;
@@ -815,6 +838,30 @@ export default function IdeWorkspace({ selectedProject }) {
         monacoFindRef.current?.find();
       },
     },
+    {
+      id: "split-editor-right",
+      title: "Split Editor Right",
+      shortcut: "",
+      execute: () => {
+        splitRight();
+      },
+    },
+    {
+      id: "split-editor-down",
+      title: "Split Editor Down",
+      shortcut: "",
+      execute: () => {
+        splitDown();
+      },
+    },
+    {
+      id: "close-editor-group",
+      title: "Close Editor Group",
+      shortcut: "",
+      execute: () => {
+        closeGroup(focusedGroupId);
+      },
+    },
     ...CODE_ACTIONS.map((action) => ({
       id: action.id,
       title: action.title,
@@ -958,6 +1005,27 @@ export default function IdeWorkspace({ selectedProject }) {
         return;
       }
 
+      if (mod && event.key === "\\") {
+        event.preventDefault();
+        splitRight();
+        return;
+      }
+
+      if (mod && event.shiftKey && event.key === "\\") {
+        event.preventDefault();
+        splitDown();
+        return;
+      }
+
+      if (mod && !event.shiftKey && event.key >= "1" && event.key <= "9") {
+        const idx = parseInt(event.key, 10) - 1;
+        if (idx < groups.length) {
+          event.preventDefault();
+          focusGroup(groups[idx].id);
+        }
+        return;
+      }
+
       if (event.key === "Escape") {
         handlePendingCancel();
       }
@@ -985,6 +1053,10 @@ export default function IdeWorkspace({ selectedProject }) {
     handlePendingCancel,
     closePalette,
     setLayout,
+    splitRight,
+    splitDown,
+    groups,
+    focusGroup,
   ]);
 
   const openPaths = tabs.map((tab) => tab.path);
@@ -1000,12 +1072,14 @@ export default function IdeWorkspace({ selectedProject }) {
   }, [activePath]);
 
   const getAiContext = useCallback(() => {
+    const aiActivePath = focusedGroup?.activePath || activePath;
+    const aiActiveTab = tabs.find((t) => t.path === aiActivePath) || activeTab;
     const currentFile =
-      activePath && typeof activeTab?.content === "string"
+      aiActivePath && typeof aiActiveTab?.content === "string"
         ? {
-            path: activePath,
-            content: activeTab.content,
-            language: activeTab.language || null,
+            path: aiActivePath,
+            content: aiActiveTab.content,
+            language: aiActiveTab.language || null,
           }
         : null;
 
@@ -1032,7 +1106,7 @@ export default function IdeWorkspace({ selectedProject }) {
         candidates: allOpen,
         currentFile,
         selection,
-        activePath,
+        activePath: aiActivePath,
         diagnostics,
         recentPaths: tabs.map((t) => t.path),
         graphNeighbors: Array.isArray(graphNeighborsRef.current) ? graphNeighborsRef.current : [],
@@ -1052,15 +1126,17 @@ export default function IdeWorkspace({ selectedProject }) {
       diagnostics,
       budget,
     };
-  }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget, getSelectionForAi]);
+  }, [activePath, activeTab, tabs, diagnostics, settings.ai?.contextBudget, getSelectionForAi, focusedGroup]);
 
   const triggerAiAction = useCallback(
     (actionId) => {
+      const aiActivePath = focusedGroup?.activePath || activePath;
+      const aiActiveTab = tabs.find((t) => t.path === aiActivePath) || activeTab;
       const selection = getSelectionForAi();
       const context = {
         selection: selection?.text || null,
-        fileContent: activeTab?.content || null,
-        path: activePath,
+        fileContent: aiActiveTab?.content || null,
+        path: aiActivePath,
       };
       const prompt = buildCodeActionPrompt(actionId, context);
       if (prompt) {
@@ -1070,7 +1146,7 @@ export default function IdeWorkspace({ selectedProject }) {
         setLayout((current) => ({ ...current, rightOpen: true, rightTab: "ai" }));
       }
     },
-    [getSelectionForAi, activeTab, activePath, setLayout]
+    [getSelectionForAi, tabs, activeTab, activePath, setLayout, focusedGroup]
   );
 
   const triggerWorkspaceCommand = useCallback(
@@ -1104,6 +1180,57 @@ export default function IdeWorkspace({ selectedProject }) {
     },
     [setTabContent, toast]
   );
+
+  useEffect(() => {
+    window.__modcodesWriteFile = async (path, content) => {
+      try {
+        const result = await writeFile(path, content);
+        if (result && result.ok) {
+          setTabContent(path, content);
+          return { ok: true, path };
+        }
+        return { ok: false, code: "writeFailed", error: result?.error || "Write failed." };
+      } catch (err) {
+        return { ok: false, code: "writeError", error: err?.message || "Write error." };
+      }
+    };
+    window.__modcodesApplyPatch = async (path, original, replacement) => {
+      try {
+        const current = tabs.find((t) => t.path === path);
+        const currentContent = current?.content || "";
+        if (!currentContent.includes(original)) {
+          return { ok: false, code: "patchNotFound", error: "Original text not found in file." };
+        }
+        const updated = currentContent.replace(original, replacement);
+        const result = await writeFile(path, updated);
+        if (result && result.ok) {
+          setTabContent(path, updated);
+          return { ok: true, path };
+        }
+        return { ok: false, code: "writeFailed", error: result?.error || "Patch write failed." };
+      } catch (err) {
+        return { ok: false, code: "patchError", error: err?.message || "Patch error." };
+      }
+    };
+    window.__modcodesCreateFile = async (path, content) => {
+      try {
+        const result = await writeFile(path, content);
+        if (result && result.ok) {
+          openFile({ path, name: path.split("/").pop() });
+          setTabContent(path, content);
+          return { ok: true, path };
+        }
+        return { ok: false, code: "createFailed", error: result?.error || "Create failed." };
+      } catch (err) {
+        return { ok: false, code: "createError", error: err?.message || "Create error." };
+      }
+    };
+    return () => {
+      delete window.__modcodesWriteFile;
+      delete window.__modcodesApplyPatch;
+      delete window.__modcodesCreateFile;
+    };
+  }, [setTabContent, tabs, openFile]);
 
   const handleAiNavigate = useCallback(
     (ref) => {
@@ -1313,26 +1440,56 @@ export default function IdeWorkspace({ selectedProject }) {
                 />
               </>
             )}
-            <div className="editor-region">
-              <TabBar
-                tabs={tabs}
-                activePath={activePath}
-                onActivate={switchTab}
-                onClose={handleCloseTab}
-                onMenuAction={handleTabMenuAction}
-              />
-              <EditorPane
-                tab={activeTab}
-                openPaths={openPaths}
-                onChange={handleContentChange}
-                onSave={handleSave}
-                revealRequest={revealRequest}
-                focusHandleRef={monacoFocusRef}
-                findHandleRef={monacoFindRef}
-                selectionHandleRef={monacoSelectionRef}
-                onNavigateDirectory={handleBreadcrumbNavigate}
-              />
-            </div>
+            <EditorGroupSplit
+              groups={groups}
+              focusedGroupId={focusedGroupId}
+              splitDirection={splitDirection}
+              tabs={tabs}
+              onActivate={activateInGroup}
+              onClose={closeInGroup}
+              onMenuAction={(action, path, groupId) => {
+                if (action === "others") {
+                  const group = groups.find((g) => g.id === groupId);
+                  if (group) {
+                    const others = group.paths.filter((p) => p !== path);
+                    others.forEach((p) => closeInGroup(p, groupId));
+                  }
+                } else if (action === "right") {
+                  const group = groups.find((g) => g.id === groupId);
+                  if (group) {
+                    const idx = group.paths.indexOf(path);
+                    if (idx >= 0) {
+                      group.paths.slice(idx + 1).forEach((p) => closeInGroup(p, groupId));
+                    }
+                  }
+                } else if (action === "clean") {
+                  const group = groups.find((g) => g.id === groupId);
+                  if (group) {
+                    const clean = group.paths.filter((p) => {
+                      const tab = tabs.find((t) => t.path === p);
+                      return tab && !tab.dirty;
+                    });
+                    clean.forEach((p) => closeInGroup(p, groupId));
+                  }
+                } else if (action === "all") {
+                  const group = groups.find((g) => g.id === groupId);
+                  if (group) {
+                    [...group.paths].forEach((p) => closeInGroup(p, groupId));
+                  }
+                }
+              }}
+              onChange={handleContentChange}
+              onSave={handleSave}
+              revealRequest={revealRequest}
+              focusHandleRef={monacoFocusRef}
+              findHandleRef={monacoFindRef}
+              selectionHandleRef={monacoSelectionRef}
+              onNavigateDirectory={handleBreadcrumbNavigate}
+              onSplitRight={splitRight}
+              onSplitDown={splitDown}
+              onCloseGroup={closeGroup}
+              onFocus={focusGroup}
+            />
             {layout.rightOpen && (
               <>
                 <div
@@ -1467,6 +1624,7 @@ export default function IdeWorkspace({ selectedProject }) {
                         externalPrompt={aiPrompt}
                         onApplyDiff={handleApplyDiff}
                         onNavigate={handleAiNavigate}
+                        projectId={selectedProject?.id || null}
                       />
                     ) : (
                       <ProblemsPanel

@@ -22,6 +22,8 @@ export function createAgentOrchestrator({
   timeoutMs = 30000,
   planner = null,
   toolRegistry = null,
+  provider = null,
+  model = null,
 } = {}) {
   let state = ORCHESTRATOR_STATES.idle;
   let taskSession = createAgentSession({ task: createAgentTask({ title: "Idle" }) });
@@ -123,7 +125,6 @@ export function createAgentOrchestrator({
   function rejectPlan(reason) {
     state = ORCHESTRATOR_STATES.failed;
     taskSession.fail(reason || "Plan rejected");
-    emit();
     return getSnapshot();
   }
 
@@ -141,10 +142,6 @@ export function createAgentOrchestrator({
     const tool = toolRegistry.getTool ? toolRegistry.getTool(toolName) : null;
     if (!tool) {
       throw new Error(`Unknown tool: ${toolName}`);
-    }
-    // Permission check — only read allowed automatically
-    if (permission && permission !== "read" && tool.permission !== "read") {
-      throw new Error(`Tool ${toolName} requires approval for ${tool.permission}`);
     }
     state = ORCHESTRATOR_STATES.observing;
     emit();
@@ -206,6 +203,63 @@ export function createAgentOrchestrator({
     return getSnapshot();
   }
 
+  async function runAgentLoop({ title, description, context, onStepComplete, execFn, autoApprove = false } = {}) {
+    if (state !== ORCHESTRATOR_STATES.idle && state !== ORCHESTRATOR_STATES.completed && state !== ORCHESTRATOR_STATES.cancelled && state !== ORCHESTRATOR_STATES.failed) {
+      throw new Error(`Cannot start agent loop in state ${state}`);
+    }
+
+    await startTask({ title, description, context });
+    if (state === ORCHESTRATOR_STATES.failed) return getSnapshot();
+    if (state === ORCHESTRATOR_STATES.cancelled) return getSnapshot();
+
+    if (!autoApprove && state === ORCHESTRATOR_STATES.awaitingApproval) {
+      return getSnapshot();
+    }
+
+    if (state === ORCHESTRATOR_STATES.awaitingApproval) {
+      approvePlan();
+    }
+
+    const steps = plan && Array.isArray(plan.steps) ? plan.steps : [];
+    for (let i = 0; i < steps.length && i < maxSteps; i++) {
+      ensureNotCancelled();
+      if (state === ORCHESTRATOR_STATES.cancelled) break;
+
+      const step = steps[i];
+      const toolToUse = step.expectedTools && step.expectedTools.length > 0
+        ? step.expectedTools[0]
+        : "ide.read-file";
+
+      const args = step.expectedFiles && step.expectedFiles.length > 0
+        ? { path: step.expectedFiles[0] }
+        : {};
+
+      try {
+        const obs = await executeStep({ toolName: toolToUse, args }, execFn);
+        if (typeof onStepComplete === "function") {
+          onStepComplete({ step, observation: obs, index: i, total: steps.length });
+        }
+      } catch {
+        break;
+      }
+    }
+
+    if (state === ORCHESTRATOR_STATES.executing || state === ORCHESTRATOR_STATES.observing) {
+      proposeChangeset({
+        id: `changeset-${Date.now()}`,
+        operations: observations
+          .filter((obs) => obs.status === "success" && obs.tool !== "ide.current-file")
+          .map((obs) => ({
+            type: "modify",
+            path: obs.arguments && obs.arguments.path || "unknown",
+            reason: `Step: ${obs.tool}`,
+          })),
+      });
+    }
+
+    return getSnapshot();
+  }
+
   return {
     getSnapshot,
     subscribe,
@@ -217,5 +271,6 @@ export function createAgentOrchestrator({
     complete,
     cancel,
     fail,
+    runAgentLoop,
   };
 }
