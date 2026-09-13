@@ -20,7 +20,7 @@ architecture, debugging, and every shipped line.
 Agent), `.modcodes` Markdown-first project memory, approval gates and save
 gates, responsive desktop/tablet/mobile, AdSense with privacy consent.
 
-**Quality gates at release:** 151/151 Playwright E2E · 845 Vitest unit tests ·
+**Quality gates at release:** 963 Vitest unit tests ·
 ESLint clean · security scan clean · CI on every push.
 
 **Stack:** Next.js 16 · React 19 · Node ≥ 20.9 · Bonsai (WebGPU) · Ollama (local).
@@ -77,43 +77,50 @@ AI features enable when a provider is available.
 
 ## Engineering Concepts Practiced
 
-- React Components
-- Props
-- State Management
-- useState
-- useEffect
-- Controlled Components
-- Parent → Child Communication
-- Child → Parent Callback Props
-- Conditional Rendering
-- map()
-- filter()
-- localStorage
-- JSON
+- React Components & Hooks
+- State Management (useState, Context)
+- useEffect & Side Effects
 - Component Architecture
-- Flexbox
+- Flexbox & CSS Modules
 - UI Engineering
+- Pub/Sub Pattern
+- Tool Registries
+- Change Management (Changesets)
+- Approval Gates
+- Error Recovery & Retry Logic
+- Streaming (AI responses)
+- WebGPU (Bonsai)
+- Local-First Architecture
+- Security Headers & CSP
 
 ---
 
 # Vision
 
-The long-term goal is to build a complete AI-powered development environment capable of assisting developers throughout the software development lifecycle.
+A complete AI-powered development environment for assisting developers throughout the software development lifecycle.
 
-Planned features include:
+### Implemented
 
-- Monaco Editor
-- File Explorer
-- Workspace Tabs
-- Integrated Terminal
-- Git Integration
-- AI Chat Assistant
-- Ollama Integration
+- ✅ Monaco Editor with split panes and multi-file tabs
+- ✅ File Explorer with tree view
+- ✅ Workspace Tabs with editor groups
+- ✅ Integrated Terminal via local bridge
+- ✅ Git Integration (read + write operations)
+- ✅ AI Chat Assistant with streaming
+- ✅ Ollama Integration (local inference)
+- ✅ Bonsai Integration (WebGPU in-browser)
+- ✅ Autonomous AI Agent with error recovery
+- ✅ Command Palette
+- ✅ Search across workspace
+- ✅ Settings with hardware detection
+- ✅ Project Memory (.modcodes Markdown)
+- ✅ Research → PRD → Roadmap lifecycle
+- ✅ Approval-gated changesets
+
+### Planned
+
 - Plugin System
 - Theme Engine
-- Command Palette
-- Search
-- Settings
 - Debugger
 - Code Runner
 - AI Code Explanation
@@ -123,22 +130,16 @@ Planned features include:
 
 # Tech Stack
 
-Current
+- Next.js 16 · React 19 · JavaScript
+- Monaco Editor · Turbopack
+- Ollama (local) · Bonsai (WebGPU)
+- Vitest · ESLint
+- CSS Modules
 
-- Next.js
-- React
-- JavaScript
-- CSS
-- Lucide React
-
-Planned
+### Planned
 
 - TypeScript
-- Node.js
 - Electron / Tauri
-- Monaco Editor
-- Ollama
-- Git
 - SQLite / PostgreSQL
 
 ---
@@ -151,10 +152,21 @@ src/
     ├── components/
     │   ├── Sidebar/
     │   ├── Workspace/
-    │   └── CreateProjectModal/
+    │   │   └── content/  (AI, Git, Terminal, Editor)
+    │   ├── Settings/
+    │   └── Onboarding/
+    ├── hooks/           (useEditorGroups, useWorkspaceLayout)
+    ├── lib/
+    │   ├── ai/          (providers, tools, agent, planner)
+    │   ├── git/
+    │   ├── terminal/
+    │   ├── editor/
+    │   └── project/
     ├── globals.css
     ├── layout.js
     └── page.js
+tools/
+    └── modcodes-bridge/ (local terminal/Git bridge)
 ```
 
 ---
@@ -163,17 +175,16 @@ src/
 
 Building MODCODES is helping me develop skills in:
 
-- React
-- Next.js
-- JavaScript
-- CSS
-- UI Engineering
-- Component Architecture
-- Software Engineering
-- System Design
-- Developer Tooling
-- IDE Architecture
-- Product Engineering
+- React & Next.js (App Router, Server Components)
+- JavaScript (ES Modules, Async/Await)
+- CSS (Modules, Responsive Design)
+- UI Engineering & Component Architecture
+- IDE Architecture (Monaco, Editor Groups, Tabs)
+- AI Integration (Ollama, WebGPU, Streaming)
+- Developer Tooling (Terminal, Git, Search)
+- System Design (Security, Caching, Error Recovery)
+- Product Engineering (Approval Gates, Changesets, Memory)
+- Software Engineering (Testing, CI/CD, Documentation)
 
 ---
 
@@ -196,44 +207,46 @@ prioritized — and everything shipped is mine to explain.
 
 # Roadmap
 
-## Phase 1 — Project Management
+## Phase 1 — Project Management ✅
 
 - ✅ Create Project
 - ✅ View Projects
 - ✅ Delete Projects
-- 🚧 Unique Project IDs
-- ⏳ Edit Project
-- ⏳ Search Projects
+- ✅ Unique Project IDs
+- ✅ Edit Project
+- ✅ Search Projects
 
 ---
 
-## Phase 2 — IDE Core
+## Phase 2 — IDE Core ✅
 
-- File Explorer
-- Workspace Tabs
-- Monaco Editor
-- Integrated Terminal
+- ✅ File Explorer
+- ✅ Workspace Tabs
+- ✅ Monaco Editor
+- ✅ Integrated Terminal
 
 ---
 
-## Phase 3 — AI Features
+## Phase 3 — AI Features ✅
 
-- AI Chat
-- Local AI (Ollama)
-- AI Code Explanation
-- AI Project Assistant
+- ✅ AI Chat
+- ✅ Local AI (Ollama)
+- ✅ AI Code Explanation
+- ✅ AI Project Assistant
+- ✅ Autonomous Agent
 
 ---
 
 ## Phase 4 — Professional Features
 
-- Git Integration
-- Theme Engine
-- Plugin System
-- Settings
-- Command Palette
-- Debugger
-- Code Runner
+- ✅ Git Integration
+- ✅ Settings
+- ✅ Command Palette
+- ✅ Search
+- ⏳ Theme Engine
+- ⏳ Plugin System
+- ⏳ Debugger
+- ⏳ Code Runner
 
 ---
 

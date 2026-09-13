@@ -1,4 +1,5 @@
 import { TASK_STATES, createAgentSession, createAgentTask } from "./agentTask";
+import { observationsToChangeset } from "./agentChangeGeneration";
 
 export const ORCHESTRATOR_STATES = {
   idle: "idle",
@@ -15,11 +16,24 @@ export const ORCHESTRATOR_STATES = {
   failed: "failed",
 };
 
+const TOOL_FALLBACKS = {
+  "ide.read-file": ["ide.current-file", "ide.search"],
+  "ide.write-file": ["ide.apply-patch"],
+  "ide.apply-patch": ["ide.write-file"],
+  "ide.create-file": ["ide.write-file"],
+  "ide.search": ["ide.open-files"],
+  "ide.current-file": ["ide.read-file"],
+  "ide.diagnostics": [],
+  "ide.open-files": [],
+};
+
 export function createAgentOrchestrator({
   maxSteps = 10,
   maxToolRounds = 4,
   contextBudget = 24000,
   timeoutMs = 30000,
+  maxRetries = 2,
+  retryDelayMs = 1000,
   planner = null,
   toolRegistry = null,
   provider = null,
@@ -31,6 +45,8 @@ export function createAgentOrchestrator({
   let observations = [];
   let changeset = null;
   let abortController = null;
+  let retryCount = 0;
+  let errorHistory = [];
   const listeners = new Set();
 
   function emit() {
@@ -60,6 +76,24 @@ export function createAgentOrchestrator({
       state = ORCHESTRATOR_STATES.cancelled;
       taskSession.cancel();
     }
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function getFallbackTools(toolName) {
+    return TOOL_FALLBACKS[toolName] || [];
+  }
+
+  function recordError(toolName, args, error, attempt) {
+    errorHistory.push({
+      tool: toolName,
+      args,
+      error: error && error.message ? error.message : String(error),
+      attempt,
+      timestamp: Date.now(),
+    });
   }
 
   async function startTask({ title, description, context } = {}) {
@@ -128,6 +162,127 @@ export function createAgentOrchestrator({
     return getSnapshot();
   }
 
+  async function executeStepWithRetry({ toolName, args, permission, retryCount: attemptRetry } = {}, execFn) {
+    const maxAttempts = (attemptRetry !== undefined ? attemptRetry : maxRetries) + 1;
+    let lastError = null;
+    let attemptsMade = 0;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      attemptsMade++;
+      ensureNotCancelled();
+      if (state === ORCHESTRATOR_STATES.cancelled) {
+        return null;
+      }
+
+      if (!toolRegistry) {
+        throw new Error("Tool registry not configured");
+      }
+
+      const tool = toolRegistry.getTool ? toolRegistry.getTool(toolName) : null;
+      if (!tool) {
+        throw new Error(`Unknown tool: ${toolName}`);
+      }
+
+      state = ORCHESTRATOR_STATES.observing;
+      emit();
+      const start = Date.now();
+
+      try {
+        let result;
+        if (typeof execFn === "function") {
+          result = await execFn({ toolName, args });
+        } else {
+          result = await toolRegistry.executeToolCall
+            ? await toolRegistry.executeToolCall({ toolName, args })
+            : await tool.execute(args);
+        }
+
+        const obs = {
+          tool: toolName,
+          arguments: args,
+          result,
+          status: "success",
+          durationMs: Date.now() - start,
+          timestamp: Date.now(),
+          attempt,
+        };
+        observations.push(obs);
+        state = ORCHESTRATOR_STATES.executing;
+        emit();
+        return obs;
+      } catch (error) {
+        lastError = error;
+        recordError(toolName, args, error, attempt);
+        retryCount++;
+
+        if (attempt < maxAttempts) {
+          await sleep(retryDelayMs * attempt);
+          continue;
+        }
+      }
+    }
+
+    const fallbackTools = getFallbackTools(toolName);
+    for (const fallbackTool of fallbackTools) {
+      ensureNotCancelled();
+      if (state === ORCHESTRATOR_STATES.cancelled) {
+        return null;
+      }
+
+      const fallbackToolDef = toolRegistry.getTool ? toolRegistry.getTool(fallbackTool) : null;
+      if (!fallbackToolDef) continue;
+
+      state = ORCHESTRATOR_STATES.observing;
+      emit();
+      const start = Date.now();
+
+      try {
+        let result;
+        if (typeof execFn === "function") {
+          result = await execFn({ toolName: fallbackTool, args });
+        } else {
+          result = await toolRegistry.executeToolCall
+            ? await toolRegistry.executeToolCall({ toolName: fallbackTool, args })
+            : await fallbackToolDef.execute(args);
+        }
+
+        const obs = {
+          tool: fallbackTool,
+          arguments: args,
+          result,
+          status: "success",
+          durationMs: Date.now() - start,
+          timestamp: Date.now(),
+          fallback: true,
+          originalTool: toolName,
+        };
+        observations.push(obs);
+        state = ORCHESTRATOR_STATES.executing;
+        emit();
+        return obs;
+      } catch (fallbackError) {
+        recordError(fallbackTool, args, fallbackError, 1);
+      }
+    }
+
+    const errorMessage = lastError && lastError.message ? lastError.message : String(lastError);
+    const obs = {
+      tool: toolName,
+      arguments: args,
+      result: errorMessage,
+      status: "error",
+      durationMs: 0,
+      timestamp: Date.now(),
+      attempts: maxAttempts,
+      fallbacksAttempted: fallbackTools,
+    };
+    observations.push(obs);
+    state = ORCHESTRATOR_STATES.failed;
+    taskSession.fail(errorMessage);
+    emit();
+    throw lastError;
+  }
+
   async function executeStep({ toolName, args, permission } = {}, execFn) {
     if (state !== ORCHESTRATOR_STATES.executing && state !== ORCHESTRATOR_STATES.approved) {
       throw new Error(`Cannot execute in state ${state}`);
@@ -136,38 +291,7 @@ export function createAgentOrchestrator({
     if (state === ORCHESTRATOR_STATES.cancelled) {
       return getSnapshot();
     }
-    if (!toolRegistry) {
-      throw new Error("Tool registry not configured");
-    }
-    const tool = toolRegistry.getTool ? toolRegistry.getTool(toolName) : null;
-    if (!tool) {
-      throw new Error(`Unknown tool: ${toolName}`);
-    }
-    state = ORCHESTRATOR_STATES.observing;
-    emit();
-    const start = Date.now();
-    let result;
-    try {
-      if (typeof execFn === "function") {
-        result = await execFn({ toolName, args });
-      } else {
-        result = await toolRegistry.executeToolCall
-          ? await toolRegistry.executeToolCall({ toolName, args })
-          : await tool.execute(args);
-      }
-      const obs = { tool: toolName, arguments: args, result, status: "success", durationMs: Date.now() - start, timestamp: Date.now() };
-      observations.push(obs);
-      state = ORCHESTRATOR_STATES.executing;
-      emit();
-      return obs;
-    } catch (error) {
-      const obs = { tool: toolName, arguments: args, result: error && error.message ? error.message : String(error), status: "error", durationMs: Date.now() - start, timestamp: Date.now() };
-      observations.push(obs);
-      state = ORCHESTRATOR_STATES.failed;
-      taskSession.fail(obs.result);
-      emit();
-      throw error;
-    }
+    return executeStepWithRetry({ toolName, args, permission }, execFn);
   }
 
   function proposeChangeset(nextChangeset) {
@@ -203,10 +327,13 @@ export function createAgentOrchestrator({
     return getSnapshot();
   }
 
-  async function runAgentLoop({ title, description, context, onStepComplete, execFn, autoApprove = false } = {}) {
+  async function runAgentLoop({ title, description, context, onStepComplete, execFn, autoApprove = false, continueOnError = true } = {}) {
     if (state !== ORCHESTRATOR_STATES.idle && state !== ORCHESTRATOR_STATES.completed && state !== ORCHESTRATOR_STATES.cancelled && state !== ORCHESTRATOR_STATES.failed) {
       throw new Error(`Cannot start agent loop in state ${state}`);
     }
+
+    retryCount = 0;
+    errorHistory = [];
 
     await startTask({ title, description, context });
     if (state === ORCHESTRATOR_STATES.failed) return getSnapshot();
@@ -221,9 +348,17 @@ export function createAgentOrchestrator({
     }
 
     const steps = plan && Array.isArray(plan.steps) ? plan.steps : [];
+    let consecutiveFailures = 0;
+    const maxConsecutiveFailures = 3;
+
     for (let i = 0; i < steps.length && i < maxSteps; i++) {
       ensureNotCancelled();
       if (state === ORCHESTRATOR_STATES.cancelled) break;
+
+      if (state === ORCHESTRATOR_STATES.failed && continueOnError) {
+        state = ORCHESTRATOR_STATES.executing;
+        emit();
+      }
 
       const step = steps[i];
       const toolToUse = step.expectedTools && step.expectedTools.length > 0
@@ -236,28 +371,70 @@ export function createAgentOrchestrator({
 
       try {
         const obs = await executeStep({ toolName: toolToUse, args }, execFn);
+        consecutiveFailures = 0;
         if (typeof onStepComplete === "function") {
           onStepComplete({ step, observation: obs, index: i, total: steps.length });
         }
-      } catch {
-        break;
+      } catch (error) {
+        consecutiveFailures++;
+        retryCount++;
+
+        if (typeof onStepComplete === "function") {
+          onStepComplete({
+            step,
+            observation: { tool: toolToUse, status: "error", error: error.message },
+            index: i,
+            total: steps.length,
+            failed: true,
+          });
+        }
+
+        if (!continueOnError || consecutiveFailures >= maxConsecutiveFailures) {
+          break;
+        }
       }
     }
 
-    if (state === ORCHESTRATOR_STATES.executing || state === ORCHESTRATOR_STATES.observing) {
-      proposeChangeset({
-        id: `changeset-${Date.now()}`,
-        operations: observations
-          .filter((obs) => obs.status === "success" && obs.tool !== "ide.current-file")
-          .map((obs) => ({
-            type: "modify",
-            path: obs.arguments && obs.arguments.path || "unknown",
-            reason: `Step: ${obs.tool}`,
-          })),
+    const successfulObs = observations.filter((obs) => obs.status === "success");
+    const failedObs = observations.filter((obs) => obs.status === "error");
+
+    if (successfulObs.length > 0 || (state === ORCHESTRATOR_STATES.executing || state === ORCHESTRATOR_STATES.observing)) {
+      const generatedChangeset = observationsToChangeset({
+        title: `Agent changeset: ${title || "task"}`,
+        observations: successfulObs,
       });
+
+      if (generatedChangeset) {
+        generatedChangeset.metadata = {
+          totalSteps: steps.length,
+          successfulSteps: successfulObs.length,
+          failedSteps: failedObs.length,
+          retryCount,
+          errorHistory: errorHistory.slice(-10),
+        };
+        changeset = generatedChangeset;
+        state = ORCHESTRATOR_STATES.changesProposed;
+        taskSession.setState(TASK_STATES.observing);
+        state = ORCHESTRATOR_STATES.awaitingReview;
+        emit();
+      } else {
+        state = ORCHESTRATOR_STATES.awaitingReview;
+        emit();
+      }
+    } else if (state === ORCHESTRATOR_STATES.failed && observations.length > 0) {
+      state = ORCHESTRATOR_STATES.awaitingReview;
+      emit();
     }
 
     return getSnapshot();
+  }
+
+  function getErrorHistory() {
+    return [...errorHistory];
+  }
+
+  function getRetryCount() {
+    return retryCount;
   }
 
   return {
@@ -267,10 +444,13 @@ export function createAgentOrchestrator({
     approvePlan,
     rejectPlan,
     executeStep,
+    executeStepWithRetry,
     proposeChangeset,
     complete,
     cancel,
     fail,
     runAgentLoop,
+    getErrorHistory,
+    getRetryCount,
   };
 }
