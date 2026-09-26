@@ -1,27 +1,47 @@
 .chat-input{
-    border: 2px solid var(--border-color);
-    padding: 15px;
     display: flex;
     flex-direction: row;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: var(--space-md) var(--space-lg) var(--space-lg);
+    padding: var(--space-sm);
+    background-color: var(--surface-bg);
+    border: solid 1px var(--border-color);
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
 }
 
 .input{
     color: var(--primary-text);
-    
-    background-color: var(--surface-bg);
-    display: flex;    
+    background-color: transparent;
+    display: flex;
     flex-grow: 1;
+    min-width: 0;
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    outline: none;
+    font-size: var(--text-sm);
+}
+
+.input::placeholder{
+    color: var(--muted-text);
 }
 
 .chat-button{
-    display: flex;
+    --btn-padding-y: var(--space-sm);
+    --btn-padding-x: var(--sp-10);
+    --btn-radius: var(--radius-md);
+    --btn-transition: background-color var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--primary-text);
     background-color: var(--accent-color);
-    border:solid 2px var(--border-color);
-    border-radius: 5px;
-    padding: 10px;
+    border: solid 1px var(--accent-40);
+    border-radius: var(--btn-radius);
+    padding: var(--btn-padding-y) var(--btn-padding-x);
     cursor: pointer;
-    gap: 10px;
+    transition: var(--btn-transition);
 }
 
 .chat-button:hover{
@@ -30,4 +50,10 @@
 
 .chat-button:active{
     background-color: var(--active-color);
+}
+
+@media (max-width: 768px) {
+    .chat-input {
+        margin: var(--space-sm) var(--space-sm) var(--space-md);
+    }
 }

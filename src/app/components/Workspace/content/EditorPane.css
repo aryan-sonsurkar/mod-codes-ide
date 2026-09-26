@@ -13,17 +13,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 6px 12px;
+  gap: var(--sp-12);
+  padding: var(--sp-6) var(--sp-12);
   min-height: 36px;
   border-bottom: solid 1px var(--border-color);
-  background-color: rgba(24, 18, 43, 0.5);
+  background-color: var(--sidebar-50);
 }
 
 .editor-toolbar-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   min-width: 0;
 }
 
@@ -38,12 +38,12 @@
 
 .editor-dirty {
   color: var(--warning-color);
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 
 .editor-save-hint {
   color: var(--success-color);
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 
 .editor-save-error {
@@ -51,24 +51,27 @@
 }
 
 .editor-warning {
-  padding: 4px 12px;
-  background-color: rgba(245, 158, 11, 0.08);
+  padding: var(--sp-4) var(--sp-12);
+  background-color: var(--warning-08);
   color: var(--warning-color);
   border-bottom: solid 1px var(--border-color);
   font-size: var(--text-sm);
 }
 
 .editor-save-button {
+  --btn-padding-y: var(--sp-4);
+  --btn-padding-x: var(--sp-12);
+  --btn-transition: all var(--transition-base);
   color: var(--primary-text);
   background-color: var(--accent-color);
-  border: solid 1px rgba(139, 92, 246, 0.4);
-  border-radius: var(--radius-lg);
-  padding: 4px 12px;
+  border: solid 1px var(--accent-40);
+  border-radius: var(--btn-radius);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   cursor: pointer;
   flex-shrink: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: all var(--transition-base);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  transition: var(--btn-transition);
 }
 
 .editor-save-button:hover:not(:disabled) {
@@ -87,7 +90,7 @@
   align-items: center;
   justify-content: center;
   color: var(--muted-text);
-  padding: 12px;
+  padding: var(--sp-12);
   font-size: var(--text-sm);
 }
 

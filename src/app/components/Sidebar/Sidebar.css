@@ -2,43 +2,59 @@
   display: flex;
   background-color: var(--sidebar-bg);
   width: 250px;
-  border-right: solid 2px #f8f8f8;
+  border-right: solid 1px var(--border-color);
   text-align: left;
   flex-direction: column;
   color: var(--primary-text);
-  padding: 10px;
-  gap: 10px;
+  padding: var(--space-sm);
+  gap: var(--space-sm);
 }
 
 .sidebar-brand{
   display: block;
-  padding: 4px 10px 10px;
+  padding: var(--space-xs) var(--space-sm) var(--space-md);
   color: var(--accent-color);
   font-weight: 700;
   letter-spacing: 2px;
 }
 
-.projectsbtn{
+.projectsbtn,
+.settingsbtn{
+  --btn-padding-y: var(--space-sm);
+  --btn-padding-x: var(--space-sm);
+  --btn-radius: var(--radius-md);
+  --btn-gap: var(--space-xl);
+  --btn-transition: background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base);
   display: flex;
   flex-direction: row;
-  padding: 10px;
-  gap: 20px;
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  gap: var(--btn-gap);
   background-color: var(--surface-bg);
-  color: var(--primary-text)
+  color: var(--primary-text);
+  border: solid 1px var(--border-color);
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  transition: var(--btn-transition);
 }
 
-.settingsbtn{
-  display: flex;
-  flex-direction: row;
-  padding: 10px;
-  gap: 20px;
-  background-color: var(--surface-bg);
-  color: var(--primary-text)
+.projectsbtn:hover,
+.settingsbtn:hover{
+  background-color: var(--hover-color);
+  border-color: var(--accent-color);
+  color: var(--primary-text);
+}
+
+.projectsbtn:active,
+.settingsbtn:active{
+  background-color: var(--active-color);
 }
 
 .sidebar-active{
   background-color: var(--accent-color);
-  color: #ffffff;
+  border-color: var(--accent-color);
+  color: var(--white);
 }
 
 @media (max-width: 768px) {
@@ -47,22 +63,22 @@
     align-items: center;
     width: 100%;
     border-right: none;
-    border-bottom: solid 2px var(--border-color);
-    gap: 8px;
-    padding: 6px 8px;
+    border-bottom: solid 1px var(--border-color);
+    gap: var(--space-sm);
+    padding: var(--sp-6) var(--space-sm);
     overflow: hidden;
   }
 
   .sidebar-brand {
     margin-right: auto;
-    padding-bottom: 4px;
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-bottom: var(--space-xs);
+    padding-left: var(--space-xs);
+    padding-right: var(--space-xs);
   }
 
   .projectsbtn,
   .settingsbtn {
-    gap: 8px;
-    padding: 8px 10px;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--sp-10);
   }
 }

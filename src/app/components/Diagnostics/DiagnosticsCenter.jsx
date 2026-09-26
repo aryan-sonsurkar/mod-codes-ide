@@ -1,6 +1,30 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+  detectWebGpuCapability,
+  isWebGpuAvailable,
+} from "../../lib/ai/browser/webgpu";
 import "./DiagnosticsCenter.css";
+
+// Shared by the "WebGPU" and "Bonsai (WebGPU)" rows so opening diagnostics
+// creates a single GPU device and both rows report the same result.
+let webGpuProbePromise = null;
+function probeWebGpu() {
+  if (!webGpuProbePromise) {
+    webGpuProbePromise = detectWebGpuCapability()
+      .then((capability) => {
+        if (!isWebGpuAvailable(capability)) {
+          webGpuProbePromise = null;
+        }
+        return capability;
+      })
+      .catch(() => {
+        webGpuProbePromise = null;
+        return null;
+      });
+  }
+  return webGpuProbePromise;
+}
 
 function detect(name, fn) {
   try {
@@ -26,7 +50,7 @@ export default function DiagnosticsCenter() {
       detect("Browser", () => typeof navigator !== "undefined" && navigator.userAgent),
       detect("OS/platform", () => typeof navigator !== "undefined" && (navigator.platform || navigator.userAgentData?.platform || "unknown")),
       detect("File System Access API", () => typeof window !== "undefined" && "showDirectoryPicker" in window),
-      detect("WebGPU", () => typeof navigator !== "undefined" && "gpu" in navigator),
+      detect("WebGPU", async () => isWebGpuAvailable(await probeWebGpu())),
       detect("Web Worker", () => typeof Worker !== "undefined"),
       detect("Cache Storage", () => typeof caches !== "undefined"),
       detect("Monaco", () => true),
@@ -38,7 +62,7 @@ export default function DiagnosticsCenter() {
           return false;
         }
       }),
-      detect("Bonsai (WebGPU)", () => typeof navigator !== "undefined" && "gpu" in navigator),
+      detect("Bonsai (WebGPU)", async () => isWebGpuAvailable(await probeWebGpu())),
       detect("Terminal Bridge (127.0.0.1:8787)", async () => {
         try {
           const res = await fetch("http://127.0.0.1:8787/health", { method: "GET", signal: AbortSignal.timeout(800) });

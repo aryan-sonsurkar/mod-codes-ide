@@ -134,3 +134,82 @@ export function normalizeStorageError(error) {
   }
   return { code: "storage-failed", retryable: true, cause: error };
 }
+
+function requestUrl(input) {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input && typeof input.url === "string") {
+    return input.url;
+  }
+  if (input && typeof input.href === "string") {
+    return input.href;
+  }
+  return String(input);
+}
+
+function readHeader(headers, name) {
+  if (!headers) {
+    return null;
+  }
+  if (typeof headers.get === "function") {
+    try {
+      return headers.get(name);
+    } catch {
+      return null;
+    }
+  }
+  const direct = headers[name] ?? headers[name.toLowerCase()];
+  return typeof direct === "string" ? direct : null;
+}
+
+function isCacheableWeightRequest(input, init) {
+  const method = ((init && init.method) || (typeof input === "object" && input && input.method) || "GET").toUpperCase();
+  if (method !== "GET") {
+    return false;
+  }
+  const headers = (init && init.headers) || (typeof input === "object" && input && input.headers) || null;
+  // Range responses are partial; serving the full cached body would corrupt
+  // any reader that depends on 206 semantics, so those always hit the network.
+  return !readHeader(headers, "Range");
+}
+
+/**
+ * Wraps `fetch` so model weight files already written to the browser weight
+ * cache are served from Cache Storage instead of the network. Without this the
+ * 200+ MB download performed by `downloadModel` is never actually reused: the
+ * runtime fetches the model files again on every load.
+ *
+ * Only plain GET requests without a Range header are served from the cache;
+ * everything else falls through to the network untouched.
+ */
+export function createWeightCachedFetch({
+  cacheName = WEIGHT_CACHE_NAME,
+  cacheProvider = null,
+  fetchImpl = typeof fetch === "function" ? fetch : null,
+} = {}) {
+  if (typeof fetchImpl !== "function") {
+    return null;
+  }
+  if (!cacheProvider || typeof cacheProvider.open !== "function") {
+    return null;
+  }
+
+  return async function weightCachedFetch(input, init) {
+    if (!isCacheableWeightRequest(input, init)) {
+      return fetchImpl(input, init);
+    }
+    try {
+      const cache = await openWeightCache(cacheProvider, cacheName);
+      if (cache) {
+        const hit = await cache.match(requestUrl(input));
+        if (hit) {
+          return hit;
+        }
+      }
+    } catch {
+      // Cache Storage unavailable or entry unreadable: fall back to network.
+    }
+    return fetchImpl(input, init);
+  };
+}

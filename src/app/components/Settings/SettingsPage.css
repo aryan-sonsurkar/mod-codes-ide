@@ -2,21 +2,21 @@
   display: flex;
   flex-grow: 1;
   min-width: 0;
-  gap: 24px;
-  padding: 24px;
+  gap: var(--sp-24);
+  padding: var(--sp-24);
   background-color: var(--workspace-bg);
 }
 
 .settings-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-12);
   width: 200px;
   flex-shrink: 0;
 }
 
 .settings-title {
-  font-size: 22px;
+  font-size: var(--fs-22);
   color: var(--primary-text);
   letter-spacing: -0.3px;
 }
@@ -24,86 +24,89 @@
 .settings-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
 }
 
 .settings-nav-item {
+  --btn-padding-y: var(--sp-8);
+  --btn-padding-x: var(--sp-12);
+  --btn-transition: all var(--transition-fast);
   text-align: left;
-  padding: 8px 12px;
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   border: solid 1px transparent;
-  border-radius: var(--radius-lg);
+  border-radius: var(--btn-radius);
   background-color: transparent;
   color: var(--secondary-text);
-  font-weight: 600;
-  font-size: var(--text-sm);
+  font-weight: var(--btn-font-weight);
+  font-size: var(--btn-font-size);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: var(--btn-transition);
 }
 
 .settings-nav-item:hover {
-  background-color: rgba(139, 92, 246, 0.08);
+  background-color: var(--accent-08);
   color: var(--primary-text);
 }
 
 .settings-nav-item-active {
-  background-color: rgba(139, 92, 246, 0.15);
+  background-color: var(--accent-15);
   color: var(--accent-color);
-  border-color: rgba(139, 92, 246, 0.2);
+  border-color: var(--accent-20);
 }
 
 .settings-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-12);
   flex-grow: 1;
   min-width: 0;
   max-width: 640px;
 }
 
 .settings-category-title {
-  font-size: 20px;
+  font-size: var(--fs-20);
   color: var(--primary-text);
   letter-spacing: -0.3px;
 }
 
 .settings-category-description {
   color: var(--secondary-text);
-  font-size: 14px;
-  margin-bottom: 8px;
+  font-size: var(--fs-14);
+  margin-bottom: var(--sp-8);
 }
 
 .settings-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 
 .settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 16px;
-  background-color: rgba(42, 31, 77, 0.5);
+  gap: var(--sp-16);
+  padding: var(--sp-12) var(--sp-16);
+  background-color: var(--surface-50);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-lg);
   transition: border-color var(--transition-fast);
 }
 
 .settings-row:hover {
-  border-color: rgba(139, 92, 246, 0.2);
+  border-color: var(--accent-20);
 }
 
 .settings-row-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-2);
   min-width: 0;
 }
 
 .settings-row-label {
   color: var(--primary-text);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
 }
 
@@ -118,8 +121,8 @@
   flex-shrink: 0;
   padding: 0;
   border: solid 1px var(--border-color);
-  border-radius: 12px;
-  background-color: rgba(59, 46, 90, 0.5);
+  border-radius: var(--radius-12);
+  background-color: var(--border-50);
   cursor: pointer;
   position: relative;
   transition: background-color var(--transition-fast);
@@ -136,7 +139,7 @@
   left: 2px;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background-color: var(--primary-text);
   transition: left var(--transition-fast);
 }
@@ -148,14 +151,14 @@
 .settings-number-control {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   flex-shrink: 0;
 }
 
 .settings-number-input {
   width: 70px;
-  padding: 6px 8px;
-  background-color: rgba(34, 24, 58, 0.6);
+  padding: var(--sp-6) var(--sp-8);
+  background-color: var(--workspace-60);
   color: var(--primary-text);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-md);
@@ -175,8 +178,8 @@
 
 .settings-select {
   width: 280px;
-  padding: 6px 8px;
-  background-color: rgba(34, 24, 58, 0.6);
+  padding: var(--sp-6) var(--sp-8);
+  background-color: var(--workspace-60);
   color: var(--primary-text);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-md);
@@ -192,8 +195,8 @@
 
 .settings-text-input {
   width: 280px;
-  padding: 6px 8px;
-  background-color: rgba(34, 24, 58, 0.6);
+  padding: var(--sp-6) var(--sp-8);
+  background-color: var(--workspace-60);
   color: var(--primary-text);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-md);
@@ -210,20 +213,21 @@
 .settings-connection-control {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-shrink: 0;
 }
 
 .settings-connection-button {
-  padding: 6px 14px;
+  --btn-transition: all var(--transition-base);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  color: #ffffff;
+  color: var(--white);
   border: none;
-  border-radius: var(--radius-lg);
-  font-weight: 600;
-  font-size: var(--text-sm);
+  border-radius: var(--btn-radius);
+  font-weight: var(--btn-font-weight);
+  font-size: var(--btn-font-size);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: var(--btn-transition);
 }
 
 .settings-connection-button:hover:not(:disabled) {
@@ -248,8 +252,8 @@
 }
 
 .settings-ai-note {
-  padding: 12px 16px;
-  background-color: rgba(42, 31, 77, 0.5);
+  padding: var(--sp-12) var(--sp-16);
+  background-color: var(--surface-50);
   border: dashed 1px var(--border-color);
   border-radius: var(--radius-lg);
   color: var(--secondary-text);
@@ -258,8 +262,8 @@
 }
 
 .settings-placeholder {
-  padding: 12px 16px;
-  background-color: rgba(42, 31, 77, 0.5);
+  padding: var(--sp-12) var(--sp-16);
+  background-color: var(--surface-50);
   border: dashed 1px var(--border-color);
   border-radius: var(--radius-lg);
   color: var(--secondary-text);
@@ -270,40 +274,40 @@
 .settings-inline-status {
   color: var(--success-color);
   font-size: var(--text-xs);
-  margin-top: -4px;
-  padding-left: 2px;
+  margin-top: var(--sp-neg-4);
+  padding-left: var(--sp-2);
 }
 
 .settings-remote-notice {
-  padding: 10px 14px;
+  padding: var(--sp-10) var(--sp-14);
   border-radius: var(--radius-md);
-  background-color: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background-color: var(--warning-08);
+  border: 1px solid var(--warning-25);
   color: var(--warning-color);
   font-size: var(--text-sm);
   line-height: 1.5;
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
 }
 
 .settings-remote-notice strong {
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-2);
   font-weight: 600;
 }
 
 .settings-remote-notice code {
   font-family: var(--font-mono);
-  background-color: rgba(139, 92, 246, 0.1);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 12px;
+  background-color: var(--accent-10);
+  padding: var(--sp-1) var(--sp-5);
+  border-radius: var(--radius-3);
+  font-size: var(--fs-12);
   color: var(--accent-color);
 }
 
 @media (max-width: 768px) {
   .settings-page {
     flex-direction: column;
-    padding: 16px;
+    padding: var(--sp-16);
   }
 
   .settings-sidebar {

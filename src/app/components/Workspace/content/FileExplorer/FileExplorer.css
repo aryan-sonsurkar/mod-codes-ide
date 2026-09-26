@@ -4,19 +4,19 @@
   overflow-y: auto;
   background-color: transparent;
   color: var(--primary-text);
-  padding: 4px;
+  padding: var(--sp-4);
 }
 
 .explorer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-8);
   font-weight: 600;
   letter-spacing: 1px;
   color: var(--muted-text);
-  padding: 4px 8px 8px;
-  margin-bottom: 4px;
+  padding: var(--sp-4) var(--sp-8) var(--sp-8);
+  margin-bottom: var(--sp-4);
   border-bottom: solid 1px var(--border-color);
   font-size: var(--text-xs);
 }
@@ -27,9 +27,9 @@
 }
 
 .explorer-filter-input {
-  padding: 5px 8px;
-  margin-bottom: 6px;
-  background-color: rgba(34, 24, 58, 0.6);
+  padding: var(--sp-5) var(--sp-8);
+  margin-bottom: var(--sp-6);
+  background-color: var(--workspace-60);
   color: var(--primary-text);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-md);
@@ -44,22 +44,27 @@
 
 .explorer-actions {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-4);
 }
 
 .explorer-action-button {
+  --btn-padding-y: var(--sp-3);
+  --btn-padding-x: var(--sp-8);
+  --btn-radius: var(--radius-md);
+  --btn-font-size: var(--text-xs);
+  --btn-transition: all var(--transition-fast);
   background: transparent;
   color: var(--muted-text);
   border: solid 1px transparent;
-  border-radius: var(--radius-md);
-  padding: 3px 8px;
-  font-size: var(--text-xs);
+  border-radius: var(--btn-radius);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  font-size: var(--btn-font-size);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: var(--btn-transition);
 }
 
 .explorer-action-button:hover {
-  background-color: rgba(139, 92, 246, 0.1);
+  background-color: var(--accent-10);
   color: var(--primary-text);
   border-color: var(--border-color);
 }
@@ -81,7 +86,7 @@
   display: flex;
   flex-direction: column;
   min-width: 160px;
-  padding: 4px;
+  padding: var(--sp-4);
   background-color: var(--surface-bg);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-lg);
@@ -91,7 +96,7 @@
 
 .explorer-menu-item {
   text-align: left;
-  padding: 6px 10px;
+  padding: var(--sp-6) var(--sp-10);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -102,7 +107,7 @@
 }
 
 .explorer-menu-item:hover {
-  background-color: rgba(139, 92, 246, 0.12);
+  background-color: var(--accent-12);
 }
 
 .explorer-menu-danger {
@@ -110,7 +115,7 @@
 }
 
 .explorer-menu-danger:hover {
-  background-color: rgba(239, 68, 68, 0.12);
+  background-color: var(--danger-12);
 }
 
 .explorer-overlay {
@@ -119,7 +124,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--black-60);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 30;
@@ -129,11 +134,11 @@
 .explorer-dialog {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-14);
   width: 100%;
   max-width: min(380px, calc(100vw - 32px));
   box-sizing: border-box;
-  padding: 20px;
+  padding: var(--sp-20);
   background-color: var(--surface-bg);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-xl);
@@ -148,8 +153,8 @@
 }
 
 .explorer-dialog-input {
-  padding: 8px 10px;
-  background-color: rgba(34, 24, 58, 0.6);
+  padding: var(--sp-8) var(--sp-10);
+  background-color: var(--workspace-60);
   color: var(--primary-text);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-md);
@@ -170,19 +175,20 @@
 .explorer-dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 
 .explorer-dialog-button {
+  --btn-transition: all var(--transition-base);
   color: var(--primary-text);
   background-color: var(--surface-bg);
   border: solid 1px var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 6px 14px;
+  border-radius: var(--btn-radius);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: all var(--transition-base);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  transition: var(--btn-transition);
 }
 
 .explorer-dialog-button:hover {
@@ -211,15 +217,15 @@
 
 .explorer-empty {
   color: var(--muted-text);
-  padding: 8px;
+  padding: var(--sp-8);
   font-size: var(--text-sm);
 }
 
 .tree-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
+  gap: var(--sp-6);
+  padding: var(--sp-3) var(--sp-6);
   border-radius: var(--radius-md);
   white-space: nowrap;
   overflow: hidden;
@@ -239,7 +245,7 @@
   align-items: center;
   flex-shrink: 0;
   color: var(--muted-text);
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 
 .tree-row-directory .tree-icon {
@@ -247,7 +253,7 @@
 }
 
 .tree-row-selected .tree-icon {
-  color: #ffffff;
+  color: var(--white);
 }
 
 .tree-row-directory {
@@ -257,7 +263,7 @@
 }
 
 .tree-row-directory:hover {
-  background-color: rgba(139, 92, 246, 0.1);
+  background-color: var(--accent-10);
 }
 
 .tree-row-file {
@@ -266,13 +272,13 @@
 }
 
 .tree-row-file:hover {
-  background-color: rgba(139, 92, 246, 0.06);
+  background-color: var(--accent-06);
   color: var(--primary-text);
 }
 
 .tree-row-selected {
   background-color: var(--accent-color);
-  color: #ffffff;
+  color: var(--white);
 }
 
 .tree-row-selected:hover {
@@ -294,7 +300,60 @@
 .tree-empty {
   color: var(--muted-text);
   font-style: italic;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  padding-top: var(--sp-2);
+  padding-bottom: var(--sp-2);
   font-size: var(--text-sm);
+}
+
+@media (max-width: 1024px) {
+  .file-explorer {
+    width: 240px;
+    padding: var(--sp-3);
+  }
+
+  .explorer-header {
+    padding: var(--sp-4) var(--sp-6) var(--sp-6);
+    letter-spacing: 0.5px;
+  }
+
+  .explorer-filter-input {
+    padding: var(--sp-4) var(--sp-6);
+    font-size: var(--text-xs);
+  }
+}
+
+@media (max-width: 768px) {
+  .file-explorer {
+    width: 100%;
+    padding: var(--sp-4);
+  }
+
+  .explorer-header {
+    padding: var(--sp-4) var(--sp-8) var(--sp-6);
+    letter-spacing: 1px;
+  }
+
+  .explorer-filter-input {
+    font-size: var(--text-sm);
+  }
+}
+
+@media (max-width: 640px) {
+  .file-explorer {
+    padding: var(--sp-3);
+  }
+
+  .explorer-header {
+    font-size: var(--fs-11);
+    letter-spacing: 0.5px;
+  }
+
+  .explorer-actions {
+    gap: var(--sp-2);
+  }
+
+  .explorer-action-button {
+    --btn-padding-y: var(--sp-3);
+    --btn-padding-x: var(--sp-6);
+  }
 }

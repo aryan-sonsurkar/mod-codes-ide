@@ -1324,7 +1324,7 @@ export default function IdeWorkspace({ selectedProject }) {
           </button>
         </div>
       </header>
-      <div className="workspace-mode-bar" role="tablist" aria-label="Workspace modes" style={{display:"flex",gap:6,padding:"6px 0"}}>
+      <div className="workspace-mode-bar" role="tablist" aria-label="Workspace modes">
         {[
           ["code","Code"],
           ["overview","Overview"],
@@ -1335,7 +1335,7 @@ export default function IdeWorkspace({ selectedProject }) {
         ].map(([id,label])=>(
           <button key={id} role="tab" aria-selected={workspaceMode===id} className={`ide-header-button${workspaceMode===id?" ide-header-button-active":""}`} onClick={()=>setWorkspaceMode(id)}>{label}</button>
         ))}
-        <span style={{marginLeft:"auto",color:"var(--secondary-text)",fontSize:12,alignSelf:"center"}}>Phase: {modcodesData?.project?.phase || "idea"} · .modcodes local</span>
+        <span className="workspace-mode-bar-phase">Phase: {modcodesData?.project?.phase || "idea"} · .modcodes local</span>
       </div>
 
       {showContinue && modcodesData && (
@@ -1352,7 +1352,7 @@ export default function IdeWorkspace({ selectedProject }) {
       {status === "ready" && tree ? (
         <>
           {workspaceMode !== "code" ? (
-            <div style={{flex:1, minHeight:0, overflow:"auto", background:"var(--workspace-bg)", border:"1px solid var(--border-color)", borderRadius:8}}>
+            <div className="ide-mode-panel">
               {workspaceMode==="overview" && <ProjectOverview modcodesData={modcodesData} codebaseSnapshot={{fileCount: collectFileCount(tree), filesChangedSinceLastSession:0}} onContinue={()=>setWorkspaceMode("code")} onOpen={()=>setWorkspaceMode("code")} onReview={()=>{}} onPhaseChange={(next)=>{const u={...modcodesData, project:{...modcodesData.project, phase:next, updatedAt:new Date().toISOString()}}; setModcodesData(u); saveModcodes({rootName:tree.name,data:u});}} />}
               {workspaceMode==="research" && <ResearchWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}
               {workspaceMode==="prd" && <PRDWorkspace modcodesData={modcodesData} onUpdate={(next)=>{setModcodesData(next); saveModcodes({rootName:tree.name,data:next});}} />}

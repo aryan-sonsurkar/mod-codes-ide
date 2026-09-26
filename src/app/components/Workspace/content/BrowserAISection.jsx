@@ -69,6 +69,7 @@ export default function BrowserAISection({
   registry,
   onStateChange = () => {},
   onReinitialize = () => {},
+  onReleaseModel = () => {},
 }) {
   const [progress, setProgress] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -170,9 +171,19 @@ export default function BrowserAISection({
       return;
     }
     setBusy(true);
+    setConfirmEvict(false);
     try {
       const info = await registry.getModel(BROWSER_MODEL_ID);
-      if (info && info.state === MODEL_STATES.ready) {
+      const resident =
+        info &&
+        (info.state === MODEL_STATES.ready || info.state === MODEL_STATES.loading);
+      // Prefer the real release: unloadModel disposes the engine inside the
+      // worker, which is what actually returns the GPU memory to the browser.
+      let released = false;
+      if (typeof onReleaseModel === "function") {
+        released = Boolean(await onReleaseModel());
+      }
+      if (!released && resident) {
         await registry.markUnloading?.(BROWSER_MODEL_ID);
         await registry.finishDownload?.(BROWSER_MODEL_ID);
       }
@@ -180,7 +191,7 @@ export default function BrowserAISection({
     } finally {
       setBusy(false);
     }
-  }, [registry, onStateChange]);
+  }, [registry, onStateChange, onReleaseModel]);
 
   if (!capability || !registry) {
     return (

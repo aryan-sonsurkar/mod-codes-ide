@@ -28,6 +28,7 @@ import {
   formatDurationMs,
   formatTokensPerSecond,
   hardwareTier,
+  isBonsaiInputDisabled,
   isWebGpuAvailable,
   loadConversations,
   parseReferencesFromText,
@@ -246,6 +247,16 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
   const listRef = useRef(null);
   const toolRegistryRef = useRef(null);
   const browserRuntimeRef = useRef(null);
+  const browserRegistryRef = useRef(null);
+  const providerRef = useRef(null);
+  const getContextDataRef = useRef(getContextData);
+
+  // Keep the latest context callback for tools without putting it in any
+  // dependency array (context changes on every keystroke, which used to
+  // recreate the provider/session constantly).
+  useEffect(() => {
+    getContextDataRef.current = getContextData;
+  }, [getContextData]);
 
   const cacheProvider = useMemo(
     () =>
@@ -306,11 +317,14 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     return `${Math.round(profile.deviceMemoryGb)} GB RAM detected — ${top.model.name} fits.`;
   }, []);
 
+  // Reads the registry through a ref so the callback identity is stable.
+  // Depending on the registry state here made this callback change on every
+  // registry install, which re-ran the effect below and installed yet another
+  // registry — an infinite create/replace loop.
   const refreshBrowserModel = useCallback(async () => {
-    setBrowserModelInfo(
-      browserRegistry ? await browserRegistry.getModel(BROWSER_MODEL_ID) : null
-    );
-  }, [browserRegistry]);
+    const registry = browserRegistryRef.current;
+    setBrowserModelInfo(registry ? await registry.getModel(BROWSER_MODEL_ID) : null);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -332,6 +346,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           }
         },
       });
+      browserRegistryRef.current = registry;
       setBrowserRegistry(registry);
       setBrowserModelInfo(await registry.getModel(BROWSER_MODEL_ID));
     }, 0);
@@ -398,7 +413,13 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
 
       let provider;
       if (providerId === "browser-bonsai") {
-        if (!capability || !isWebGpuAvailable(capability)) {
+        if (!capability) {
+          // Detection has not finished yet: stay in the loading state instead
+          // of flashing "unsupported" for a browser that may be fine.
+          setStatus(PROVIDER_STATES.checking);
+          return;
+        }
+        if (!isWebGpuAvailable(capability)) {
           setStatus(PROVIDER_STATES.unsupported);
           return;
         }
@@ -418,12 +439,22 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
           registry: browserRegistry,
           capabilityDetector: () => capability,
           defaultModelId: BROWSER_MODEL_ID,
+          onDeviceLost: ({ reason }) => {
+            if (!active) {
+              return;
+            }
+            setStatus(PROVIDER_STATES.unavailable);
+            setCapability((prev) =>
+              prev ? { ...prev, state: "lost", reason: reason || "lost" } : prev
+            );
+          },
         });
       } else {
         provider = createOllamaProvider({
           baseUrl: settings.ai?.baseUrl,
         });
       }
+      providerRef.current = provider;
 
       const connection = await provider.testConnection();
       if (!active) {
@@ -469,7 +500,9 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       });
 
       if (!toolRegistryRef.current) {
-        toolRegistryRef.current = buildToolRegistry(getContextData);
+        // Deref the ref at call time so tools always see the current editor
+        // context even though the registry is built only once.
+        toolRegistryRef.current = buildToolRegistry(() => getContextDataRef.current?.());
       }
 
       if (!orchestratorRef.current) {
@@ -496,7 +529,6 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     retryToken,
     providerId,
     settings.ai,
-    getContextData,
     capability,
     browserModelInfo,
     browserRegistry,
@@ -1086,12 +1118,28 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     []
   );
 
+  // "Free GPU memory" must actually release the resident engine; only flipping
+  // registry state left the 200+ MB of GPU allocations alive in the worker.
+  const handleReleaseBrowserModel = useCallback(async () => {
+    const provider = providerRef.current;
+    if (!provider || typeof provider.unloadModel !== "function") {
+      return false;
+    }
+    try {
+      const result = await provider.unloadModel(BROWSER_MODEL_ID);
+      return Boolean(result && result.unloaded);
+    } catch {
+      return false;
+    }
+  }, []);
+
   const connectionClass = providerStateClass(status);
 
-  const inputDisabled =
-    status !== PROVIDER_STATES.ready ||
-    (providerId === "browser-bonsai" &&
-      !(browserModelInfo && browserModelInfo.state === MODEL_STATES.downloaded));
+  const inputDisabled = isBonsaiInputDisabled({
+    status,
+    providerId,
+    browserModelInfo,
+  });
 
   const modelStatusLabel = (() => {
     if (status === PROVIDER_STATES.checking) {
@@ -1255,6 +1303,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
         registry={browserRegistry}
         onStateChange={handleBrowserStateChange}
         onReinitialize={handleReinitializeWebGpu}
+        onReleaseModel={handleReleaseBrowserModel}
       />
 
       {(status === PROVIDER_STATES.unavailable || status === PROVIDER_STATES.busy) && <AISetup providerId={providerId} />}

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AI_ERRORS } from "../errors";
+import { PROVIDER_STATES } from "../providerStates";
 import { MODEL_STATES } from "./registry";
 import { createModelRegistry } from "./registry";
 import { createBrowserBonsaiProvider } from "./provider";
@@ -416,5 +417,142 @@ describe("createBrowserBonsaiProvider", () => {
     }
     expect(chunks[0].type).toBe("error");
     expect(chunks[0].error.code).toBe(AI_ERRORS.unsupported);
+  });
+});
+
+describe("createBrowserBonsaiProvider unloadModel", () => {
+  it("disposes the resident engine and returns the model to downloaded", async () => {
+    const registry = await downloadedRegistry();
+    const { runtime, engine } = makeRuntime({
+      events: [{ type: "text", text: "hi" }, { type: "done" }],
+    });
+    const provider = createBrowserBonsaiProvider({
+      runtime,
+      registry,
+      capabilityDetector: async () => makeCapability(),
+    });
+
+    await provider.chat({
+      model: "bonsai-1.7b",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    expect(runtime.createEngine).toHaveBeenCalledTimes(1);
+
+    await expect(provider.unloadModel("bonsai-1.7b")).resolves.toEqual({
+      unloaded: true,
+    });
+    expect(engine.dispose).toHaveBeenCalledTimes(1);
+    expect((await registry.getModel("bonsai-1.7b")).state).toBe(
+      MODEL_STATES.downloaded
+    );
+
+    await expect(provider.unloadModel("bonsai-1.7b")).resolves.toEqual({
+      unloaded: false,
+    });
+
+    await provider.chat({
+      model: "bonsai-1.7b",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    expect(runtime.createEngine).toHaveBeenCalledTimes(2);
+    await provider.dispose();
+  });
+});
+
+describe("createBrowserBonsaiProvider device loss", () => {
+  it("evicts the dead engine and notifies subscribers", async () => {
+    const registry = await downloadedRegistry();
+    let settleLost = null;
+    const lost = new Promise((resolve) => {
+      settleLost = resolve;
+    });
+    const chat = {
+      send: vi.fn(async function* () {
+        yield { type: "text", text: "hi" };
+        yield { type: "done" };
+      }),
+    };
+    const engine = { dispose: vi.fn(async () => {}), lost };
+    const runtime = {
+      createEngine: vi.fn(async () => engine),
+      createChat: vi.fn(async () => chat),
+    };
+    const onDeviceLost = vi.fn();
+    const provider = createBrowserBonsaiProvider({
+      runtime,
+      registry,
+      capabilityDetector: async () => makeCapability(),
+      onDeviceLost,
+    });
+    const seen = [];
+    const unsubscribe = provider.subscribeDeviceLost((info) => seen.push(info));
+
+    await provider.chat({
+      model: "bonsai-1.7b",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    expect(runtime.createEngine).toHaveBeenCalledTimes(1);
+
+    settleLost("device-lost");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onDeviceLost).toHaveBeenCalledTimes(1);
+    expect(onDeviceLost.mock.calls[0][0]).toMatchObject({
+      modelId: "bonsai-1.7b",
+      reason: "device-lost",
+    });
+    expect(seen).toHaveLength(1);
+    expect(provider.getState()).toBe(PROVIDER_STATES.unavailable);
+    expect((await registry.getModel("bonsai-1.7b")).state).toBe(
+      MODEL_STATES.downloaded
+    );
+
+    unsubscribe();
+    await provider.chat({
+      model: "bonsai-1.7b",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    expect(runtime.createEngine).toHaveBeenCalledTimes(2);
+    await provider.dispose();
+  });
+
+  it("recovers from a failed engine load instead of parking the model in error", async () => {
+    const registry = await downloadedRegistry();
+    const runtime = {
+      createEngine: vi.fn(async () => {
+        throw new Error("gpu exploded");
+      }),
+      createChat: vi.fn(async () => ({ send: vi.fn() })),
+    };
+    const provider = createBrowserBonsaiProvider({
+      runtime,
+      registry,
+      capabilityDetector: async () => makeCapability(),
+    });
+
+    await expect(
+      provider.chat({
+        model: "bonsai-1.7b",
+        messages: [{ role: "user", content: "hi" }],
+      })
+    ).rejects.toThrow();
+    expect((await registry.getModel("bonsai-1.7b")).state).toBe(
+      MODEL_STATES.downloaded
+    );
+
+    const { runtime: okRuntime } = makeRuntime({
+      events: [{ type: "text", text: "hi" }, { type: "done" }],
+    });
+    const retry = createBrowserBonsaiProvider({
+      runtime: okRuntime,
+      registry,
+      capabilityDetector: async () => makeCapability(),
+    });
+    await retry.chat({
+      model: "bonsai-1.7b",
+      messages: [{ role: "user", content: "hi" }],
+    });
+    expect(okRuntime.createEngine).toHaveBeenCalledTimes(1);
+    await retry.dispose();
   });
 });

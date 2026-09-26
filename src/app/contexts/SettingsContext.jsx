@@ -28,13 +28,28 @@ export function SettingsProvider({ children }) {
   }, [settings]);
 
   const updateSetting = useCallback((category, key, value) => {
-    setSettings((current) => ({
-      ...current,
-      [category]: {
-        ...current[category],
-        [key]: value,
-      },
-    }));
+    setSettings((current) => {
+      const currentCategory = current[category];
+      // Return the same object when nothing changes: an identity change here
+      // re-renders every consumer and re-ran dependent effects on every
+      // redundant write (e.g. re-selecting the already-selected model).
+      if (
+        currentCategory &&
+        typeof currentCategory === "object" &&
+        !Array.isArray(currentCategory) &&
+        Object.prototype.hasOwnProperty.call(currentCategory, key) &&
+        Object.is(currentCategory[key], value)
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        [category]: {
+          ...currentCategory,
+          [key]: value,
+        },
+      };
+    });
   }, []);
 
   const value = useMemo(

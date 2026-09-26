@@ -150,6 +150,11 @@ async function readBodyToBytes(response, onChunk) {
  *   treated as cache hits).
  * - Size mismatches against the declared file size fail loudly.
  * - Abort via `signal` maps to the `aborted` state (no error surface).
+ *
+ * INTEGRITY: byte length is the only integrity check performed here.
+ * `file.sha256` is null for every shipped file and is never hashed or
+ * compared — see the note at the top of `catalog.js`. Do not present this
+ * download as checksummed or verified.
  */
 export async function downloadModel({
   model,

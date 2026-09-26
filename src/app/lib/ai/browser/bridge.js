@@ -4,6 +4,7 @@ export const BRIDGE_TYPES = {
   stream: "stream",
   streamEnd: "stream-end",
   cancel: "cancel",
+  event: "event",
 };
 
 let nextId = 0;
@@ -38,12 +39,25 @@ export function bridgeErrorToError(bridgeError) {
  *   { type: "response", id, ok: false, error: { name, message } }
  *   { type: "stream", id, event }        // zero or more, for stream methods
  *   { type: "stream-end", id, result }   // terminal event for stream methods
+ *   { type: "event", name, payload }     // unsolicited worker notifications
  *
  * `worker` must provide addEventListener("message") and postMessage(message).
+ *
+ * Reliability: an uncaught worker `error` or a failed structured-clone
+ * (`messageerror`) rejects every in-flight request immediately instead of
+ * leaving them to burn the full `timeoutMs`, and streamed requests carry
+ * first-chunk and inter-chunk deadlines so a wedged model cannot hang the
+ * UI forever.
  */
-export function createBridgeClient({ worker, timeoutMs = 120_000 } = {}) {
+export function createBridgeClient({
+  worker,
+  timeoutMs = 120_000,
+  firstChunkTimeoutMs = 120_000,
+  chunkTimeoutMs = 60_000,
+} = {}) {
   const pending = new Map();
   const streams = new Map();
+  const eventHandlers = new Set();
   let disposed = false;
 
   function handleMessage(event) {
@@ -70,14 +84,64 @@ export function createBridgeClient({ worker, timeoutMs = 120_000 } = {}) {
     } else if (message.type === BRIDGE_TYPES.streamEnd) {
       const stream = streams.get(message.id);
       if (stream) {
-        streams.delete(message.id);
         stream.onEnd(message.result);
+      }
+    } else if (message.type === BRIDGE_TYPES.event) {
+      for (const handler of eventHandlers) {
+        try {
+          handler(message.name, message.payload);
+        } catch {
+          // one bad subscriber must not break the others
+        }
       }
     }
   }
 
+  /**
+   * The worker died or a message could not be deserialized. Fail fast rather
+   * than letting every caller wait out the request timeout.
+   */
+  function handleWorkerFailure(event) {
+    if (disposed) {
+      return;
+    }
+    const source =
+      (event && (event.error || event.reason)) || (event && event.message) || null;
+    const error =
+      source instanceof Error
+        ? source
+        : new Error(
+            typeof source === "string" && source.length > 0
+              ? source
+              : "The AI worker failed."
+          );
+    if (error.message === "Script error.") {
+      error.message = "The AI worker crashed.";
+    }
+
+    const ids = Array.from(pending.keys());
+    for (const id of ids) {
+      const entry = pending.get(id);
+      pending.delete(id);
+      if (entry) {
+        entry.reject(error);
+      }
+    }
+
+    const streamIds = Array.from(streams.keys());
+    for (const id of streamIds) {
+      const stream = streams.get(id);
+      if (stream && typeof stream.onError === "function") {
+        stream.onError(error);
+      }
+    }
+    streams.clear();
+  }
+
   if (worker && typeof worker.addEventListener === "function") {
     worker.addEventListener("message", handleMessage);
+    worker.addEventListener("error", handleWorkerFailure);
+    worker.addEventListener("messageerror", handleWorkerFailure);
   }
 
   function post(message) {
@@ -118,11 +182,19 @@ export function createBridgeClient({ worker, timeoutMs = 120_000 } = {}) {
     });
   }
 
-  function streamRequest(method, params, { signal = null } = {}) {
+  function streamRequest(
+    method,
+    params,
+    { signal = null, firstChunkTimeout = firstChunkTimeoutMs, chunkTimeout = chunkTimeoutMs } = {}
+  ) {
     const id = nextMessageId();
     const queue = [];
     let ended = false;
+    let failed = false;
+    let failError = null;
     let endResult = null;
+    let sawChunk = false;
+    let timer = null;
     const waiters = [];
 
     const notify = () => {
@@ -131,25 +203,79 @@ export function createBridgeClient({ worker, timeoutMs = 120_000 } = {}) {
       }
     };
 
+    const clearTimer = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    function failStream(error) {
+      if (ended || failed) {
+        return;
+      }
+      failed = true;
+      ended = true;
+      failError = error || new Error("The AI stream failed.");
+      clearTimer();
+      streams.delete(id);
+      if (worker && typeof worker.postMessage === "function") {
+        try {
+          worker.postMessage({ type: BRIDGE_TYPES.cancel, id });
+        } catch {
+          // worker may already be gone
+        }
+      }
+      notify();
+    }
+
+    function armTimer() {
+      clearTimer();
+      const ms = sawChunk ? chunkTimeout : firstChunkTimeout;
+      if (!(ms > 0)) {
+        return;
+      }
+      timer = setTimeout(() => {
+        failStream(
+          new Error(
+            sawChunk
+              ? `${method} stream stalled — no data received for ${ms} ms.`
+              : `${method} timed out after ${ms} ms.`
+          )
+        );
+      }, ms);
+    }
+
     streams.set(id, {
       onEvent: (event) => {
-        if (!ended) {
-          queue.push(event);
-          notify();
+        if (ended) {
+          return;
         }
+        sawChunk = true;
+        armTimer();
+        queue.push(event);
+        notify();
       },
       onEnd: (result) => {
-        if (!ended) {
-          ended = true;
-          endResult = result;
-          notify();
+        if (ended) {
+          return;
         }
+        ended = true;
+        endResult = result;
+        clearTimer();
+        streams.delete(id);
+        notify();
       },
+      onError: failStream,
+      cleanup: clearTimer,
     });
+
+    armTimer();
 
     if (signal) {
       const onAbort = () => {
         streams.delete(id);
+        clearTimer();
         if (worker && typeof worker.postMessage === "function") {
           try {
             worker.postMessage({ type: BRIDGE_TYPES.cancel, id });
@@ -176,13 +302,18 @@ export function createBridgeClient({ worker, timeoutMs = 120_000 } = {}) {
         if (queue.length > 0) {
           return Promise.resolve({ value: queue.shift(), done: false });
         }
+        if (failed) {
+          return Promise.reject(failError || new Error("The AI stream failed."));
+        }
         if (ended) {
           return Promise.resolve({ value: endResult, done: true });
         }
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           waiters.push(() => {
             if (queue.length > 0) {
               resolve({ value: queue.shift(), done: false });
+            } else if (failed) {
+              reject(failError || new Error("The AI stream failed."));
             } else {
               resolve({ value: endResult, done: true });
             }
@@ -199,6 +330,17 @@ export function createBridgeClient({ worker, timeoutMs = 120_000 } = {}) {
   return {
     request,
     streamRequest,
+    /**
+     * Subscribes to unsolicited worker events (e.g. `engine-lost`).
+     * Returns an unsubscribe function.
+     */
+    onEvent(handler) {
+      if (typeof handler !== "function") {
+        return () => {};
+      }
+      eventHandlers.add(handler);
+      return () => eventHandlers.delete(handler);
+    },
     async dispose() {
       if (disposed) {
         return;
@@ -208,9 +350,17 @@ export function createBridgeClient({ worker, timeoutMs = 120_000 } = {}) {
         entry.reject(new Error("The bridge client was disposed."));
       }
       pending.clear();
+      for (const stream of streams.values()) {
+        if (typeof stream.cleanup === "function") {
+          stream.cleanup();
+        }
+      }
       streams.clear();
+      eventHandlers.clear();
       if (worker && typeof worker.removeEventListener === "function") {
         worker.removeEventListener("message", handleMessage);
+        worker.removeEventListener("error", handleWorkerFailure);
+        worker.removeEventListener("messageerror", handleWorkerFailure);
       }
       if (worker && typeof worker.terminate === "function") {
         worker.terminate();
@@ -234,6 +384,41 @@ export function createWorkerMessageHandler({ adapter, postMessage }) {
   const chats = new Map();
   const activeSends = new Map();
 
+  /**
+   * Forwards a device/engine loss from the worker to the client as an
+   * unsolicited event. The adapter opts in by exposing
+   * `watchEngineLost(engine) -> Promise<reason> | null`.
+   */
+  function reportEngineLost(engine, engineId) {
+    if (!adapter || typeof adapter.watchEngineLost !== "function") {
+      return;
+    }
+    let promise = null;
+    try {
+      promise = adapter.watchEngineLost(engine);
+    } catch {
+      return;
+    }
+    if (!promise || typeof promise.then !== "function") {
+      return;
+    }
+    promise
+      .then((reason) => {
+        postMessage({
+          type: BRIDGE_TYPES.event,
+          name: "engine-lost",
+          payload: { engineId, reason: reason || "lost" },
+        });
+      })
+      .catch(() => {
+        postMessage({
+          type: BRIDGE_TYPES.event,
+          name: "engine-lost",
+          payload: { engineId, reason: "lost" },
+        });
+      });
+  }
+
   async function handle(method, params) {
     switch (method) {
       case "ping":
@@ -244,6 +429,7 @@ export function createWorkerMessageHandler({ adapter, postMessage }) {
         const engine = await adapter.createEngine(params);
         const engineId = params.engineId || `engine-${engines.size + 1}`;
         engines.set(engineId, engine);
+        reportEngineLost(engine, engineId);
         return { engineId };
       }
       case "chat.create": {

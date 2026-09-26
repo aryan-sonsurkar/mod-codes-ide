@@ -45,15 +45,15 @@
 
 .editor-group-divider-vertical {
   width: 4px;
-  margin: 0 -2px;
+  margin: 0 var(--sp-neg-2);
   cursor: col-resize;
-  border-radius: 2px;
+  border-radius: var(--radius-2);
   align-self: stretch;
 }
 
 .editor-group-divider-horizontal {
   height: 4px;
-  margin: -2px 0;
+  margin: var(--sp-neg-2) 0;
   cursor: row-resize;
-  border-radius: 2px;
+  border-radius: var(--radius-2);
 }

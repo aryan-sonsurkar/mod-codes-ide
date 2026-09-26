@@ -8,6 +8,50 @@ function modelUriForPath(monaco, path) {
   return monaco.Uri.parse("modcodes://model/" + encodeURIComponent(path));
 }
 
+const MODCODES_THEME_ID = "modcodes-dark";
+let modcodesThemeDefined = false;
+
+function ensureModcodesTheme(monaco) {
+  if (modcodesThemeDefined) {
+    return MODCODES_THEME_ID;
+  }
+  try {
+    monaco.editor.defineTheme(MODCODES_THEME_ID, {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "keyword", foreground: "C4B5FD" },
+      { token: "string", foreground: "86EFAC" },
+      { token: "number", foreground: "FCD34D" },
+      { token: "comment", foreground: "8B8BA7" },
+      { token: "identifier.function", foreground: "93C5FD" },
+      { token: "variable", foreground: "F9A8D4" },
+    ],
+    colors: {
+      "editor.background": "#1C1433",
+      "editor.foreground": "#F8FAFC",
+      "editor.lineHighlightBackground": "#241B44",
+      "editorLineNumber.foreground": "#6B6890",
+      "editorLineNumber.activeForeground": "#B8B5C5",
+      "editorCursor.foreground": "#A78BFA",
+      "editor.selectionBackground": "#4A21AA66",
+      "editorIndentGuide.background1": "#3B2E5A",
+      "editorWidget.background": "#2A1F4D",
+      "editorWidget.border": "#3B2E5A",
+      "input.background": "#22183A",
+      "focusBorder": "#A78BFA",
+      "scrollbarSlider.background": "#3B2E5A80",
+      "scrollbarSlider.hoverBackground": "#3B2E5AB3",
+      "scrollbarSlider.activeBackground": "#4A21AACC",
+    },
+    });
+    modcodesThemeDefined = true;
+  } catch {
+    return "vs-dark";
+  }
+  return MODCODES_THEME_ID;
+}
+
 export default function MonacoEditor({
   file,
   content,
@@ -136,13 +180,14 @@ export default function MonacoEditor({
       }
 
       monacoRef.current = monaco;
+      const themeId = ensureModcodesTheme(monaco);
 
       if (!editor && containerRef.current) {
         const editorSettings = settingsRef.current.editor;
         editor = monaco.editor.create(containerRef.current, {
           value: "",
           language: "plaintext",
-          theme: "vs-dark",
+          theme: themeId,
           automaticLayout: true,
           minimap: { enabled: editorSettings.minimap },
           fontSize: editorSettings.fontSize,

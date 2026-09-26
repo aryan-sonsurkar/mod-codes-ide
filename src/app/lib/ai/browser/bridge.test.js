@@ -180,3 +180,156 @@ describe("bridge protocol", () => {
     expect(deadWorker.terminate).toHaveBeenCalled();
   });
 });
+
+function createSilentWorker({ onPost = () => {} } = {}) {
+  const listeners = { message: new Set(), error: new Set(), messageerror: new Set() };
+  return {
+    listeners,
+    addEventListener(type, callback) {
+      if (listeners[type]) {
+        listeners[type].add(callback);
+      }
+    },
+    removeEventListener(type, callback) {
+      if (listeners[type]) {
+        listeners[type].delete(callback);
+      }
+    },
+    postMessage(message) {
+      onPost(message);
+    },
+    fire(type, event) {
+      for (const callback of [...listeners[type]]) {
+        callback(event);
+      }
+    },
+    terminate: vi.fn(),
+  };
+}
+
+describe("bridge failure handling", () => {
+  it("rejects in-flight requests immediately when the worker errors", async () => {
+    const worker = createSilentWorker();
+    const client = createBridgeClient({ worker, timeoutMs: 60_000 });
+
+    const promise = client.request("ping");
+    worker.fire("error", { message: "boom" });
+
+    await expect(promise).rejects.toThrow("boom");
+    await client.dispose();
+  });
+
+  it("rejects in-flight requests when a message fails to deserialize", async () => {
+    const worker = createSilentWorker();
+    const client = createBridgeClient({ worker, timeoutMs: 60_000 });
+
+    const promise = client.request("ping");
+    worker.fire("messageerror", { message: "could not be cloned" });
+
+    await expect(promise).rejects.toThrow("could not be cloned");
+    await client.dispose();
+  });
+
+  it("rejects an in-flight stream when the worker errors", async () => {
+    const worker = createSilentWorker();
+    const client = createBridgeClient({
+      worker,
+      firstChunkTimeoutMs: 60_000,
+      chunkTimeoutMs: 60_000,
+    });
+
+    const stream = client.streamRequest("chat.send", { chatId: "c" }, {});
+    const pending = stream.next();
+    worker.fire("error", { message: "worker crashed" });
+
+    await expect(pending).rejects.toThrow("worker crashed");
+    await client.dispose();
+  });
+});
+
+describe("bridge stream timeouts", () => {
+  it("fails a stream that never produces a first chunk", async () => {
+    const worker = createSilentWorker();
+    const client = createBridgeClient({
+      worker,
+      firstChunkTimeoutMs: 20,
+      chunkTimeoutMs: 20,
+    });
+
+    const stream = client.streamRequest(
+      "chat.send",
+      { chatId: "c" },
+      { firstChunkTimeout: 20, chunkTimeout: 20 }
+    );
+
+    await expect(stream.next()).rejects.toThrow(/timed out/i);
+    await client.dispose();
+  });
+
+  it("fails a stream that stalls between chunks", async () => {
+    let requestId = null;
+    const worker = createSilentWorker({
+      onPost: (message) => {
+        if (message.type === "request") {
+          requestId = message.id;
+        }
+      },
+    });
+    const client = createBridgeClient({
+      worker,
+      firstChunkTimeoutMs: 60_000,
+      chunkTimeoutMs: 20,
+    });
+
+    const stream = client.streamRequest(
+      "chat.send",
+      { chatId: "c" },
+      { firstChunkTimeout: 60_000, chunkTimeout: 20 }
+    );
+
+    worker.fire("message", {
+      data: { type: "stream", id: requestId, event: { type: "text", text: "hi" } },
+    });
+
+    const first = await stream.next();
+    expect(first.done).toBe(false);
+    expect(first.value.text).toBe("hi");
+
+    await expect(stream.next()).rejects.toThrow(/stalled/i);
+    await client.dispose();
+  });
+
+  it("clears the watchdog once the stream ends normally", async () => {
+    let requestId = null;
+    const worker = createSilentWorker({
+      onPost: (message) => {
+        if (message.type === "request") {
+          requestId = message.id;
+        }
+      },
+    });
+    const client = createBridgeClient({
+      worker,
+      firstChunkTimeoutMs: 60_000,
+      chunkTimeoutMs: 60_000,
+    });
+
+    const stream = client.streamRequest(
+      "chat.send",
+      { chatId: "c" },
+      { firstChunkTimeout: 60_000, chunkTimeout: 60_000 }
+    );
+
+    worker.fire("message", {
+      data: { type: "stream", id: requestId, event: { type: "text", text: "hi" } },
+    });
+    worker.fire("message", { data: { type: "stream-end", id: requestId, result: null } });
+
+    const first = await stream.next();
+    expect(first.value.text).toBe("hi");
+    const last = await stream.next();
+    expect(last.done).toBe(true);
+
+    await client.dispose();
+  });
+});

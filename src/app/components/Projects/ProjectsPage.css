@@ -1,7 +1,7 @@
 .projects-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-16);
   width: 100%;
   max-width: 860px;
   margin: 0 auto;
@@ -11,25 +11,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-12);
 }
 
 .projects-title {
-  font-size: 26px;
+  font-size: var(--fs-26);
   color: var(--primary-text);
   letter-spacing: -0.3px;
 }
 
 .projects-new-button {
-  color: #ffffff;
+  --btn-padding-y: var(--sp-8);
+  --btn-padding-x: var(--sp-16);
+  --btn-transition: all var(--transition-base);
+  color: var(--white);
   background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  border: solid 1px rgba(139, 92, 246, 0.4);
-  border-radius: var(--radius-lg);
-  padding: 8px 16px;
+  border: solid 1px var(--accent-40);
+  border-radius: var(--btn-radius);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   cursor: pointer;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  transition: all var(--transition-base);
+  font-weight: var(--btn-font-weight);
+  font-size: var(--btn-font-size);
+  transition: var(--btn-transition);
 }
 
 .projects-new-button:hover {
@@ -40,15 +43,15 @@
 .projects-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   flex-wrap: wrap;
 }
 
 .projects-search {
   flex-grow: 1;
   min-width: 200px;
-  padding: 8px 12px;
-  background-color: rgba(42, 31, 77, 0.5);
+  padding: var(--sp-8) var(--sp-12);
+  background-color: var(--surface-50);
   color: var(--primary-text);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-lg);
@@ -64,7 +67,7 @@
 .projects-sort {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 
 .projects-sort-label {
@@ -73,8 +76,8 @@
 }
 
 .projects-sort-select {
-  padding: 8px 10px;
-  background-color: rgba(42, 31, 77, 0.5);
+  padding: var(--sp-8) var(--sp-10);
+  background-color: var(--surface-50);
   color: var(--primary-text);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-md);
@@ -91,7 +94,7 @@
 .projects-favorites {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   color: var(--secondary-text);
   font-size: var(--text-sm);
   cursor: pointer;
@@ -105,30 +108,30 @@
 .projects-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 
 .project-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
-  background-color: rgba(42, 31, 77, 0.5);
+  gap: var(--sp-16);
+  padding: var(--sp-16) var(--sp-18);
+  background-color: var(--surface-50);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-xl);
   transition: all var(--transition-base);
 }
 
 .project-card:hover {
-  border-color: rgba(139, 92, 246, 0.3);
+  border-color: var(--accent-30);
   box-shadow: var(--shadow-glow);
 }
 
 .project-card-main {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--sp-12);
   min-width: 0;
 }
 
@@ -136,10 +139,10 @@
   background: transparent;
   border: none;
   color: var(--warning-color);
-  font-size: 18px;
+  font-size: var(--fs-18);
   line-height: 1;
   cursor: pointer;
-  padding: 2px;
+  padding: var(--sp-2);
   flex-shrink: 0;
   transition: transform var(--transition-fast);
 }
@@ -153,8 +156,8 @@
 }
 
 .project-card-name {
-  font-size: 17px;
-  margin-bottom: 4px;
+  font-size: var(--fs-17);
+  margin-bottom: var(--sp-4);
   word-break: break-word;
   font-weight: 600;
 }
@@ -168,20 +171,22 @@
 
 .project-card-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-shrink: 0;
 }
 
 .projects-open-button {
-  color: #ffffff;
+  --btn-padding-y: var(--sp-7);
+  --btn-transition: all var(--transition-base);
+  color: var(--white);
   background-color: var(--accent-color);
-  border: solid 1px rgba(139, 92, 246, 0.4);
-  border-radius: var(--radius-lg);
-  padding: 7px 14px;
+  border: solid 1px var(--accent-40);
+  border-radius: var(--btn-radius);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: all var(--transition-base);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  transition: var(--btn-transition);
 }
 
 .projects-open-button:hover {
@@ -189,41 +194,43 @@
 }
 
 .projects-delete-button {
+  --btn-padding-y: var(--sp-7);
+  --btn-transition: all var(--transition-base);
   color: var(--primary-text);
-  background-color: rgba(239, 68, 68, 0.15);
-  border: solid 1px rgba(239, 68, 68, 0.3);
-  border-radius: var(--radius-lg);
-  padding: 7px 14px;
+  background-color: var(--danger-15);
+  border: solid 1px var(--danger-30);
+  border-radius: var(--btn-radius);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: all var(--transition-base);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  transition: var(--btn-transition);
 }
 
 .projects-delete-button:hover {
-  background-color: rgba(239, 68, 68, 0.25);
+  background-color: var(--danger-25);
 }
 
 .projects-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 48px 16px;
+  gap: var(--sp-8);
+  padding: var(--sp-48) var(--sp-16);
   text-align: center;
-  background-color: rgba(42, 31, 77, 0.3);
+  background-color: var(--surface-30);
   border: dashed 1px var(--border-color);
   border-radius: var(--radius-xl);
 }
 
 .projects-empty-title {
-  font-size: 18px;
+  font-size: var(--fs-18);
   color: var(--primary-text);
 }
 
 .projects-empty-text {
   color: var(--secondary-text);
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
 }
 
 .projects-overlay {
@@ -232,7 +239,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--black-60);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 30;
@@ -242,11 +249,11 @@
 .projects-dialog {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-14);
   width: 100%;
   max-width: 380px;
   max-width: min(380px, calc(100vw - 32px));
-  padding: 20px;
+  padding: var(--sp-20);
   background-color: var(--surface-bg);
   border: solid 1px var(--border-color);
   border-radius: var(--radius-xl);
@@ -264,34 +271,12 @@
 .projects-dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-}
-
-.projects-dialog-button {
-  color: var(--primary-text);
-  background-color: var(--surface-bg);
-  border: solid 1px var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 6px 14px;
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: all var(--transition-base);
-}
-
-.projects-dialog-button:hover {
-  background-color: var(--hover-color);
-  border-color: var(--accent-color);
-}
-
-.projects-dialog-danger {
-  background-color: var(--danger-color);
-  border-color: var(--danger-color);
+  gap: var(--space-sm);
 }
 
 @media (max-width: 768px) {
   .projects-page {
-    padding: 0 4px;
+    padding: 0 var(--sp-4);
   }
 
   .projects-header {

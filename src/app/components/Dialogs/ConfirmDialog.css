@@ -5,28 +5,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--black-50);
 }
 
 .confirm-dialog {
   max-width: min(440px, calc(100vw - 32px));
   min-width: 0;
-  padding: 18px;
+  padding: var(--sp-18);
   background-color: var(--surface-bg);
   border: solid 2px var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-6);
   color: var(--primary-text);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 
 .confirm-title {
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 
 .confirm-message {
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-16);
   line-height: 1.5;
   word-break: break-word;
 }
@@ -34,16 +34,18 @@
 .confirm-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 
 .confirm-button {
-  padding: 6px 14px;
+  --btn-radius: var(--radius-4);
+  --btn-font-size: var(--fs-13);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   background-color: transparent;
   color: var(--primary-text);
   border: solid 2px var(--border-color);
-  border-radius: 4px;
-  font-size: 13px;
+  border-radius: var(--btn-radius);
+  font-size: var(--btn-font-size);
   cursor: pointer;
 }
 
@@ -54,7 +56,7 @@
 .confirm-button-primary {
   background-color: var(--accent-color);
   border-color: var(--accent-color);
-  color: #ffffff;
+  color: var(--white);
 }
 
 .confirm-button-primary:hover {
@@ -64,9 +66,9 @@
 .confirm-button-danger {
   background-color: var(--danger-color);
   border-color: var(--danger-color);
-  color: #ffffff;
+  color: var(--white);
 }
 
 .confirm-button-danger:hover {
-  background-color: #dc2626;
+  background-color: var(--danger-hover);
 }

@@ -2,11 +2,11 @@
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 4px 12px;
+  padding: var(--sp-4) var(--sp-12);
   border-bottom: solid 1px var(--border-color);
   background-color: var(--sidebar-bg);
   font-family: "Consolas", "Menlo", monospace;
-  font-size: 12px;
+  font-size: var(--fs-12);
   min-height: 26px;
   overflow-x: auto;
   white-space: nowrap;
@@ -20,7 +20,7 @@
 
 .breadcrumb-separator {
   color: var(--secondary-text);
-  padding: 0 2px;
+  padding: 0 var(--sp-2);
   user-select: none;
 }
 
@@ -28,8 +28,8 @@
   border: none;
   background: transparent;
   color: var(--secondary-text);
-  padding: 2px 4px;
-  border-radius: 3px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-3);
   cursor: default;
   font-family: inherit;
   font-size: inherit;

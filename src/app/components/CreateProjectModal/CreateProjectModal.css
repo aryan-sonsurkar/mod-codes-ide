@@ -7,19 +7,19 @@
     z-index: 10;
     background-color: var(--surface-bg);
     flex-direction: column;
-    padding: 24px;
-    border-radius: 10px;
+    padding: var(--sp-24);
+    border-radius: var(--radius-10);
     border: 1px solid var(--border-color);
     width: 100%;
     max-width: 450px;
     max-width: min(450px, calc(100vw - 32px));
-    gap: 15px;
+    gap: var(--sp-15);
     box-sizing: border-box;
 }
 
 .backdrop{
     z-index: 8;
-    background-color: rgba(0,0,0,0.5);
+    background-color: var(--black-50);
     position: fixed;
     top: 0%;
     left: 0%;
@@ -30,33 +30,33 @@
 .gitrepo{
     display: flex;
     flex-direction: row;
-    gap: 10px;
+    gap: var(--sp-10);
 }
 
 .ModalButtons{
   display: flex;
   flex-direction: row;
-  padding: 10px;
-  gap: 20px;
+  padding: var(--sp-10);
+  gap: var(--sp-20);
   justify-content: right;
 }
 
 .labels{
-    font-size: 20px;
+    font-size: var(--fs-20);
     font-weight: 400;
-    margin-bottom: 2px;
+    margin-bottom: var(--sp-2);
 }
 
 .button{
-    padding: 10px;
-    gap: 20px;
+    padding: var(--sp-10);
+    gap: var(--sp-20);
     background-color: var(--accent-color);
     color: var(--primary-text);
 }
 
 .input{
-    padding: 10px;
-    border-radius: 8px;
+    padding: var(--sp-10);
+    border-radius: var(--radius-8);
     outline: none;
     
 }

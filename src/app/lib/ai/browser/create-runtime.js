@@ -23,20 +23,49 @@ export function createBrowserRuntime({ worker = createBrowserWorker() } = {}) {
     return null;
   }
   const client = createBridgeClient({ worker });
+  const lostResolvers = new Map();
+  let engineSeq = 0;
+
+  // The client allocates the engine id up front so the `engine-lost` event
+  // can be routed before the create request resolves.
+  const unsubscribeLost = client.onEvent((name, payload) => {
+    if (name !== "engine-lost" || !payload) {
+      return;
+    }
+    const resolve = lostResolvers.get(payload.engineId);
+    if (resolve) {
+      lostResolvers.delete(payload.engineId);
+      resolve(payload.reason || "lost");
+    }
+  });
 
   return {
     async createEngine({ files, manifestUrl, auxUrl }) {
-      const { engineId } = await client.request("engine.create", {
-        files,
-        manifestUrl,
-        auxUrl,
+      engineSeq += 1;
+      const engineId = `engine-${engineSeq}`;
+      let resolveLost = null;
+      const lost = new Promise((resolve) => {
+        resolveLost = resolve;
       });
+      lostResolvers.set(engineId, resolveLost);
+
+      try {
+        await client.request("engine.create", { engineId, files, manifestUrl, auxUrl });
+      } catch (error) {
+        lostResolvers.delete(engineId);
+        throw error;
+      }
+
       return {
         engineId,
+        lost,
         save: () => client.request("engine.save", { engineId }),
         restore: (snapshot) =>
           client.request("engine.restore", { engineId, snapshot }),
-        dispose: () => client.request("engine.dispose", { engineId }),
+        dispose: () => {
+          lostResolvers.delete(engineId);
+          return client.request("engine.dispose", { engineId });
+        },
       };
     },
     async createChat(engine, { tokenizerJsonUrl, tokenizerConfigUrl }) {
@@ -61,8 +90,15 @@ export function createBrowserRuntime({ worker = createBrowserWorker() } = {}) {
       return client.request("ping");
     },
     async dispose() {
-      await client.request("dispose");
-      await client.dispose();
+      lostResolvers.clear();
+      if (typeof unsubscribeLost === "function") {
+        unsubscribeLost();
+      }
+      try {
+        await client.request("dispose");
+      } finally {
+        await client.dispose();
+      }
     },
   };
 }

@@ -93,6 +93,59 @@ export function watchDeviceLost(device) {
   return { promise };
 }
 
+/**
+ * Instruments `gpu.requestDevice` so that a device loss inside the worker is
+ * observable even when the runtime does not expose its device publicly.
+ *
+ * The first call installs the hook (idempotent per gpu object) and returns a
+ * promise that resolves with `WEBGPU_STATES.lost` as soon as any device
+ * created through that gpu object is lost. Returns `{ lost: null }` when
+ * WebGPU is unavailable so callers can skip the wiring entirely.
+ */
+export function installDeviceLostTracker(gpu = getGpuObject(typeof navigator !== "undefined" ? navigator : null)) {
+  if (!gpu || typeof gpu.requestDevice !== "function") {
+    return { lost: null };
+  }
+  if (gpu.__modcodesLostTracker) {
+    return gpu.__modcodesLostTracker;
+  }
+
+  const original = gpu.requestDevice;
+  let settleLost = null;
+  const lost = new Promise((resolve) => {
+    settleLost = resolve;
+  });
+  let settled = false;
+  const settle = () => {
+    if (!settled) {
+      settled = true;
+      settleLost(WEBGPU_STATES.lost);
+    }
+  };
+
+  gpu.requestDevice = function trackedRequestDevice(...args) {
+    return Promise.resolve(original.apply(gpu, args)).then((device) => {
+      if (device && typeof device.lost?.then === "function") {
+        device.lost.then(settle, settle);
+      }
+      return device;
+    });
+  };
+
+  const tracker = { lost };
+  try {
+    Object.defineProperty(gpu, "__modcodesLostTracker", {
+      value: tracker,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+  } catch {
+    gpu.__modcodesLostTracker = tracker;
+  }
+  return tracker;
+}
+
 export function capabilityFromState(state, reason = null) {
   return {
     state,

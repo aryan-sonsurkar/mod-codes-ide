@@ -5,8 +5,8 @@
   min-height: 0;
   overflow-y: auto;
   color: var(--primary-text);
-  padding: 4px 8px 8px;
-  gap: 12px;
+  padding: var(--sp-4) var(--sp-8) var(--sp-8);
+  gap: var(--sp-12);
 }
 
 .graph-section {
@@ -17,10 +17,10 @@
 .graph-section-header {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 4px 4px;
+  gap: var(--sp-5);
+  padding: var(--sp-8) var(--sp-4) var(--sp-4);
   color: var(--secondary-text);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -28,29 +28,34 @@
 
 .graph-empty {
   color: var(--secondary-text);
-  font-size: 13px;
-  padding: 4px 8px;
+  font-size: var(--fs-13);
+  padding: var(--sp-4) var(--sp-8);
 }
 
 .graph-analyze {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 4px 4px 8px;
+  gap: var(--sp-8);
+  padding: var(--sp-4) var(--sp-4) var(--sp-8);
 }
 
 .graph-analyze-button {
+  --btn-padding-y: var(--sp-5);
+  --btn-padding-x: var(--sp-10);
+  --btn-radius: var(--radius-4);
+  --btn-font-size: var(--fs-12);
+  --btn-gap: var(--sp-6);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--btn-gap);
   align-self: flex-start;
-  padding: 5px 10px;
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   background-color: var(--accent-color);
   color: var(--primary-text);
   border: solid 2px var(--border-color);
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: var(--btn-radius);
+  font-size: var(--btn-font-size);
   cursor: pointer;
 }
 
@@ -79,22 +84,22 @@
 .graph-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-2);
 }
 
 .graph-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   width: 100%;
   text-align: left;
-  padding: 5px 8px;
+  padding: var(--sp-5) var(--sp-8);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-4);
   background: transparent;
   color: var(--primary-text);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 
 .graph-item:hover:not(:disabled) {
@@ -115,7 +120,7 @@
 .graph-item-path {
   margin-left: auto;
   color: var(--secondary-text);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-family: "Consolas", "Menlo", monospace;
   white-space: nowrap;
   overflow: hidden;
@@ -125,8 +130,8 @@
 
 .graph-item-status {
   margin-left: auto;
-  color: #fbbf24;
-  font-size: 11px;
+  color: var(--warning-bright);
+  font-size: var(--fs-11);
   font-family: "Consolas", "Menlo", monospace;
   flex-shrink: 0;
 }
@@ -137,12 +142,12 @@
 
 .graph-summary {
   color: var(--secondary-text);
-  font-size: 12px;
-  padding: 8px 4px 0;
+  font-size: var(--fs-12);
+  padding: var(--sp-8) var(--sp-4) 0;
 }
 
 .graph-error {
-  color: rgb(240, 82, 82);
-  font-size: 12px;
-  padding: 8px 4px 0;
+  color: var(--danger-alt);
+  font-size: var(--fs-12);
+  padding: var(--sp-8) var(--sp-4) 0;
 }

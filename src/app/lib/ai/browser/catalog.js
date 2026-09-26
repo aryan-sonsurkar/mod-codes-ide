@@ -1,3 +1,28 @@
+/*
+ * INTEGRITY — read before touching `sha256`.
+ *
+ * `sha256` is `null` for every shipped file and is NEVER verified. Nothing in
+ * the download or cache path hashes the payload; `modelVersionKey()` below
+ * simply emits the literal suffix "unverified" when the field is empty.
+ *
+ * What is actually enforced today:
+ *   - HTTPS only (the file URLs are huggingface.co `resolve` links),
+ *   - a pinned commit SHA in the URL (the `revision` segment), so a release
+ *     cannot silently change bytes under the same tag,
+ *   - byte-length accounting (`downloadBytes`) against the Cache Storage
+ *     entry when deciding whether a cached model is complete.
+ *
+ * What is NOT enforced: content authenticity. A compromised CDN or a
+ * MitM that defeats TLS could serve arbitrary weights and MODCODES would
+ * load them. Do not describe Bonsai downloads as "verified" or
+ * "checksummed" anywhere in the UI or docs until this is implemented.
+ *
+ * To implement it: populate `sha256` above from the upstream HF repo, hash
+ * each chunk in `download.js` while streaming (SubtleCrypto, async), compare
+ * before writing to Cache Storage, and fail the download with
+ * AI_ERRORS.unavailable on mismatch.
+ */
+
 export const CATALOG_VERSION = 1;
 
 export const BONSAI_MODEL_TIERS = [

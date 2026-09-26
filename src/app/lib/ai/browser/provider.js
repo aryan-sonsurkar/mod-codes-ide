@@ -52,8 +52,10 @@ export function createBrowserBonsaiProvider({
   registry = null,
   capabilityDetector = detectWebGpuCapability,
   defaultModelId = "bonsai-1.7b",
+  onDeviceLost = () => {},
 } = {}) {
   const engines = new Map();
+  const deviceLostListeners = new Set();
   let currentState = PROVIDER_STATES.unknown;
 
   function setState(next) {
@@ -62,6 +64,56 @@ export function createBrowserBonsaiProvider({
 
   function getState() {
     return currentState;
+  }
+
+  function subscribeDeviceLost(listener) {
+    if (typeof listener !== "function") {
+      return () => {};
+    }
+    deviceLostListeners.add(listener);
+    return () => deviceLostListeners.delete(listener);
+  }
+
+  function emitDeviceLost(info) {
+    try {
+      onDeviceLost(info);
+    } catch {
+      // a listener must not break the runtime
+    }
+    for (const listener of deviceLostListeners) {
+      try {
+        listener(info);
+      } catch {
+        // ignore listener errors
+      }
+    }
+  }
+
+  /**
+   * The worker reports GPU device loss over the bridge; drop the dead engine
+   * immediately so the next message reloads from a fresh device instead of
+   * hanging against a lost one. The weights are still cached, so the model
+   * returns to `downloaded` (retryable) rather than `error`.
+   */
+  function handleEngineLost(modelId, reason) {
+    if (!engines.has(modelId)) {
+      return;
+    }
+    engines.delete(modelId);
+    setState(PROVIDER_STATES.unavailable);
+    if (registry && typeof registry.resetModel === "function") {
+      registry.resetModel(modelId);
+    }
+    emitDeviceLost({ modelId, reason: reason || "lost" });
+  }
+
+  function watchEngineLoss(modelId, engine) {
+    if (!engine || typeof engine.lost?.then !== "function") {
+      return;
+    }
+    engine.lost
+      .then((reason) => handleEngineLost(modelId, reason))
+      .catch(() => handleEngineLost(modelId, "lost"));
   }
 
   async function ensureRuntime() {
@@ -184,14 +236,18 @@ export function createBrowserBonsaiProvider({
       });
       const entry = { engine, chat, model, modelId };
       engines.set(modelId, entry);
+      watchEngineLoss(modelId, engine);
       if (typeof registry.markReady === "function") {
         registry.markReady(modelId);
       }
       setState(PROVIDER_STATES.ready);
       return entry;
     } catch (error) {
-      if (typeof registry.fail === "function") {
-        registry.fail(modelId, error);
+      // The weights themselves are fine — only the engine failed to come up.
+      // `fail()` would park the model in `error` and block `assertModelReady`
+      // forever; reset so the next attempt can retry from `downloaded`.
+      if (typeof registry.resetModel === "function") {
+        registry.resetModel(modelId);
       }
       setState(PROVIDER_STATES.unavailable);
       throw mapRuntimeError(error);
@@ -335,5 +391,6 @@ export function createBrowserBonsaiProvider({
     testConnection,
     dispose,
     unloadModel,
+    subscribeDeviceLost,
   };
 }

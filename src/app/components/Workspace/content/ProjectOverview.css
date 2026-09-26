@@ -1,10 +1,10 @@
-.project-overview{padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--surface-bg);border:1px solid var(--border-color);border-radius:8px;color:var(--primary-text)}
-.project-overview .muted{color:var(--secondary-text);font-size:13px}
-.project-overview .small{font-size:12px;font-style:italic}
-.overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
-.overview-card{background:var(--workspace-bg);border:1px solid var(--border-color);border-radius:6px;padding:10px;font-size:13px}
-.reconcile-proposals{border:1px solid var(--border-color);border-radius:6px;padding:10px}
-.proposal{margin:8px 0;padding:8px;background:var(--workspace-bg);border-radius:4px}
-.proposal-actions{display:flex;gap:6px;margin-top:6px}
-.overview-actions{display:flex;gap:8px;flex-wrap:wrap}
-.overview-actions .primary{background:var(--accent-color);color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer}
+.project-overview{padding:var(--sp-16);display:flex;flex-direction:column;gap:var(--sp-12);background:var(--surface-bg);border:1px solid var(--border-color);border-radius:var(--radius-8);color:var(--primary-text)}
+.project-overview .muted{color:var(--secondary-text);font-size:var(--fs-13)}
+.project-overview .small{font-size:var(--fs-12);font-style:italic}
+.overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--sp-10)}
+.overview-card{background:var(--workspace-bg);border:1px solid var(--border-color);border-radius:var(--radius-6);padding:var(--sp-10);font-size:var(--fs-13)}
+.reconcile-proposals{border:1px solid var(--border-color);border-radius:var(--radius-6);padding:var(--sp-10)}
+.proposal{margin:var(--sp-8) 0;padding:var(--sp-8);background:var(--workspace-bg);border-radius:var(--radius-4)}
+.proposal-actions{display:flex;gap:var(--sp-6);margin-top:var(--sp-6)}
+.overview-actions{display:flex;gap:var(--sp-8);flex-wrap:wrap}
+.overview-actions .primary{--btn-padding-y: var(--sp-8);--btn-radius: var(--radius-6);background:var(--accent-color);color:var(--white);border:none;border-radius:var(--btn-radius);padding:var(--btn-padding-y) var(--btn-padding-x);cursor:pointer}

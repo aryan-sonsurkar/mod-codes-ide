@@ -4,48 +4,48 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--black-60);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
-  padding: 16px;
+  padding: var(--sp-16);
   animation: fadeIn var(--transition-base);
 }
 
 .onboarding-card {
   width: 100%;
   max-width: 520px;
-  padding: 28px;
+  padding: var(--sp-28);
   border-radius: var(--radius-2xl);
   background-color: var(--surface-bg);
   border: solid 1px var(--border-color);
   color: var(--primary-text);
-  box-shadow: var(--shadow-lg), 0 0 60px rgba(139, 92, 246, 0.1);
+  box-shadow: var(--shadow-lg), 0 0 60px var(--accent-10);
   animation: slideUp var(--transition-smooth);
 }
 
 .onboarding-card h2 {
-  margin: 0 0 12px;
-  font-size: 22px;
+  margin: 0 0 var(--sp-12);
+  font-size: var(--fs-22);
   letter-spacing: -0.3px;
 }
 
 .onboarding-card p {
-  margin: 0 0 12px;
+  margin: 0 0 var(--sp-12);
   color: var(--secondary-text);
-  font-size: 14px;
+  font-size: var(--fs-14);
   line-height: 1.6;
 }
 
 .onboarding-list {
-  margin: 0 0 12px 18px;
+  margin: 0 0 var(--sp-12) var(--sp-18);
   color: var(--secondary-text);
-  font-size: 13px;
+  font-size: var(--fs-13);
   line-height: 1.6;
 }
 
 .onboarding-privacy {
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-style: italic;
   color: var(--muted-text);
 }
@@ -53,61 +53,67 @@
 .onboarding-choices {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 12px 0;
+  gap: var(--sp-8);
+  margin: var(--sp-12) 0;
 }
 
 .onboarding-choice {
+  --btn-padding-y: var(--sp-12);
+  --btn-gap: var(--sp-2);
+  --btn-transition: all var(--transition-base);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: 12px 14px;
+  gap: var(--btn-gap);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background-color: rgba(34, 24, 58, 0.6);
+  border-radius: var(--btn-radius);
+  background-color: var(--workspace-60);
   text-align: left;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: var(--btn-transition);
 }
 
 .onboarding-choice:hover {
-  border-color: rgba(139, 92, 246, 0.3);
+  border-color: var(--accent-30);
 }
 
 .onboarding-choice-active {
   border-color: var(--accent-color);
-  background-color: rgba(139, 92, 246, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.2);
+  background-color: var(--accent-12);
+  box-shadow: inset 0 0 0 1px var(--accent-20);
 }
 
 .onboarding-choice strong {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--primary-text);
 }
 
 .onboarding-choice span {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--secondary-text);
 }
 
 .onboarding-actions {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
+  gap: var(--sp-12);
+  margin-top: var(--sp-16);
 }
 
 .onboarding-skip {
-  padding: 8px 16px;
+  --btn-padding-y: var(--sp-8);
+  --btn-padding-x: var(--sp-16);
+  --btn-transition: all var(--transition-base);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--btn-radius);
   background: transparent;
   color: var(--secondary-text);
   cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: all var(--transition-base);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  transition: var(--btn-transition);
 }
 
 .onboarding-skip:hover {
@@ -116,15 +122,18 @@
 }
 
 .onboarding-next {
-  padding: 8px 18px;
+  --btn-padding-y: var(--sp-8);
+  --btn-padding-x: var(--sp-18);
+  --btn-transition: all var(--transition-base);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--btn-radius);
   background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  color: #ffffff;
-  font-weight: 600;
+  color: var(--white);
+  font-weight: var(--btn-font-weight);
   cursor: pointer;
-  font-size: var(--text-sm);
-  transition: all var(--transition-base);
+  font-size: var(--btn-font-size);
+  transition: var(--btn-transition);
 }
 
 .onboarding-next:hover:not(:disabled) {
@@ -141,21 +150,21 @@
 .onboarding-progress {
   display: flex;
   justify-content: center;
-  gap: 6px;
-  margin-top: 14px;
+  gap: var(--sp-6);
+  margin-top: var(--sp-14);
 }
 
 .onboarding-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background-color: var(--border-color);
   transition: all var(--transition-base);
 }
 
 .onboarding-dot-active {
   background-color: var(--accent-color);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 8px var(--accent-40);
 }
 
 .onboarding-dot-done {
@@ -164,10 +173,10 @@
 }
 
 .onboarding-step-label {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--accent-color);
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-12);
 }

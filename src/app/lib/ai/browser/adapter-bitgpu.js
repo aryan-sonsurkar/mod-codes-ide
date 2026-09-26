@@ -4,7 +4,11 @@
  * Worker; the imports are dynamic so the main thread never pays for the
  * runtime, and the server bundle never resolves it.
  */
+import { installDeviceLostTracker } from "./webgpu";
+
 export function createBitgpuAdapter() {
+  let deviceLostPromise = null;
+
   async function loadEngineModule() {
     const [bitgpu, gguf] = await Promise.all([
       import("bitgpu"),
@@ -17,8 +21,30 @@ export function createBitgpuAdapter() {
     return import("bitgpu/chat");
   }
 
+  /**
+   * bitgpu creates its own GPU device internally and does not expose it, so
+   * the lost promise is captured by instrumenting `navigator.gpu.requestDevice`
+   * before the engine is built. Returns null when WebGPU is unavailable.
+   */
+  function trackDeviceLost() {
+    if (deviceLostPromise) {
+      return deviceLostPromise;
+    }
+    const gpu =
+      typeof globalThis !== "undefined" &&
+      globalThis.navigator &&
+      globalThis.navigator.gpu;
+    if (!gpu || typeof gpu.requestDevice !== "function") {
+      return null;
+    }
+    const tracker = installDeviceLostTracker(gpu);
+    deviceLostPromise = tracker.lost || null;
+    return deviceLostPromise;
+  }
+
   return {
     async createEngine({ files = [], manifestUrl = null, auxUrl = null, maxSeqLen = 4096, kvCache = "q8" }) {
+      trackDeviceLost();
       const { bitgpu, gguf } = await loadEngineModule();
       const dataUrl = Array.isArray(files) && files.length > 0 ? files[0] : null;
       if (!dataUrl) {
@@ -43,6 +69,14 @@ export function createBitgpuAdapter() {
         kvCache,
       });
       return engine;
+    },
+
+    /**
+     * Bridge hook: resolves with a reason when this worker's GPU device is
+     * lost. A single tracked device covers every engine it created.
+     */
+    watchEngineLost() {
+      return trackDeviceLost();
     },
 
     async createChat(engine, { tokenizerJsonUrl, tokenizerConfigUrl }) {

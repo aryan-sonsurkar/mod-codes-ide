@@ -28,22 +28,93 @@ function stringifyToolResult(result) {
   }
 }
 
+const STREAM_STALL_TIMEOUT_MS = 60000;
+
+function toAsyncIterator(stream) {
+  if (!stream) {
+    return null;
+  }
+  if (typeof stream[Symbol.asyncIterator] === "function") {
+    return stream[Symbol.asyncIterator]();
+  }
+  if (typeof stream[Symbol.iterator] === "function") {
+    return stream[Symbol.iterator]();
+  }
+  if (typeof stream.next === "function") {
+    return stream;
+  }
+  return null;
+}
+
+/**
+ * Awaiting the *next* chunk is the only place a stalled stream can be seen:
+ * the previous check ran after a chunk arrived, so a provider that simply
+ * stopped sending never triggered it. Races `iterator.next()` against a
+ * deadline, aborts the request on expiry, and always clears the timer.
+ */
+async function nextWithStall(iterator, ms, onStall) {
+  let timer = null;
+  let timedOut = false;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      reject(
+        new AiError(
+          AI_ERRORS.network,
+          `Stream timed out — no data received for ${Math.round(ms / 1000)} seconds.`
+        )
+      );
+    }, ms);
+  });
+  // The loser of the race must never surface as an unhandled rejection.
+  timeout.catch(() => {});
+  try {
+    return await Promise.race([iterator.next(), timeout]);
+  } finally {
+    clearTimeout(timer);
+    if (timedOut && typeof onStall === "function") {
+      onStall();
+    }
+  }
+}
+
 async function streamRequest(provider, request, onDelta) {
   const stream = await provider.streamChat(request);
+  const iterator = toAsyncIterator(stream);
+  if (!iterator) {
+    throw new AiError(
+      AI_ERRORS.invalidRequest,
+      "Provider returned a non-iterable stream."
+    );
+  }
+
+  const onStall = () => {
+    if (request && request.signal && typeof request.signal.abort === "function") {
+      try {
+        request.signal.abort();
+      } catch {
+        // the provider may already be torn down
+      }
+    }
+    if (typeof iterator.return === "function") {
+      try {
+        iterator.return();
+      } catch {
+        // releasing a suspended generator is best effort
+      }
+    }
+  };
+
   let text = "";
   const toolCalls = [];
   let stats = null;
-  let lastChunkTime = Date.now();
-  const STALL_TIMEOUT_MS = 60000;
-  for await (const chunk of stream) {
-    const now = Date.now();
-    if (now - lastChunkTime > STALL_TIMEOUT_MS) {
-      throw new AiError(
-        AI_ERRORS.network,
-        "Stream timed out — no data received for 60 seconds."
-      );
+
+  for (;;) {
+    const next = await nextWithStall(iterator, STREAM_STALL_TIMEOUT_MS, onStall);
+    if (next && next.done) {
+      break;
     }
-    lastChunkTime = now;
+    const chunk = next ? next.value : null;
     if (chunk && chunk.type === "text" && typeof chunk.text === "string") {
       text += chunk.text;
       if (typeof onDelta === "function") {

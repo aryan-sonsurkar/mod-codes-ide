@@ -224,6 +224,7 @@ export {
   baseModelState,
   createModelRegistry,
 } from "./browser";
+export { isModelUsableForChat, isBonsaiInputDisabled } from "./browser";
 export {
   BONSAI_PROVIDER_ID,
   BONSAI_PROVIDER_NAME,

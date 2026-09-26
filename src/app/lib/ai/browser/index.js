@@ -7,3 +7,4 @@ export * from "./provider";
 export * from "./bridge";
 export * from "./create-runtime";
 export * from "./download";
+export * from "./inputGate";
