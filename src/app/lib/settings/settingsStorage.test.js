@@ -93,14 +93,16 @@ describe("AI settings sanitization", () => {
     expect(loadSettings().ai.defaultModel).toBe("qwen2.5-coder:7b");
   });
 
-  it("defaults the provider to ollama and accepts browser-bonsai only", () => {
+  it("defaults the provider to browser-bonsai and accepts ollama only otherwise", () => {
+    expect(loadSettings().ai.provider).toBe("browser-bonsai");
+    stubStorage(JSON.stringify({ ai: { provider: "ollama" } }));
     expect(loadSettings().ai.provider).toBe("ollama");
     stubStorage(JSON.stringify({ ai: { provider: "browser-bonsai" } }));
     expect(loadSettings().ai.provider).toBe("browser-bonsai");
     stubStorage(JSON.stringify({ ai: { provider: "skynet" } }));
-    expect(loadSettings().ai.provider).toBe("ollama");
+    expect(loadSettings().ai.provider).toBe("browser-bonsai");
     stubStorage(JSON.stringify({ ai: { provider: 42 } }));
-    expect(loadSettings().ai.provider).toBe("ollama");
+    expect(loadSettings().ai.provider).toBe("browser-bonsai");
   });
 });
 

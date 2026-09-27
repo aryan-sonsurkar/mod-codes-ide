@@ -204,7 +204,21 @@ function formatModelSize(bytes) {
   return `${mb.toFixed(0)} MB`;
 }
 
-export default function AIPanel({ getContextData, externalPrompt = null, onApplyDiff = null, onNavigate = null, projectId = null }) {
+const UNSENDABLE_STATES = new Set([
+  PROVIDER_STATES.idle,
+  PROVIDER_STATES.unavailable,
+  PROVIDER_STATES.unsupported,
+  PROVIDER_STATES.degraded,
+]);
+
+export default function AIPanel({
+  getContextData,
+  externalPrompt = null,
+  onApplyDiff = null,
+  onNavigate = null,
+  onPromptConsumed = null,
+  projectId = null,
+}) {
   const { settings, updateSetting } = useSettings();
   const [providerId, setProviderId] = useState(
     settings.ai?.provider === "browser-bonsai" ? "browser-bonsai" : "ollama"
@@ -250,6 +264,7 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
   const browserRegistryRef = useRef(null);
   const providerRef = useRef(null);
   const getContextDataRef = useRef(getContextData);
+  const handledPromptTokensRef = useRef(new Set());
 
   // Keep the latest context callback for tools without putting it in any
   // dependency array (context changes on every keystroke, which used to
@@ -946,9 +961,9 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
       const preview = buildContextPreview(context);
       setContextPreview(preview);
       setContextForInspector(context);
-      if (promptContent == null) {
-        setInput("");
-      }
+      // Clear the composer only when it holds the text we just sent, so an
+      // externally triggered prompt never wipes an unrelated draft.
+      setInput((current) => (current.trim() === content ? "" : current));
       setSending(true);
       setGenerationState(CONVERSATION_STATES.generating);
       setGenerationPhase("thinking");
@@ -1093,14 +1108,35 @@ export default function AIPanel({ getContextData, externalPrompt = null, onApply
     if (!externalPrompt || typeof externalPrompt.content !== "string" || externalPrompt.content.length === 0) {
       return;
     }
-    if (status !== PROVIDER_STATES.ready || sending) {
+    const token = externalPrompt.token;
+    if (handledPromptTokensRef.current.has(token)) {
       return;
     }
-    const timer = window.setTimeout(() => {
-      sendWithContent(externalPrompt.content);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [externalPrompt, status, sending, sendWithContent]);
+
+    // Surface the question immediately instead of dropping it on the floor
+    // while the provider is still checking, downloading, or loading.
+    setInput((current) => (current ? current : externalPrompt.content));
+
+    if (status === PROVIDER_STATES.ready && !sending) {
+      const timer = window.setTimeout(() => {
+        handledPromptTokensRef.current.add(token);
+        if (onPromptConsumed) {
+          onPromptConsumed(token);
+        }
+        sendWithContent(externalPrompt.content);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    // The provider cannot become ready this session — leave the question in
+    // the composer so the user can send it after fixing setup.
+    if (UNSENDABLE_STATES.has(status)) {
+      handledPromptTokensRef.current.add(token);
+      if (onPromptConsumed) {
+        onPromptConsumed(token);
+      }
+    }
+  }, [externalPrompt, status, sending, sendWithContent, onPromptConsumed]);
 
   const handleSend = useCallback(async () => {
     await sendWithContent();

@@ -38,7 +38,8 @@ export function clearOnboardingForTests() {
 
 export default function Onboarding({ onComplete, onSkip }) {
   const [step, setStep] = useState(0);
-  const [aiChoice, setAiChoice] = useState(null);
+  // Browser AI needs no install, so it is the recommended, preselected path.
+  const [aiChoice, setAiChoice] = useState("bonsai");
   const [dontShowAgain, setDontShowAgain] = useState(true);
 
   const handleNext = () => {

@@ -25,7 +25,9 @@ export const DEFAULT_SETTINGS = {
     fontFamily: 'Consolas, "Courier New", monospace',
   },
   ai: {
-    provider: "ollama",
+    // Browser AI ships with zero install, so it is the default for new users.
+    // Ollama remains available in Settings for machines that run a local server.
+    provider: "browser-bonsai",
     baseUrl: DEFAULT_AI_BASE_URL,
     defaultModel: "",
     contextBudget: 24000,
@@ -85,7 +87,7 @@ function sanitizeSettings(settings) {
   const defaultModel =
     typeof ai.defaultModel === "string" ? ai.defaultModel : "";
   const provider =
-    ai.provider === "browser-bonsai" ? "browser-bonsai" : "ollama";
+    ai.provider === "ollama" ? "ollama" : DEFAULT_SETTINGS.ai.provider;
 
   const usageLimits = ai.usageLimits || {};
   const sanitizedUsageLimits = {

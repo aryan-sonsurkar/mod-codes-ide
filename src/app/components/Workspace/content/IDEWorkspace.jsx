@@ -90,7 +90,7 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-export default function IdeWorkspace({ selectedProject }) {
+export default function IdeWorkspace({ selectedProject, registerAskHandler = null }) {
   const router = useRouter();
   const [status, setStatus] = useState("requesting");
   const [tree, setTree] = useState(null);
@@ -130,6 +130,26 @@ export default function IdeWorkspace({ selectedProject }) {
       cancelled = true;
     };
   }, []);
+
+  // The bottom quick-ask bar hands its question over to the AI panel.
+  useEffect(() => {
+    if (!registerAskHandler) return;
+    registerAskHandler((content) => {
+      setLayout((current) => ({ ...current, rightOpen: true, rightTab: "ai" }));
+      setAiPrompt({
+        content,
+        selection: null,
+        token: Date.now(),
+        actionId: "quick-ask",
+      });
+    });
+    return () => registerAskHandler(null);
+  }, [registerAskHandler, setLayout]);
+
+  const handleAiPromptConsumed = useCallback(() => {
+    setAiPrompt(null);
+  }, []);
+
   // Load .modcodes when tree is available (local-first project memory)
   useEffect(() => {
     if (!tree || !selectedProject) return;
@@ -1624,6 +1644,7 @@ export default function IdeWorkspace({ selectedProject }) {
                         externalPrompt={aiPrompt}
                         onApplyDiff={handleApplyDiff}
                         onNavigate={handleAiNavigate}
+                        onPromptConsumed={handleAiPromptConsumed}
                         projectId={selectedProject?.id || null}
                       />
                     ) : (

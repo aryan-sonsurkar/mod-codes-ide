@@ -4,11 +4,16 @@ import ChatInput from "./chat-input";
 import CreateProjectModal from "../CreateProjectModal/CreateProjectModal";
 import IdeWorkspace from "./content/IDEWorkspace";
 import ProjectsPage from "../Projects/ProjectsPage";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { loadWorkspace } from "../../lib/workspace/workspaceStorage";
 import { useToast } from "../../contexts/ToastContext";
 import Onboarding, { isOnboardingCompleted } from "../Onboarding/Onboarding";
 import { ProjectOpenAd } from "../Ads/AdContainer";
+
+const ONBOARDING_PROVIDER_MAP = {
+  ollama: "ollama",
+  bonsai: "browser-bonsai",
+};
 
 function loadProjectsHydrated() {
   try {
@@ -37,8 +42,14 @@ export default function Workspace() {
   const [selectedProjectId, setSelectedProjectId] = useState(loadProjectIdHydrated);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(loadOnboardingHydrated);
+  const askHandlerRef = useRef(null);
 
   const { toast } = useToast();
+
+  // IdeWorkspace registers the hand-off so a quick question opens the AI panel.
+  const registerAskHandler = useCallback((handler) => {
+    askHandlerRef.current = handler;
+  }, []);
 
   function openModal(){
     setIsModalOpen(true);
@@ -112,15 +123,30 @@ export default function Workspace() {
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
 
+  function handleQuickAsk(text) {
+    const content = (text || "").trim();
+    if (!content) return;
+    if (!selectedProject || !askHandlerRef.current) {
+      toast("Open a project first so ModCodes can use your code as context.", "info");
+      return;
+    }
+    askHandlerRef.current(content);
+  }
+
+  function handleAttach() {
+    toast("File attachments aren't available yet — ask ModCodes about files already in your project.", "info");
+  }
+
   return (
 <div className="workspace">
   {showOnboarding && (
     <Onboarding
       onComplete={(result) => {
-        if (result && result.aiChoice && result.aiChoice !== "skip") {
+        const provider = ONBOARDING_PROVIDER_MAP[result?.aiChoice];
+        if (provider) {
           try {
             const saved = JSON.parse(localStorage.getItem("modcodes-settings") || "{}");
-            saved.ai = { ...saved.ai, provider: result.aiChoice };
+            saved.ai = { ...saved.ai, provider };
             localStorage.setItem("modcodes-settings", JSON.stringify(saved));
           } catch {}
         }
@@ -132,7 +158,7 @@ export default function Workspace() {
   {selectedProject ? (
     <>
       <ProjectOpenAd />
-      <IdeWorkspace selectedProject={selectedProject} />
+      <IdeWorkspace selectedProject={selectedProject} registerAskHandler={registerAskHandler} />
     </>
   ) : (
     <section className="workspace-content">
@@ -146,7 +172,7 @@ export default function Workspace() {
     </section>
   )}
 
-  <ChatInput />
+  <ChatInput hasProject={Boolean(selectedProject)} onSubmit={handleQuickAsk} onAttach={handleAttach} />
 
   {isModalOpen && <CreateProjectModal closeModal={closeModal} addProject={addProject} />}
 </div>
