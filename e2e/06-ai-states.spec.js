@@ -68,6 +68,28 @@ test.describe("AI Provider States", () => {
     await expect(page.locator(".ide-workspace")).toBeVisible();
   });
 
+  test("AI transcript occupies the panel instead of being clipped", async ({ modcodesPage: page }) => {
+    await openAIPanel(page);
+    await page.waitForTimeout(1000);
+
+    const messages = page.locator(".ai-messages");
+    await expect(messages).toBeVisible();
+
+    const first = await messages.boundingBox();
+    expect(first).not.toBeNull();
+    expect(first.height).toBeGreaterThan(80);
+
+    const toggle = page.locator(".ai-setup-toggle");
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await page.waitForTimeout(400);
+
+    const second = await messages.boundingBox();
+    expect(second).not.toBeNull();
+    expect(second.height).toBeGreaterThan(80);
+    await expect(page.locator(".ai-input")).toBeVisible();
+  });
+
   test("settings page shows AI configuration", async ({ modcodesPage: page }) => {
     await navigateToSettings(page);
     await expect(page.locator(".settings-page")).toBeVisible();

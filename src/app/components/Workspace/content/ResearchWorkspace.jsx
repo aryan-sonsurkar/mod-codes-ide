@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { createResearchPipeline } from "../../../lib/research/pipeline";
-import { createAdService } from "../../../lib/ads/AdService";
 import "./ResearchWorkspace.css";
 
 const SECTIONS = ["Research Overview","Problem","Users","Existing Solutions","Competitors","Market/Context","Technical Feasibility","Technology Options","Risks","Open Questions","Sources","Research History"];
@@ -13,8 +12,6 @@ export default function ResearchWorkspace({ modcodesData, onUpdate }) {
   const [error, setError] = useState(null);
   const [lastSources, setLastSources] = useState([]);
   const pipeline = createResearchPipeline();
-  const adService = createAdService();
-  const ad = adService.requestAd({ placement: "research" });
 
   function parseUrls() {
     return String(urlsText || "").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
@@ -84,7 +81,6 @@ export default function ResearchWorkspace({ modcodesData, onUpdate }) {
       <div className="research-grid">
         {SECTIONS.map((s)=><div key={s} className="research-card"><strong>{s}</strong><pre>{String(modcodesData.sections?.[s] || modcodesData.sections?.Research || "").slice(0,300) || "—"}</pre></div>)}
       </div>
-      {ad && <div className="ad sponsored"><span className="ad-label">{ad.label}</span> {ad.title} <a href={ad.href}>{ad.cta}</a></div>}
       <p className="muted small">Advanced: open .modcodes directly. “Research this deeper” continues from existing state.</p>
     </div>
   );

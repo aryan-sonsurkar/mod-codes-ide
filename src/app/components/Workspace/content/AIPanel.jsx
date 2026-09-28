@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./AIPanel.css";
-import { Bot, Cpu, RefreshCw, Send, ShieldCheck, Square, Copy, Check, Zap } from "lucide-react";
+import { Bot, ChevronDown, Cpu, RefreshCw, Send, ShieldCheck, Square, Copy, Check, Zap } from "lucide-react";
 import {
   AI_ERRORS,
   ALL_BUILTIN_TOOLS,
@@ -252,6 +252,7 @@ export default function AIPanel({
   const [generationPhase, setGenerationPhase] = useState(null);
   const [agentMode, setAgentMode] = useState(false);
   const [agentSnapshot, setAgentSnapshot] = useState(null);
+  const [setupOverride, setSetupOverride] = useState(null);
   const orchestratorRef = useRef(null);
 
   const sessionRef = useRef(null);
@@ -1210,6 +1211,14 @@ export default function AIPanel({
     return "Generating\u2026";
   })();
 
+  const setupExpanded =
+    setupOverride === null
+      ? status !== PROVIDER_STATES.ready && messages.length === 0
+      : setupOverride;
+  const setupMeta = `${providerId === "ollama" ? "Ollama" : "Bonsai"}${
+    modelId ? ` \u00b7 ${modelId}` : ""
+  }`;
+
   return (
     <div className="ai-panel">
       <div className={`ai-status ${connectionClass}`}>
@@ -1254,6 +1263,22 @@ export default function AIPanel({
         limitStatus={getLimitStatus()}
       />
 
+      <div className="ai-setup">
+        <button
+          type="button"
+          className="ai-setup-toggle"
+          aria-expanded={setupExpanded}
+          onClick={() => setSetupOverride(!setupExpanded)}
+        >
+          <ChevronDown
+            size={14}
+            className={setupExpanded ? "ai-setup-chevron ai-setup-chevron-open" : "ai-setup-chevron"}
+          />
+          <span className="ai-setup-title">Model &amp; setup</span>
+          <span className="ai-setup-meta">{setupMeta}</span>
+        </button>
+        {setupExpanded && (
+        <div className="ai-setup-body">
       <div className="ai-controls">
         <label className="ai-label" htmlFor="ai-provider-select">
           Provider
@@ -1390,6 +1415,9 @@ export default function AIPanel({
       />
 
       <AgentWorkflowDemo getContextData={getContextData} onApplyDiff={onApplyDiff} onNavigate={onNavigate} />
+        </div>
+        )}
+      </div>
 
       {agentSnapshot && (agentMode || agentSnapshot.state !== "idle") && (
         <AgentProgress
@@ -1401,39 +1429,6 @@ export default function AIPanel({
           onRejectChangeset={handleAgentRejectChangeset}
           onOpenFile={handleAgentOpenFile}
         />
-      )}
-
-      <div className="ai-tools">
-        <ShieldCheck size={12} />
-        <span>Tools: read + write (with approval)</span>
-        {toolActivity && toolActivity.length > 0 && (
-          <span className="ai-tools-active">
-            Running: {toolActivity.join(", ")}
-          </span>
-        )}
-      </div>
-
-      {pendingApproval && (
-        <AIToolApproval
-          request={pendingApproval}
-          onApprove={() => setPendingApproval(null)}
-          onReject={() => setPendingApproval(null)}
-        />
-      )}
-
-      {lastStats && (
-        <div className="ai-stats">
-          <span className="ai-stats-label">Last run</span>
-          {formatTokensPerSecond(lastStats.tokensPerSecond) && (
-            <span>{formatTokensPerSecond(lastStats.tokensPerSecond)}</span>
-          )}
-          {formatDurationMs(lastStats.durationMs) && (
-            <span>{formatDurationMs(lastStats.durationMs)}</span>
-          )}
-          {lastStats.outputTokens != null && (
-            <span>{lastStats.outputTokens} tokens</span>
-          )}
-        </div>
       )}
 
       <div className="ai-messages" ref={listRef} role="log" aria-live="polite">
@@ -1471,6 +1466,17 @@ export default function AIPanel({
               <div key={key} className="ai-message ai-message-assistant">
                 <div>{message.content}</div>
                 <AIReferences text={message.content} onNavigate={handleNavigateReference} />
+                {Array.isArray(message.toolMetadata?.toolCalls) &&
+                  message.toolMetadata.toolCalls.length > 0 && (
+                    <div className="ai-tool-calls">
+                      <span className="ai-tool-calls-label">Tools used</span>
+                      {message.toolMetadata.toolCalls.map((call, index) => (
+                        <span key={`${call.toolName}-${index}`} className="ai-tool-call">
+                          {call.toolName}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 {hasCodeBlock(message.content) && (
                   <AIDiffPreview
                     message={message}
@@ -1483,6 +1489,16 @@ export default function AIPanel({
               </div>
             );
           })
+        )}
+        {sending && toolActivity && toolActivity.length > 0 && (
+          <div className="ai-process" role="status">
+            <span className="ai-process-label">Running</span>
+            {toolActivity.map((toolName) => (
+              <span key={toolName} className="ai-process-tool">
+                {toolName}
+              </span>
+            ))}
+          </div>
         )}
         {sending && streamingText && (
           <div className="ai-message ai-message-assistant ai-message-streaming" aria-live="polite">
@@ -1503,6 +1519,35 @@ export default function AIPanel({
           <div className="ai-diff-applied" role="status">
             <Check size={12} />
             Change applied — save the file to write it to disk.
+          </div>
+        )}
+      </div>
+
+      {pendingApproval && (
+        <AIToolApproval
+          request={pendingApproval}
+          onApprove={() => setPendingApproval(null)}
+          onReject={() => setPendingApproval(null)}
+        />
+      )}
+
+      <div className="ai-run">
+        <div className="ai-tools">
+          <ShieldCheck size={12} />
+          <span>Tools: read + write (with approval)</span>
+        </div>
+        {lastStats && (
+          <div className="ai-stats">
+            <span className="ai-stats-label">Last run</span>
+            {formatTokensPerSecond(lastStats.tokensPerSecond) && (
+              <span>{formatTokensPerSecond(lastStats.tokensPerSecond)}</span>
+            )}
+            {formatDurationMs(lastStats.durationMs) && (
+              <span>{formatDurationMs(lastStats.durationMs)}</span>
+            )}
+            {lastStats.outputTokens != null && (
+              <span>{lastStats.outputTokens} tokens</span>
+            )}
           </div>
         )}
       </div>
