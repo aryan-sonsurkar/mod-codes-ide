@@ -211,6 +211,8 @@ async function mockFileSystemAccess(page, files = SAMPLE_FILES) {
         fileHandlesMap.set(path, {
           kind: "file",
           name: node.name,
+          queryPermission: async () => "granted",
+          requestPermission: async () => "granted",
           getFile: async () => ({
             name: node.name,
             text: async () => node.content || "",
@@ -243,6 +245,8 @@ async function mockFileSystemAccess(page, files = SAMPLE_FILES) {
               yield fileHandlesMap.get(`${path}/${child.name}`) || {
                 kind: "file",
                 name: child.name,
+                queryPermission: async () => "granted",
+                requestPermission: async () => "granted",
                 getFile: async () => ({
                   name: child.name,
                   text: async () => child.content || "",

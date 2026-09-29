@@ -68,6 +68,36 @@ export function useEditorGroups({ tabs, openFile }) {
     [focusedGroupId]
   );
 
+  const restorePaths = useCallback(
+    (paths, active) => {
+      setGroups((current) => {
+        const target =
+          current.find((group) => group.id === focusedGroupId) || current[0];
+
+        if (!target || target.paths.length > 0) {
+          return current;
+        }
+
+        const nextPaths = Array.from(new Set(paths));
+
+        if (nextPaths.length === 0) {
+          return current;
+        }
+
+        return current.map((group) =>
+          group.id === target.id
+            ? {
+                ...group,
+                paths: nextPaths,
+                activePath: active && nextPaths.includes(active) ? active : nextPaths[0],
+              }
+            : group
+        );
+      });
+    },
+    [focusedGroupId]
+  );
+
   const activateInGroup = useCallback(
     (path, groupId) => {
       const targetId = groupId || focusedGroupId;
@@ -211,6 +241,7 @@ export function useEditorGroups({ tabs, openFile }) {
     splitDirection,
     openInGroup,
     closeInGroup,
+    restorePaths,
     activateInGroup,
     splitRight,
     splitDown,

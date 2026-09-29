@@ -16,6 +16,7 @@ const GitPanel = dynamic(() => import("./GitPanel"), { ssr: false });
 const AIPanel = dynamic(() => import("./AIPanel"), { ssr: false });
 import CommandPalette from "./CommandPalette";
 import TerminalPanel from "./TerminalPanel";
+import RunPanel from "./RunPanel";
 import GoToLineDialog from "./GoToLineDialog";
 import GoToFileDialog from "./GoToFileDialog";
 import GoToSymbolDialog from "./GoToSymbolDialog";
@@ -108,6 +109,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
   const [replaceConfirm, setReplaceConfirm] = useState(null);
   const [conflict, setConflict] = useState(null);
   const [aiPrompt, setAiPrompt] = useState(null);
+  const [runToken, setRunToken] = useState(0);
   const monacoFocusRef = useRef(null);
   const monacoFindRef = useRef(null);
   const monacoSelectionRef = useRef(null);
@@ -264,6 +266,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     splitDirection,
     openInGroup,
     closeInGroup,
+    restorePaths,
     activateInGroup,
     splitRight,
     splitDown,
@@ -276,7 +279,31 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     focusPreviousGroup,
   } = useEditorGroups({ tabs, openFile });
 
+  const openInEditor = useCallback(
+    (file) => {
+      if (!file || !file.path) {
+        return;
+      }
+      openInGroup(file.path, file.name || nameFromPath(file.path));
+    },
+    [openInGroup]
+  );
+
   const { diagnostics } = useDiagnostics({ tabs, activePath, tree });
+
+  const activeSource = useMemo(() => {
+    if (!activePath) {
+      return null;
+    }
+    const tab = tabs.find((entry) => entry.path === activePath);
+    if (!tab) {
+      return null;
+    }
+    return {
+      path: tab.path,
+      content: typeof tab.content === "string" ? tab.content : "",
+    };
+  }, [tabs, activePath]);
 
   const workspaceGraph = useMemo(() => {
     if (!tree) {
@@ -368,6 +395,8 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
 
       addReadingDocs(openPaths);
 
+      restorePaths(openPaths, activePath);
+
       setActivePath((current) => (current ? current : activePath));
 
       for (const path of openPaths) {
@@ -399,7 +428,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     return () => {
       ignore = true;
     };
-  }, [status, selectedProject?.id, updateTab, setActivePath, addReadingDocs, tree, toast]);
+  }, [status, selectedProject?.id, updateTab, setActivePath, addReadingDocs, restorePaths, tree, toast]);
 
   useEffect(() => {
     if (status !== "ready" || !selectedProject?.id) {
@@ -595,7 +624,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
   }
 
   function handleSearchSelect(match) {
-    openFile({ path: match.path, name: match.name });
+    openInEditor({ path: match.path, name: match.name });
     setRevealRequest((current) => ({
       token: (current?.token || 0) + 1,
       path: match.path,
@@ -604,7 +633,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
   }
 
   function handleDiagnosticSelect(diagnostic) {
-    openFile({ path: diagnostic.path, name: nameFromPath(diagnostic.path) });
+    openInEditor({ path: diagnostic.path, name: nameFromPath(diagnostic.path) });
     setRevealRequest((current) => ({
       token: (current?.token || 0) + 1,
       path: diagnostic.path,
@@ -626,7 +655,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
 
   function handleSymbolSelect(symbol) {
     if (symbol.path !== activePath) {
-      openFile({ path: symbol.path, name: nameFromPath(symbol.path) });
+      openInEditor({ path: symbol.path, name: nameFromPath(symbol.path) });
     }
     setRevealRequest((current) => ({
       token: (current?.token || 0) + 1,
@@ -1236,7 +1265,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
       try {
         const result = await writeFile(path, content);
         if (result && result.ok) {
-          openFile({ path, name: path.split("/").pop() });
+          openInEditor({ path, name: path.split("/").pop() });
           setTabContent(path, content);
           return { ok: true, path };
         }
@@ -1250,14 +1279,14 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
       delete window.__modcodesApplyPatch;
       delete window.__modcodesCreateFile;
     };
-  }, [setTabContent, tabs, openFile]);
+  }, [setTabContent, tabs, openInEditor]);
 
   const handleAiNavigate = useCallback(
     (ref) => {
       if (!ref || !ref.path) {
         return;
       }
-      openFile({ path: ref.path, name: ref.path.split("/").pop() });
+      openInEditor({ path: ref.path, name: ref.path.split("/").pop() });
       if (ref.line) {
         setRevealRequest((current) => ({
           token: (current?.token || 0) + 1,
@@ -1267,7 +1296,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
       }
       monacoFocusRef.current?.focus();
     },
-    [openFile]
+    [openInEditor]
   );
   const canRetry = ["cancelled", "denied", "error"].includes(status);
 
@@ -1317,18 +1346,52 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
           </button>
           <button
             className={`ide-header-button${
-              layout.terminalOpen ? " ide-header-button-active" : ""
+              layout.terminalOpen && (layout.bottomTab || "terminal") === "terminal"
+                ? " ide-header-button-active"
+                : ""
             }`}
             title="Toggle Terminal panel"
-            aria-label={layout.terminalOpen ? "Close Terminal panel" : "Open Terminal panel"}
+            aria-label={
+              layout.terminalOpen && (layout.bottomTab || "terminal") === "terminal"
+                ? "Close Terminal panel"
+                : "Open Terminal panel"
+            }
             onClick={() =>
-              setLayout((current) => ({
-                ...current,
-                terminalOpen: !current.terminalOpen,
-              }))
+              setLayout((current) => {
+                const showingTerminal =
+                  current.terminalOpen &&
+                  (current.bottomTab || "terminal") === "terminal";
+                return {
+                  ...current,
+                  terminalOpen: !showingTerminal,
+                  bottomTab: "terminal",
+                };
+              })
             }
           >
-            {layout.terminalOpen ? "Close Terminal" : "Terminal"}
+            {layout.terminalOpen &&
+            (layout.bottomTab || "terminal") === "terminal"
+              ? "Close Terminal"
+              : "Terminal"}
+          </button>
+          <button
+            className={`ide-header-button${
+              layout.terminalOpen && layout.bottomTab === "run"
+                ? " ide-header-button-active"
+                : ""
+            }`}
+            title="Run the active file in your browser"
+            aria-label="Run active file"
+            onClick={() => {
+              setLayout((current) => ({
+                ...current,
+                terminalOpen: true,
+                bottomTab: "run",
+              }));
+              setRunToken((token) => token + 1);
+            }}
+          >
+            Run
           </button>
           <button
             className={`ide-header-button${
@@ -1417,7 +1480,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
                     {layout.leftTab === "explorer" ? (
                       <FileExplorer
                         root={tree}
-                        onFileSelect={openFile}
+                        onFileSelect={openInEditor}
                         selectedFilePath={activePath}
                         onCreateFile={handleCreateFile}
                         onCreateFolder={handleCreateFolder}
@@ -1633,7 +1696,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
                         tabs={tabs}
                         readFile={readFile}
                         onOpen={(path) =>
-                          openFile({ path, name: nameFromPath(path) })
+                          openInEditor({ path, name: nameFromPath(path) })
                         }
                       />
                     ) : layout.rightTab === "git" ? (
@@ -1680,12 +1743,67 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
                     })),
                 })}
               />
-              <TerminalPanel
-                provider={terminalProvider}
-                onClose={() =>
-                  setLayout((current) => ({ ...current, terminalOpen: false }))
-                }
-              />
+              <div
+                className="ide-dock-tabs"
+                role="tablist"
+                aria-label="Bottom panels"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={(layout.bottomTab || "terminal") === "terminal"}
+                  className={`ide-dock-tab${
+                    (layout.bottomTab || "terminal") === "terminal"
+                      ? " ide-dock-tab-active"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setLayout((current) => ({ ...current, bottomTab: "terminal" }))
+                  }
+                >
+                  Terminal
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={layout.bottomTab === "run"}
+                  className={`ide-dock-tab${
+                    layout.bottomTab === "run" ? " ide-dock-tab-active" : ""
+                  }`}
+                  onClick={() =>
+                    setLayout((current) => ({ ...current, bottomTab: "run" }))
+                  }
+                >
+                  Run
+                </button>
+                <button
+                  type="button"
+                  className="ide-dock-close"
+                  title="Close bottom panel"
+                  aria-label="Close bottom panel"
+                  onClick={() =>
+                    setLayout((current) => ({ ...current, terminalOpen: false }))
+                  }
+                >
+                  ×
+                </button>
+              </div>
+              {layout.bottomTab === "run" ? (
+                <RunPanel
+                  source={activeSource}
+                  runToken={runToken}
+                  onClose={() =>
+                    setLayout((current) => ({ ...current, terminalOpen: false }))
+                  }
+                />
+              ) : (
+                <TerminalPanel
+                  provider={terminalProvider}
+                  onClose={() =>
+                    setLayout((current) => ({ ...current, terminalOpen: false }))
+                  }
+                />
+              )}
             </div>
           )}
 
@@ -1709,7 +1827,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
           {goToFileOpen && (
             <GoToFileDialog
               tree={tree}
-              onOpen={openFile}
+              onOpen={openInEditor}
               onClose={() => setGoToFileOpen(false)}
             />
           )}

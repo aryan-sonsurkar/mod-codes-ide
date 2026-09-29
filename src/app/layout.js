@@ -7,6 +7,9 @@ import ErrorBoundary from "./components/Diagnostics/ErrorBoundary";
 import AdsProvider from "./components/Ads/AdsProvider";
 import AdSenseConfig from "./components/Ads/AdSenseConfig";
 import ObservabilityInit from "./components/Diagnostics/ObservabilityInit";
+import ServiceWorkerRegister, {
+  OfflineBanner,
+} from "./components/Offline/ServiceWorkerRegister";
 
 const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID || "";
 
@@ -29,6 +32,7 @@ export const metadata = {
   description:
     "A fast, private, browser-based development environment with local AI (Ollama + Bonsai). Code in the browser, files stay on your machine. No cloud proxy, no account.",
   applicationName: "MODCODES",
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.ico",
   },
@@ -65,6 +69,7 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <ObservabilityInit />
+        <ServiceWorkerRegister />
         {ADSENSE_ID && (
           <Script
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_ID}`}
@@ -77,6 +82,7 @@ export default function RootLayout({ children }) {
             <ToastProvider>
               <AdSenseConfig />
               <AdsProvider>{children}</AdsProvider>
+              <OfflineBanner />
             </ToastProvider>
           </SettingsProvider>
         </ErrorBoundary>

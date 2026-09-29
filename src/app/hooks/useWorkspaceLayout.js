@@ -5,6 +5,7 @@ const DEFAULT_LAYOUT = {
   leftOpen: true,
   leftTab: "explorer",
   terminalOpen: false,
+  bottomTab: "terminal",
   rightOpen: false,
   rightTab: "problems",
   leftWidth: 280,

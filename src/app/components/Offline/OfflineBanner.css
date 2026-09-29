@@ -1,0 +1,36 @@
+.offline-banner {
+  position: fixed;
+  left: var(--sp-12);
+  bottom: var(--sp-12);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  max-width: min(420px, calc(100vw - var(--sp-24)));
+  padding: var(--sp-8) var(--sp-12);
+  border: solid 1px var(--warning-30);
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--warning-color) 12%, var(--sidebar-bg));
+  color: var(--primary-text);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.35));
+}
+
+.offline-banner-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--warning-color);
+  box-shadow: 0 0 0 4px var(--warning-15);
+}
+
+@media (max-width: 640px) {
+  .offline-banner {
+    left: var(--sp-8);
+    right: var(--sp-8);
+    bottom: var(--sp-8);
+    max-width: none;
+  }
+}
