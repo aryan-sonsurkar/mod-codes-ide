@@ -27,6 +27,23 @@ async function runActiveFile(page) {
   await expect(page.locator(".run-panel")).toBeVisible({ timeout: 10000 });
 }
 
+async function waitForServiceWorker(page) {
+  const ready = await page.evaluate(async () => {
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg && reg.active) {
+          return true;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    return false;
+  });
+  expect(ready).toBe(true);
+}
+
 test.describe("Run panel and offline runtime", () => {
   test.beforeEach(async ({ modcodesPage: page }) => {
     await clearLocalStorage(page);
@@ -163,5 +180,36 @@ test.describe("Run panel and offline runtime", () => {
     expect(sw.ok).toBe(true);
     expect(sw.body).toContain("modcodes-sw-");
     expect(sw.body).toContain("skipWaiting");
+  });
+
+  test("the app shell reloads without a network", async ({ modcodesPage: page }) => {
+    await waitForServiceWorker(page);
+
+    await page.context().setOffline(true);
+    try {
+      await page.reload({ waitUntil: "domcontentloaded", timeout: 30000 });
+      await expect(page.locator(".ide-workspace")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator(".explorer-filter-input")).toBeVisible({ timeout: 15000 });
+    } finally {
+      await page.context().setOffline(false);
+    }
+  });
+
+  test("code still runs while offline", async ({ modcodesPage: page }) => {
+    await openFileInExplorer(page, "index.js");
+    await waitForServiceWorker(page);
+
+    await page.context().setOffline(true);
+    try {
+      await runActiveFile(page);
+      await expect(page.locator('[data-testid="run-console"]')).toContainText("hello", {
+        timeout: 20000,
+      });
+      await expect(page.locator('[data-testid="run-summary"]')).toContainText("exited 0", {
+        timeout: 20000,
+      });
+    } finally {
+      await page.context().setOffline(false);
+    }
   });
 });

@@ -11,19 +11,73 @@
  * - Pyodide runtime: cache first (large, versioned, never changes)
  * - model weights: NOT cached here — they already live in IndexedDB
  */
-const VERSION = "modcodes-sw-1";
+const VERSION = "modcodes-sw-4";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OWNED_CACHES = [SHELL_CACHE, ASSET_CACHE, RUNTIME_CACHE];
 const CURRENT_CACHES = new Set(OWNED_CACHES);
 
+const SHELL_URLS = ["/", "/projects", "/settings", "/manifest.json"];
+const PRECACHE_MANIFEST_URL = "/precache-manifest.json";
+const PRECACHE_ASSET_LIMIT = 400;
+
 const PYODIDE_HOST = "cdn.jsdelivr.net";
 const PYODIDE_PREFIX = "/pyodide/";
 const RUNTIME_CACHE_LIMIT = 60;
 
+async function putIfReachable(cache, url) {
+  try {
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      headers: { "X-SW-Precache": "1" },
+    });
+    if (response && response.ok) {
+      await cache.put(url, response);
+      return true;
+    }
+  } catch (error) {
+    // An offline install still succeeds with whatever is already cached.
+  }
+  return false;
+}
+
+async function precacheShell(shellCache, assetCache) {
+  await Promise.all(SHELL_URLS.map((url) => putIfReachable(shellCache, url)));
+
+  try {
+    const response = await fetch(PRECACHE_MANIFEST_URL, {
+      credentials: "same-origin",
+      headers: { "X-SW-Precache": "1" },
+    });
+
+    if (!response || !response.ok) {
+      return;
+    }
+
+    const manifest = await response.json();
+    const assets = Array.isArray(manifest.assets) ? manifest.assets : [];
+
+    await Promise.all(
+      assets
+        .slice(0, PRECACHE_ASSET_LIMIT)
+        .map((asset) => putIfReachable(assetCache, asset))
+    );
+  } catch (error) {
+    // Shell HTML alone still gives a usable offline fallback.
+  }
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil(
+    (async () => {
+      const shellCache = await caches.open(SHELL_CACHE);
+      const assetCache = await caches.open(ASSET_CACHE);
+
+      await precacheShell(shellCache, assetCache);
+      await self.skipWaiting();
+    })()
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -62,7 +116,18 @@ async function cacheFirst(cacheName, request) {
   if (cached) {
     return cached;
   }
-  const response = await fetch(request);
+
+  let response;
+  try {
+    response = await fetch(request);
+  } catch (error) {
+    const fallback = await caches.match(request, { ignoreVary: true });
+    if (fallback) {
+      return fallback;
+    }
+    throw error;
+  }
+
   if (response && response.ok) {
     await cache.put(request, response.clone());
   }
@@ -103,6 +168,10 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
 
   if (request.method !== "GET") {
+    return;
+  }
+
+  if (request.headers.has("X-SW-Precache")) {
     return;
   }
 
