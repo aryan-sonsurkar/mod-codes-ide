@@ -13,6 +13,8 @@
     width: 100%;
     max-width: 450px;
     max-width: min(450px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     gap: var(--sp-15);
     box-sizing: border-box;
 }

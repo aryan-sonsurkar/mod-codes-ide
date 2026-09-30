@@ -43,7 +43,8 @@ import {
   deleteEntry,
   rescanProjectTree,
   previewWorkspaceReplace,
-} from "../../../lib/filesystem/filesystem";
+  isWorkspaceVirtual,
+} from "../../../lib/filesystem";
 import {
   loadWorkspace,
   saveWorkspace,
@@ -82,7 +83,7 @@ const STATUS_MESSAGES = {
   cancelled:
     "Folder access was cancelled. MODCODES needs folder access to read and write project files.",
   unsupported:
-    "Your browser doesn't support the File System Access API. Please use Chrome or Edge to open projects.",
+    "This browser can't open a local folder.",
   denied: "Permission to read this project's folder was denied. Please allow access when prompted.",
   error: "MODCODES could not read this project's folder. The folder may have been moved or deleted.",
 };
@@ -349,7 +350,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     let ignore = false;
 
     async function loadDirectory() {
-      const result = await openProjectDirectory();
+      const result = await openProjectDirectory(selectedProject);
 
       if (ignore) {
         return;
@@ -362,6 +363,12 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
 
       setTree(result.tree);
       setStatus("ready");
+      if (isWorkspaceVirtual()) {
+        toast(
+          "Browser workspace — files are saved in this browser only.",
+          "info"
+        );
+      }
     }
 
     loadDirectory();
@@ -369,6 +376,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     return () => {
       ignore = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   useEffect(() => {
@@ -418,9 +426,10 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
         }));
       }
 
-      toast({
-        message: `Restored ${openPaths.length} open tab${openPaths.length === 1 ? "" : "s"} from a previous session. Unsaved changes cannot be recovered.`,
-      });
+        toast(
+          `Restored ${openPaths.length} open tab${openPaths.length === 1 ? "" : "s"} from a previous session. Unsaved changes cannot be recovered.`,
+          "info"
+        );
     }
 
     restore();
@@ -2004,7 +2013,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
           )}
           {status === "unsupported" && (
             <p style={{fontSize:12,color:"var(--muted-text)",margin:0}}>
-              Download <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer" style={{color:"var(--accent-color)"}}>Chrome</a> or <a href="https://www.microsoft.com/edge" target="_blank" rel="noopener noreferrer" style={{color:"var(--accent-color)"}}>Edge</a> to use MODCODES.
+              Folder access needs <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer" style={{color:"var(--accent-color)"}}>Chrome</a> or <a href="https://www.microsoft.com/edge" target="_blank" rel="noopener noreferrer" style={{color:"var(--accent-color)"}}>Edge</a>. You can also create a project that keeps files in this browser — it works everywhere.
             </p>
           )}
         </div>

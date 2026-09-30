@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./SearchPanel.css";
-import { searchWorkspace } from "../../../lib/filesystem/filesystem";
+import { searchWorkspace } from "../../../lib/filesystem";
 
 const MAX_VISIBLE_RESULTS = 200;
 

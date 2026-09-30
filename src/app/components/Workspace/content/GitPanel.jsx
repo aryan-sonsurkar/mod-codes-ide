@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./GitPanel.css";
 import { GitBranch, Info, ShieldAlert, Plus, RefreshCw, Send, ArrowUp, ArrowDown } from "lucide-react";
-import { getRootHandle } from "../../../lib/filesystem/filesystem";
+import { getRootHandle } from "../../../lib/filesystem";
 import {
   GIT_CAPABILITIES,
   summarizeRepository,

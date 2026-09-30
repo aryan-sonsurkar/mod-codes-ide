@@ -1,6 +1,8 @@
 import "./CreateProjectModal.css";
 import { useState } from "react";
 
+const BROWSER_LOCATION = "This browser";
+
 export default function CreateProjectModal({ closeModal, addProject }) {
   const [projectName, setProjectName] = useState("");
   const [projectLocation, setProjectLocation] = useState("");
@@ -8,16 +10,20 @@ export default function CreateProjectModal({ closeModal, addProject }) {
   const [projectType, setProjectType] = useState("Blank Project");
   const [projectGit, setProjectGit] = useState(false);
   const [githubRepo, setGithubRepo] = useState(false);
+  const [keepInBrowser, setKeepInBrowser] = useState(
+    () => typeof window !== "undefined" && !("showDirectoryPicker" in window)
+  );
 
   async function chooseProjectFolder() {
     if (!("showDirectoryPicker" in window)) {
-      window.alert("Folder selection is not supported in this browser. Please use a Chromium-based browser.");
+      window.alert("Folder selection is not supported in this browser. Tick \"Keep files in this browser\" instead.");
       return;
     }
 
     try {
       const directoryHandle = await window.showDirectoryPicker();
       setProjectLocation(directoryHandle.name);
+      setKeepInBrowser(false);
     } catch (error) {
       if (error?.name !== "AbortError") {
         console.error("Failed to pick directory:", error);
@@ -27,15 +33,21 @@ export default function CreateProjectModal({ closeModal, addProject }) {
 
   function handleSubmit(event) {
     event.preventDefault();
-    if (!projectName.trim() || !projectLocation.trim()) {
-      window.alert("Please provide project name and folder.");
+    const location = keepInBrowser ? BROWSER_LOCATION : projectLocation.trim();
+    if (!projectName.trim() || !location) {
+      window.alert(
+        keepInBrowser
+          ? "Please provide project name."
+          : "Please provide project name and folder."
+      );
       return;
     }
     const currentTime = Date.now();
     const project = {
       id: crypto.randomUUID(),
       name: projectName.trim(),
-      location: projectLocation,
+      location,
+      storage: keepInBrowser ? "virtual" : "disk",
       type: projectType,
       bringing, // idea | codebase | hybrid | empty
       git: projectGit,
@@ -74,17 +86,37 @@ export default function CreateProjectModal({ closeModal, addProject }) {
           <input
             id="project-location"
             className="input"
-            placeholder="Select a folder"
-            value={projectLocation}
+            placeholder={keepInBrowser ? "Files stay in this browser" : "Select a folder"}
+            value={keepInBrowser ? BROWSER_LOCATION : projectLocation}
             readOnly
             aria-describedby="location-hint"
           />
-          <button type="button" className="button" onClick={chooseProjectFolder} aria-label="Browse for project folder">
+          <button
+            type="button"
+            className="button"
+            onClick={chooseProjectFolder}
+            aria-label="Browse for project folder"
+            disabled={keepInBrowser}
+          >
             Browse
           </button>
         </div>
+        <section className="gitrepo">
+          <input
+            id="project-browser"
+            className="input"
+            type="checkbox"
+            checked={keepInBrowser}
+            onChange={(event) => setKeepInBrowser(event.target.checked)}
+          />
+          <label className="labels" htmlFor="project-browser">
+            Keep files in this browser (no folder, works on any device)
+          </label>
+        </section>
         <p id="location-hint" style={{color:"var(--muted-text)",fontSize:11,margin:"2px 0 0"}}>
-          Your browser will ask for folder access. Files stay on your machine.
+          {keepInBrowser
+            ? "Files are stored in this browser only and are never uploaded. No folder permission needed."
+            : "Your browser will ask for folder access. Files stay on your machine."}
         </p>
 
         <label className="labels" htmlFor="project-bringing">What are you bringing?</label>
