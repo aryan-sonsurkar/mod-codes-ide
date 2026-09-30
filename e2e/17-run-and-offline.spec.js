@@ -129,6 +129,27 @@ test.describe("Run panel and offline runtime", () => {
     expect(manifest.name).toContain("MODCODES");
     expect(manifest.start_url).toBeTruthy();
     expect(manifest.display).toBe("standalone");
+
+    const pngIcons = (manifest.icons || []).filter(
+      (icon) => icon.type === "image/png"
+    );
+    expect(pngIcons.map((icon) => icon.sizes)).toEqual(
+      expect.arrayContaining(["192x192", "512x512"])
+    );
+    expect(
+      pngIcons.some((icon) => icon.purpose === "maskable")
+    ).toBe(true);
+
+    const iconStatus = await page.evaluate(async () => {
+      const results = {};
+      for (const url of ["/icons/icon-192.png", "/favicon.ico"]) {
+        const response = await fetch(url);
+        results[url] = response.ok;
+      }
+      return results;
+    });
+    expect(iconStatus["/icons/icon-192.png"]).toBe(true);
+    expect(iconStatus["/favicon.ico"]).toBe(true);
   });
 
   test("the service worker script is served and versioned", async ({ modcodesPage: page }) => {
