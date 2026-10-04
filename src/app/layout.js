@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://modcodes.dev"),
+  metadataBase: new URL("https://modcode.vercel.app"),
   title: {
     default: "MODCODES — Browser IDE with Local AI",
     template: "%s · MODCODES",
@@ -48,7 +48,7 @@ export const metadata = {
     title: "MODCODES — Browser IDE with Local AI",
     description:
       "A fast, private, browser-based development environment with local AI. Local filesystem, Monaco, terminal, and privacy-first AI.",
-    url: "https://modcodes.dev",
+    url: "https://modcode.vercel.app",
     siteName: "MODCODES",
     locale: "en_US",
     type: "website",

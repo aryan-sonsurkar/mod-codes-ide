@@ -2,11 +2,11 @@
 
 [![Release](https://img.shields.io/github/v/release/aryan-sonsurkar/mod-codes-ide)](https://github.com/aryan-sonsurkar/mod-codes-ide/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg](./LICENSE))
-[![Live Demo](https://img.shields.io/badge/demo-live-00d4ff)](https://modcodes.dev)
+[![Live Demo](https://img.shields.io/badge/demo-live-00d4ff)](https://modcode.vercel.app)
 
 **A local-first, AI-powered software engineering workspace.** Research → PRD → Roadmap → Agent lifecycle, project memory, and approval-gated changes — with Bonsai (WebGPU) and Ollama (local) as the sole AI providers. No cloud lock-in.
 
-🌐 **Live:** [modcodes.dev](https://modcodes.dev) · 📦 **Latest:** [v0.1.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.1.0)
+🌐 **Live:** [modcode.vercel.app](https://modcode.vercel.app) · 📦 **Latest:** [v0.1.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.1.0)
 
 ---
 
