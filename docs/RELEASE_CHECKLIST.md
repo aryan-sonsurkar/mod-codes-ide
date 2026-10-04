@@ -10,7 +10,7 @@ Use this checklist before tagging a release.
 - [ ] `npm run test:e2e` — all tests pass (clean `.next`, production server)
 - [ ] No `TODO` or `FIXME` in production source (excluding docs)
 - [ ] No `console.log` in production source
-- [ ] Version in `package.json` matches version in `src/app/api/health/route.js`
+- [ ] Version in `package.json` matches the `version` reported by `/api/health` (reads `npm_package_version`)
 - [ ] `.env.example` documents all required env vars
 - [ ] `.env` is gitignored
 - [ ] No hardcoded secrets or API keys in source
@@ -37,7 +37,7 @@ Use this checklist before tagging a release.
 - [ ] Create git tag `v0.1.0`
 - [ ] Push to origin
 - [ ] Create GitHub Release
-- [ ] Verify deployment at `modcodes.dev`
+- [ ] Verify deployment at `modcode.vercel.app` (custom domain `modcodes.dev` is pending DNS)
 
 ## Post-Release
 

@@ -21,7 +21,7 @@
 ### Step 2: Check health endpoint
 
 ```
-GET https://modcodes.dev/api/health
+GET https://modcode.vercel.app/api/health
 ```
 
 Expected response:
@@ -37,7 +37,9 @@ Expected response:
 ```
 
 - `status: "ok"` — server is running
-- `version` — deployed version (compare to expected release)
+- `version` — deployed version (compare to expected release). On hosts that do
+  not set `npm_package_version`, this reports `"unknown"` — treat that as a
+  host limitation, not a failed deploy.
 - `services.ads` — whether AdSense is configured
 
 ### Step 3: Check CI status
