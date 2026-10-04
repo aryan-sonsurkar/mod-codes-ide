@@ -3,6 +3,26 @@ import "./Landing.css";
 
 const FEATURES = [
   {
+    title: "Runs in your browser",
+    description:
+      "No install, no admin rights, no extension. Open a tab and work — even on a locked-down college or work computer.",
+  },
+  {
+    title: "Works offline",
+    description:
+      "After the first visit the app shell is cached, so the editor keeps loading on flaky Wi-Fi. Your run output is local too.",
+  },
+  {
+    title: "Run JavaScript, Python and HTML",
+    description:
+      "Execute code in a sandboxed frame or worker and watch output stream into the Run panel. Nothing to install locally.",
+  },
+  {
+    title: "Projects without a folder",
+    description:
+      "No File System Access API? Keep a project's files in this browser instead — it works on Firefox, Safari and phones.",
+  },
+  {
     title: "Local Project Workspace",
     description: "Open a folder and work directly against your local files.",
   },
@@ -32,7 +52,8 @@ const FEATURES = [
   },
   {
     title: "Browser AI — Bonsai",
-    description: "Run a capable model locally in your browser via WebGPU. No cloud proxy.",
+    description:
+      "Run Bonsai locally in your browser via WebGPU, with a CPU fallback. No cloud proxy, no API key, no quota.",
   },
   {
     title: "Ollama Integration",
@@ -46,24 +67,25 @@ const FEATURES = [
 
 const STEPS = [
   {
-    title: "Create Project",
-    description: "Name your project and pick a folder.",
+    title: "Create a project",
+    description:
+      "Pick a folder, or keep the files in this browser — no sign-up either way.",
   },
   {
-    title: "Open Workspace",
-    description: "Grant folder access to connect MODCODES to your files.",
+    title: "Open the workspace",
+    description: "Explorer, tabs, search and the command palette are ready immediately.",
   },
   {
-    title: "Browse Files",
-    description: "Explore the project tree in the File Explorer.",
+    title: "Edit code",
+    description: "Write and edit files in the Monaco editor, saved where you chose.",
   },
   {
-    title: "Edit Code",
-    description: "Write and edit files in the Monaco editor.",
+    title: "Run it",
+    description: "Press Run to execute JavaScript, Python, or preview HTML in the browser.",
   },
   {
-    title: "Save Locally",
-    description: "Your changes are written straight back to disk.",
+    title: "Ask the local AI",
+    description: "Bonsai runs on your machine, so answers cost nothing and never leave it.",
   },
 ];
 
@@ -74,15 +96,25 @@ const REASONS = [
   },
   {
     title: "Local-first",
-    description: "Your files stay on your machine. Nothing is uploaded.",
+    description: "Your files stay on your machine or in this browser. Nothing is uploaded.",
   },
   {
     title: "No account required",
-    description: "Pick a folder and start — that's it.",
+    description: "Open the app and start — no sign-up, no seat limits.",
+  },
+  {
+    title: "No quota",
+    description:
+      "Local inference means no monthly chat limits or credit meters to watch.",
   },
   {
     title: "Privacy-first AI",
     description: "Your files and conversations stay on your machine. Local inference only.",
+  },
+  {
+    title: "Install-free on shared machines",
+    description:
+      "Works on lab PCs and managed devices where you cannot install software.",
   },
 ];
 
@@ -98,9 +130,13 @@ export default function Landing() {
 
       <main>
         <section className="landing-hero">
-          <h1 className="landing-hero-title">A browser-based development environment with local-first AI.</h1>
+          <h1 className="landing-hero-title">
+            A coding environment that runs in a tab, with local AI and no quota.
+          </h1>
           <p className="landing-hero-subtitle">
-            MODCODES connects directly to your files and understands your code. Use Ollama or the in-browser Bonsai model — no cloud backend, no account. Explore projects, edit with Monaco, and let AI assist where you choose.
+            Open MODCODES and start coding: no install, no account, no usage meter. Edit a
+            local folder or keep files in the browser, run JavaScript, Python and HTML, and
+            use an AI model that runs on your machine — online or off.
           </p>
           <div className="landing-hero-actions">
             <Link className="landing-cta landing-cta-primary" href="/projects">
@@ -154,7 +190,7 @@ export default function Landing() {
         <section className="landing-cta-section">
           <h2 className="landing-cta-title">Ready to code in your browser?</h2>
           <p className="landing-cta-text">
-            Open MODCODES and connect it to a project folder on your machine.
+            Open MODCODES and create a project in seconds — nothing to install.
           </p>
           <Link className="landing-cta landing-cta-primary" href="/projects">
             Open MODCODES

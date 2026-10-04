@@ -111,7 +111,11 @@ export default function Onboarding({ onComplete, onSkip }) {
                 aria-checked={aiChoice === "bonsai"}
               >
                 <strong>Bonsai (Browser AI)</strong>
-                <span>Runs on your GPU via WebGPU. No server needed. Requires a WebGPU-compatible browser.</span>
+                <span>
+                  Runs on your machine — WebGPU when available, CPU fallback otherwise. The
+                  model is downloaded once (about 248 MB), then cached for offline use. No
+                  server, no quota.
+                </span>
               </button>
               <button
                 type="button"
@@ -132,8 +136,8 @@ export default function Onboarding({ onComplete, onSkip }) {
             <h2>You&apos;re ready to code</h2>
             <p>Here&apos;s what you can do:</p>
             <ul className="onboarding-list">
-              <li><strong>Create a project</strong> &mdash; give it a name and point to a folder on your machine.</li>
-              <li><strong>Open existing code</strong> &mdash; browse to any folder with code.</li>
+              <li><strong>Create a project</strong> &mdash; give it a name, then pick a folder or keep the files in this browser.</li>
+              <li><strong>Run code</strong> &mdash; JavaScript, Python and HTML previews run inside the browser.</li>
               <li><strong>Terminal</strong> &mdash; browser simulation by default; optional local bridge for system shell.</li>
               <li><strong>All AI is local</strong> &mdash; Ollama or Browser AI. No cloud proxy.</li>
             </ul>
