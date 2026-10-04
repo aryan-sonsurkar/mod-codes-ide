@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://modcodes.dev/sitemap.xml
+Sitemap: https://modcode.vercel.app/sitemap.xml
