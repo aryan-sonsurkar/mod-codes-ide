@@ -50,7 +50,7 @@ export default function AISetup({ providerId }) {
           <ul className="ai-setup-steps">
             <li>Runs on WebGPU in Chrome, Edge, Firefox and Safari 26+ — desktop and mobile. Nothing to install.</li>
             <li>Download the 237 MB model once; it is cached in Cache Storage for offline use.</li>
-            <li>Check WebGPU status above; if it is unavailable, use Ollama instead.</li>
+            <li>Check WebGPU status above. Without WebGPU, Bonsai still runs on CPU (slower) — or use Ollama instead.</li>
             <li>Memory warning is shown only when `navigator.deviceMemory` is available.</li>
           </ul>
           <p className="ai-setup-note">Bonsai runs on your GPU via WebGPU in a Worker. Download verified by content-length.</p>

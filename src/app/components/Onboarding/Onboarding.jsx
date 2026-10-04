@@ -113,7 +113,7 @@ export default function Onboarding({ onComplete, onSkip }) {
                 <strong>Bonsai (Browser AI)</strong>
                 <span>
                   Runs on your machine — WebGPU when available, CPU fallback otherwise. The
-                  model is downloaded once (about 248 MB), then cached for offline use. No
+                  model is downloaded once (about 237 MB), then cached for offline use. No
                   server, no quota.
                 </span>
               </button>

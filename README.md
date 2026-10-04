@@ -2,11 +2,11 @@
 
 [![Release](https://img.shields.io/github/v/release/aryan-sonsurkar/mod-codes-ide)](https://github.com/aryan-sonsurkar/mod-codes-ide/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg](./LICENSE))
-[![Live Demo](https://img.shields.io/badge/demo-live-00d4ff)](https://mod-codes-ide.vercel.app)
+[![Live Demo](https://img.shields.io/badge/demo-live-00d4ff)](https://modcodes.dev)
 
 **A local-first, AI-powered software engineering workspace.** Research → PRD → Roadmap → Agent lifecycle, project memory, and approval-gated changes — with Bonsai (WebGPU) and Ollama (local) as the sole AI providers. No cloud lock-in.
 
-🌐 **Live:** [mod-codes-ide.vercel.app](https://mod-codes-ide.vercel.app) · 📦 **Latest:** [v0.1.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.1.0)
+🌐 **Live:** [modcodes.dev](https://modcodes.dev) · 📦 **Latest:** [v0.1.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.1.0)
 
 ---
 
@@ -16,11 +16,20 @@ MODCODES is my flagship software engineering project: a browser IDE for
 AI-assisted development, built AI-assisted. AI accelerates drafting; I own
 architecture, debugging, and every shipped line.
 
+**Install-free and offline:** MODCODES runs from the browser with no
+installer or account — it works on locked-down college and work machines,
+stays fully usable offline as an installed PWA, and runs JavaScript, Python
+and HTML previews in the browser (honestly labeled "Browser simulation"
+where no system shell is available). Projects can live in a real folder or
+kept in browser storage, and `.modcodes` project memory exports/imports as a
+single portable file.
+
 **v0.1.0 (current):** full project lifecycle (Research → PRD → Roadmap →
 Agent), `.modcodes` Markdown-first project memory, approval gates and save
-gates, responsive desktop/tablet/mobile, AdSense with privacy consent.
+gates, in-browser runs, offline PWA, responsive desktop/tablet/mobile,
+AdSense with privacy consent.
 
-**Quality gates at release:** 963 Vitest unit tests ·
+**Quality gates:** 1030 Vitest unit tests · 168 Playwright e2e tests ·
 ESLint clean · security scan clean · CI on every push.
 
 **Stack:** Next.js 16 · React 19 · Node ≥ 20.9 · Bonsai (WebGPU) · Ollama (local).
@@ -71,7 +80,9 @@ AI features enable when a provider is available.
 - ✅ Delete Projects
 - ✅ Local Project Persistence
 - ✅ Automatic Project Loading
-- 🚧 Preparing Project IDs
+- ✅ Unique Project IDs
+- ✅ Browser-storage projects (no folder permission needed)
+- ✅ `.modcodes` export / import (portable project memory)
 
 ---
 
@@ -104,7 +115,9 @@ A complete AI-powered development environment for assisting developers throughou
 - ✅ Monaco Editor with split panes and multi-file tabs
 - ✅ File Explorer with tree view
 - ✅ Workspace Tabs with editor groups
-- ✅ Integrated Terminal via local bridge
+- ✅ Integrated Terminal (browser simulation by default, local bridge optional)
+- ✅ In-browser Code Runner (JavaScript, Python, HTML previews)
+- ✅ Offline PWA (service worker, precached app shell)
 - ✅ Git Integration (read + write operations)
 - ✅ AI Chat Assistant with streaming
 - ✅ Ollama Integration (local inference)
@@ -122,7 +135,6 @@ A complete AI-powered development environment for assisting developers throughou
 - Plugin System
 - Theme Engine
 - Debugger
-- Code Runner
 - AI Code Explanation
 - Multi-language Support
 
@@ -133,7 +145,7 @@ A complete AI-powered development environment for assisting developers throughou
 - Next.js 16 · React 19 · JavaScript
 - Monaco Editor · Turbopack
 - Ollama (local) · Bonsai (WebGPU)
-- Vitest · ESLint
+- Vitest · ESLint · Playwright
 - CSS Modules
 
 ### Planned
@@ -161,10 +173,15 @@ src/
     │   ├── git/
     │   ├── terminal/
     │   ├── editor/
+    │   ├── filesystem/  (disk + browser-storage facade)
+    │   ├── runtime/     (in-browser JS/Python/HTML runners)
     │   └── project/
     ├── globals.css
     ├── layout.js
     └── page.js
+public/
+    ├── sw.js            (offline service worker)
+    └── pyodide-worker.js
 tools/
     └── modcodes-bridge/ (local terminal/Git bridge)
 ```
@@ -243,10 +260,10 @@ prioritized — and everything shipped is mine to explain.
 - ✅ Settings
 - ✅ Command Palette
 - ✅ Search
+- ✅ Code Runner (in-browser JS / Python / HTML)
 - ⏳ Theme Engine
 - ⏳ Plugin System
 - ⏳ Debugger
-- ⏳ Code Runner
 
 ---
 
