@@ -124,16 +124,77 @@ test.describe("Browser storage workspace", () => {
     await openCreatedProject(page, project.name);
 
     await openFileInExplorer(page, "README.md");
+    await expect(page.locator(".monaco-editor").first()).toContainText(
+      "press **Run**",
+      { timeout: 15000 }
+    );
     const savedContent = await page.locator(".monaco-editor").first().innerText();
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await waitForAppReady(page);
     await expect(page.locator(".ide-workspace")).toBeVisible({ timeout: 15000 });
 
+    const overview = page.locator(".project-overview");
+    const overviewShown = await overview
+      .waitFor({ state: "visible", timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    if (overviewShown) {
+      await overview.locator("button", { hasText: "Continue" }).first().click();
+      await expect(overview).toBeHidden({ timeout: 5000 });
+    }
+
     await openFileInExplorer(page, "README.md");
-    await page.waitForTimeout(800);
-    const restoredContent = await page.locator(".monaco-editor").first().innerText();
-    expect(restoredContent).toBe(savedContent);
+    await expect(page.locator(".monaco-editor").first()).toContainText(
+      "press **Run**",
+      { timeout: 15000 }
+    );
+    await expect
+      .poll(() => page.locator(".monaco-editor").first().innerText(), {
+        timeout: 15000,
+      })
+      .toBe(savedContent);
+  });
+
+  test("exports and imports project memory as .modcodes", async ({
+    modcodesPage: page,
+  }) => {
+    const project = uniqueProject();
+    await createBrowserProject(page, project);
+    await openCreatedProject(page, project.name);
+
+    const downloadPromise = page.waitForEvent("download", { timeout: 15000 });
+    await page.keyboard.press("Control+Shift+p");
+    await page.locator(".palette-input").fill("Export Project Memory");
+    await page.keyboard.press("Enter");
+
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.modcodes$/);
+
+    const content = [
+      "---",
+      "modcodesVersion: 1",
+      "schemaVersion: 1",
+      "project:",
+      '  name: "Imported Memory Project"',
+      "  phase: prd",
+      "---",
+      "",
+      "# Overview",
+      "imported memory marker",
+      "",
+    ].join("\n");
+
+    await page.setInputFiles('input[type="file"][accept*=".modcodes"]', {
+      name: "imported.modcodes",
+      mimeType: "text/plain",
+      buffer: Buffer.from(content),
+    });
+
+    await expect(
+      page.locator(".toast").filter({ hasText: "Imported project memory" })
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".workspace-mode-bar-phase")).toContainText("prd");
   });
 
   test("falls back to a browser workspace when the folder API is missing", async ({

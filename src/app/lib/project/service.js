@@ -1,5 +1,5 @@
 "use client";
-import { readFile, writeFile, createFile } from "../filesystem/filesystem";
+import { readFile, writeFile, createFile } from "../filesystem";
 import { parseModcodes, serializeModcodes, createEmptyModcodes } from "./modcodes";
 
 function modcodesPathFor(rootName) {

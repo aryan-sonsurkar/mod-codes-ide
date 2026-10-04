@@ -30,6 +30,11 @@ import RoadmapWorkspace from "./RoadmapWorkspace";
 import AgentWorkspace from "./AgentWorkspace";
 import { IDESecondaryAd } from "../../Ads/AdContainer";
 import { loadModcodes, saveModcodes, ensureModcodes } from "../../../lib/project/service";
+import {
+  downloadModcodesExport,
+  importModcodesFile,
+  applyImportedModcodes,
+} from "../../../lib/project/portability";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
 import { useAgentWorkspace } from "../../../hooks/useAgentWorkspace";
 import { createProjectLifecycleOrchestrator } from "../../../lib/project/lifecycle";
@@ -114,6 +119,7 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
   const monacoFocusRef = useRef(null);
   const monacoFindRef = useRef(null);
   const monacoSelectionRef = useRef(null);
+  const importInputRef = useRef(null);
   const contextCacheRef = useRef(createContextCache({ ttlMs: 2000 }));
   const graphNeighborsRef = useRef(null);
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
@@ -765,6 +771,64 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     setReplaceConfirm(null);
   }
 
+  function handleExportMemory() {
+    if (!modcodesData) {
+      toast("There is no project memory to export yet.", "info");
+      return;
+    }
+
+    const result = downloadModcodesExport({
+      data: modcodesData,
+      projectName: selectedProject?.name || tree?.name,
+    });
+
+    if (result.ok) {
+      toast(`Exported ${result.filename}`, "success");
+    } else {
+      toast("This browser could not export the project memory file.", "error");
+    }
+  }
+
+  async function handleImportMemory(event) {
+    const input = event?.target;
+    const file = input?.files?.[0] || null;
+    if (input) {
+      input.value = "";
+    }
+    if (!file) {
+      return;
+    }
+
+    const parsed = await importModcodesFile(file);
+    if (!parsed.ok) {
+      const reason =
+        parsed.status === "empty"
+          ? "That file is empty."
+          : parsed.status === "not-modcodes"
+            ? "That file does not look like project memory (.modcodes)."
+            : "That file could not be read as project memory.";
+      toast(reason, "error");
+      return;
+    }
+
+    if (!tree?.name) {
+      toast("Open a project before importing memory.", "info");
+      return;
+    }
+
+    const applied = await applyImportedModcodes({
+      rootName: tree.name,
+      data: parsed.data,
+    });
+    if (!applied.ok) {
+      toast("The imported memory could not be saved to this project.", "error");
+      return;
+    }
+
+    setModcodesData(applied.data);
+    toast(`Imported project memory from ${file.name}`, "success");
+  }
+
   const commands = [
     {
       id: "save-file",
@@ -804,6 +868,23 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
       shortcut: "",
       execute: () => {
         handleRefresh();
+      },
+    },
+    {
+      id: "export-project-memory",
+      title: "Export Project Memory (.modcodes)",
+      shortcut: "",
+      execute: () => {
+        handleExportMemory();
+      },
+    },
+    {
+      id: "import-project-memory",
+      title: "Import Project Memory (.modcodes)",
+      shortcut: "",
+      opensDialog: true,
+      execute: () => {
+        importInputRef.current?.click();
       },
     },
     {
@@ -1437,6 +1518,8 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
           onContinue={()=>setShowContinue(false)}
           onReview={()=>setShowContinue(false)}
           onOpen={()=>setShowContinue(false)}
+          onExportMemory={handleExportMemory}
+          onImportMemory={()=>importInputRef.current?.click()}
           onPhaseChange={(next)=>{ const updated={...modcodesData, project:{...modcodesData.project, phase: next, updatedAt:new Date().toISOString()}}; setModcodesData(updated); saveModcodes({rootName: tree.name, data: updated});}}
         />
       )}
@@ -1982,6 +2065,16 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
               </div>
             </div>
           )}
+
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".modcodes,text/plain"
+            hidden
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={handleImportMemory}
+          />
 
           <ConfirmDialog
             open={Boolean(replaceConfirm)}

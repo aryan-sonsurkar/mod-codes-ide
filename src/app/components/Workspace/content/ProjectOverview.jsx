@@ -4,7 +4,7 @@ import { PHASE_LABELS, phaseProgress } from "../../../lib/project/state";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
 import "./ProjectOverview.css";
 
-export default function ProjectOverview({ modcodesData, codebaseSnapshot, onContinue, onReview, onOpen, onPhaseChange }) {
+export default function ProjectOverview({ modcodesData, codebaseSnapshot, onContinue, onReview, onOpen, onPhaseChange, onExportMemory, onImportMemory }) {
   const reconciliation = useMemo(() => reconcileProjectMemory({ modcodesData, codebaseSnapshot }), [modcodesData, codebaseSnapshot]);
   if (!modcodesData) {
     return (
@@ -14,6 +14,9 @@ export default function ProjectOverview({ modcodesData, codebaseSnapshot, onCont
           <h3>No project memory yet</h3>
           <p>Project memory (.modcodes) tracks your project&apos;s phase, milestones, and decisions. The editor works without it, but recommendations and lifecycle features require it.</p>
           <button className="primary" style={{marginTop:12}} onClick={onOpen}>Open Project</button>
+          {onImportMemory && (
+            <button style={{marginTop:12, marginLeft:8}} onClick={onImportMemory}>Import .modcodes</button>
+          )}
         </div>
       </div>
     );
@@ -90,6 +93,8 @@ export default function ProjectOverview({ modcodesData, codebaseSnapshot, onCont
       <div className="overview-actions">
         <button className="primary" onClick={onContinue}>Continue</button>
         <button onClick={onOpen}>Open Project</button>
+        {onExportMemory && <button onClick={onExportMemory}>Export .modcodes</button>}
+        {onImportMemory && <button onClick={onImportMemory}>Import .modcodes</button>}
         <select value={phase} onChange={(e) => onPhaseChange && onPhaseChange(e.target.value)} aria-label="Change project phase">
           {Object.keys(PHASE_LABELS).map((k) => <option key={k} value={k}>{PHASE_LABELS[k]}</option>)}
         </select>
