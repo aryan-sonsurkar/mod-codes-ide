@@ -1,6 +1,9 @@
 {
-  "buildId": "toaUyT9z2bQZzpEyl7bm2",
+  "buildId": "YOpP4v_9X7Ty7AU1RpTFz",
   "assets": [
+    "/_next/static/YOpP4v_9X7Ty7AU1RpTFz/_buildManifest.js",
+    "/_next/static/YOpP4v_9X7Ty7AU1RpTFz/_clientMiddlewareManifest.js",
+    "/_next/static/YOpP4v_9X7Ty7AU1RpTFz/_ssgManifest.js",
     "/_next/static/chunks/03wna5-vbehid.js",
     "/_next/static/chunks/04ehxh-_4dd5h.css",
     "/_next/static/chunks/04tpb70n41chv.js",
@@ -23,18 +26,18 @@
     "/_next/static/chunks/2e_rlyq8i0ci8.js",
     "/_next/static/chunks/2jon8bu97s89g.css",
     "/_next/static/chunks/2krlhnegkj_o-.js",
-    "/_next/static/chunks/2s-ma24fdhgnh.js",
     "/_next/static/chunks/2s3rgiaow4usz.css",
     "/_next/static/chunks/2wmv-w55tnpia.css",
     "/_next/static/chunks/2z3sh82dl8glu.js.map",
     "/_next/static/chunks/306ets1b1e7hx.js",
     "/_next/static/chunks/33hr2iscqhcax.js",
     "/_next/static/chunks/366n5ul1d135c.css",
+    "/_next/static/chunks/38k-j5cj0svuy.js",
+    "/_next/static/chunks/3coti3li3vjyj.js",
     "/_next/static/chunks/3d3p60cjv2-hn.js",
     "/_next/static/chunks/3egbbbxn25din.js",
     "/_next/static/chunks/3f-5zt_22nwru.css",
     "/_next/static/chunks/3fk42_r28-ihi.js",
-    "/_next/static/chunks/3hqatms-j4b34.js",
     "/_next/static/chunks/3ivcc6t1s04dh.js",
     "/_next/static/chunks/turbopack-109gw7_tlds6i.js",
     "/_next/static/chunks/turbopack-3dg02g_xu82pa.js",
@@ -51,9 +54,6 @@
     "/_next/static/media/bonsai.worker.1r7994jmow_3z.js",
     "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
     "/_next/static/media/favicon.2vob68tjqpejf.ico",
-    "/_next/static/media/fef07dbb0973bf53-s.3p2_lha1f2xer.woff2",
-    "/_next/static/toaUyT9z2bQZzpEyl7bm2/_buildManifest.js",
-    "/_next/static/toaUyT9z2bQZzpEyl7bm2/_clientMiddlewareManifest.js",
-    "/_next/static/toaUyT9z2bQZzpEyl7bm2/_ssgManifest.js"
+    "/_next/static/media/fef07dbb0973bf53-s.3p2_lha1f2xer.woff2"
   ]
 }

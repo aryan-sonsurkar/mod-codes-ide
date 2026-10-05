@@ -140,7 +140,18 @@ export function DashboardAd() {
 }
 
 export function IDESecondaryAd() {
+  const adsense = useAdSense();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Ad-free deployments (no publisher id) or before consent must not leave
+  // stray "sponsored" chrome sitting in the IDE.
+  if (
+    !adsense ||
+    !adsense.isAvailable ||
+    adsense.consentState !== CONSENT_STATES.ACCEPTED
+  ) {
+    return null;
+  }
 
   if (collapsed) {
     return (

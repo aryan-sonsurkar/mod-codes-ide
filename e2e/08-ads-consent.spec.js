@@ -131,4 +131,23 @@ test.describe("AdSense / Consent", () => {
     await page.waitForTimeout(2000);
     await expect(page.locator(".ide-workspace")).toBeVisible();
   });
+
+  test("ad-free deployment renders no sponsored chrome in the IDE", async ({
+    modcodesPage: page,
+  }) => {
+    await injectConsentAccepted(page);
+    await navigateToProjects(page);
+    const project = uniqueProject();
+    await createAndOpenProject(page, project);
+    await expect(page.locator(".ide-workspace")).toBeVisible();
+    await page.waitForTimeout(1000);
+
+    expect(
+      await page.locator('[aria-label="Collapse sponsored content"]').count()
+    ).toBe(0);
+    expect(
+      await page.locator('[aria-label="Show sponsored content"]').count()
+    ).toBe(0);
+    expect(await page.locator("[data-placement]").count()).toBe(0);
+  });
 });
