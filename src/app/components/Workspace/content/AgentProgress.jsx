@@ -1,5 +1,6 @@
 "use client";
 import { Play, Check, X, Loader, AlertTriangle, ShieldAlert, Eye } from "lucide-react";
+import { isProtectedPath, basenameOf } from "../../../lib/ai/protectedPaths";
 
 const STEP_ICONS = {
   pending: null,
@@ -73,6 +74,9 @@ export default function AgentProgress({
   const isRunning = state === "executing" || state === "observing" || state === "planning";
   const isAwaitingPlan = state === "awaitingApproval" || state === "planReady";
   const isReviewing = state === "awaitingReview" || state === "changesProposed";
+  const protectedPaths = (changeset?.operations || [])
+    .map((op) => op.path)
+    .filter((path) => isProtectedPath(path));
 
   return (
     <div className="ai-agent-progress" role="region" aria-label="Agent progress">
@@ -164,6 +168,20 @@ export default function AgentProgress({
                 </li>
               ))}
             </ul>
+          )}
+          {protectedPaths.length > 0 && (
+            <div
+              className="ai-agent-protected"
+              role="alert"
+              data-testid="changeset-protected"
+            >
+              <ShieldAlert size={11} />
+              <span>
+                Protected files:{" "}
+                {[...new Set(protectedPaths.map((path) => basenameOf(path)))].join(", ")} — review
+                carefully before accepting.
+              </span>
+            </div>
           )}
           <div
             className={`ai-agent-verify ${

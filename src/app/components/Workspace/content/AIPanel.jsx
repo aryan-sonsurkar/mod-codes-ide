@@ -662,6 +662,10 @@ export default function AIPanel({
   );
 
   const handleClearConversation = useCallback(() => {
+    setPendingApproval((current) => {
+      current?.resolve?.(false);
+      return null;
+    });
     sessionRef.current?.clear();
     setMessages([]);
     setContextPreview(null);
@@ -1060,8 +1064,18 @@ export default function AIPanel({
             const permission = tool ? tool.permission : "read";
             const request = approvalRequestFor({ toolName, permission, args });
             if (request.requiresApproval) {
-              setPendingApproval(request);
-              return { ok: false, code: "approvalRequired", error: "Tool approval required" };
+              // Pause the tool loop until a human decides — approval must
+              // actually run the call, not just dismiss the dialog.
+              const approved = await new Promise((resolve) => {
+                setPendingApproval({ ...request, resolve });
+              });
+              if (!approved) {
+                return {
+                  ok: false,
+                  code: "approvalRejected",
+                  error: "The user rejected this tool call.",
+                };
+              }
             }
             return executeToolCall({
               registry: toolRegistryRef.current,
@@ -1219,6 +1233,10 @@ export default function AIPanel({
   }, [sendWithContent]);
 
   const handleStop = useCallback(() => {
+    setPendingApproval((current) => {
+      current?.resolve?.(false);
+      return null;
+    });
     sessionRef.current?.stop();
     setGenerationState(CONVERSATION_STATES.cancelled);
   }, []);
@@ -1603,9 +1621,18 @@ export default function AIPanel({
 
       {pendingApproval && (
         <AIToolApproval
+          key={pendingApproval.id}
           request={pendingApproval}
-          onApprove={() => setPendingApproval(null)}
-          onReject={() => setPendingApproval(null)}
+          onApprove={() => {
+            const current = pendingApproval;
+            setPendingApproval(null);
+            current?.resolve?.(true);
+          }}
+          onReject={() => {
+            const current = pendingApproval;
+            setPendingApproval(null);
+            current?.resolve?.(false);
+          }}
         />
       )}
 
