@@ -82,7 +82,9 @@ Blocking questions requiring decision.
 Numbered sources with URL, accessedAt, summary.
 
 # Agent History
-Structured observations (no chain-of-thought): {at, task, plan, decisions, files, tests, outcome}.
+Session checkpoints appended after every AI chat turn and agent run (no chain-of-thought):
+`### <ISO timestamp> — Chat turn|Agent task` with Asked / Result / Model / Tools / Files / Status
+bullets. Keeps the newest 50 entries; survives provider switches, quota loss, and reloads.
 
 # Project Context
 Free-form context for AI (budgets, conventions, secrets-note: never secrets).

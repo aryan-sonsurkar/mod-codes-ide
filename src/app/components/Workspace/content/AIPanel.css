@@ -1791,6 +1791,48 @@
   font-size: var(--fs-9);
 }
 
+.ai-agent-verify {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  margin-top: var(--sp-6);
+  padding: var(--sp-4) var(--sp-6);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.ai-agent-verify > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-agent-verify-blocked {
+  border: 1px solid var(--warning-30);
+  background-color: var(--warning-04);
+  color: var(--warning-color);
+}
+
+.ai-agent-verify-ok {
+  border: 1px solid var(--success-color);
+  background-color: var(--success-08);
+  color: var(--success-color);
+}
+
+.ai-agent-verify-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.ai-agent-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-agent-btn.ai-agent-approve:disabled:hover {
+  background-color: transparent;
+}
+
 .ai-agent-done {
   display: flex;
   align-items: center;

@@ -201,6 +201,27 @@
   text-overflow: ellipsis;
 }
 
+.run-receipt {
+  flex-shrink: 0;
+  max-width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px var(--sp-5);
+  border-radius: var(--radius-sm, 4px);
+  border: solid 1px var(--border-color);
+}
+
+.run-receipt-ok {
+  color: var(--success-text, #6fdc9c);
+  border-color: var(--success-border, rgba(60, 200, 120, 0.4));
+}
+
+.run-receipt-failed {
+  color: var(--danger-text, #ff8a80);
+  border-color: var(--danger-border, rgba(255, 100, 100, 0.4));
+}
+
 .run-hint {
   white-space: nowrap;
   overflow: hidden;

@@ -63,6 +63,9 @@ export default function AgentProgress({
   onAcceptChangeset,
   onRejectChangeset,
   onOpenFile,
+  verifyState = null,
+  verifyPending = false,
+  onVerify = null,
 }) {
   if (!snapshot) return null;
   const { state, task, plan, observations, changeset } = snapshot;
@@ -162,8 +165,57 @@ export default function AgentProgress({
               ))}
             </ul>
           )}
+          <div
+            className={`ai-agent-verify ${
+              verifyState && verifyState.ok ? "ai-agent-verify-ok" : "ai-agent-verify-blocked"
+            }`}
+            role="status"
+            data-testid={verifyState && verifyState.ok ? "agent-verify-ok" : "agent-verify-blocked"}
+          >
+            {verifyState && verifyState.ok ? (
+              <span>
+                <Check size={11} /> Verified:{" "}
+                {(verifyState.covering || []).length > 0
+                  ? verifyState.covering
+                      .map((receipt) => `${receipt.skipped ? "checked" : "passed"} ${receipt.path}`)
+                      .join(", ")
+                  : "all changes"}
+              </span>
+            ) : (
+              <>
+                <ShieldAlert size={11} />
+                <span>
+                  {verifyPending
+                    ? "Verifying changes…"
+                    : verifyState?.reason || "Verification required before accepting."}
+                </span>
+                {!verifyPending && onVerify && (
+                  <button
+                    type="button"
+                    className="ai-agent-btn ai-agent-verify-btn"
+                    onClick={onVerify}
+                    data-testid="agent-verify-btn"
+                  >
+                    <Play size={12} />
+                    Verify changes
+                  </button>
+                )}
+              </>
+            )}
+          </div>
           <div className="ai-agent-actions">
-            <button type="button" className="ai-agent-btn ai-agent-approve" onClick={onAcceptChangeset}>
+            <button
+              type="button"
+              className="ai-agent-btn ai-agent-approve"
+              onClick={onAcceptChangeset}
+              disabled={!verifyState || !verifyState.ok}
+              title={
+                verifyState && !verifyState.ok
+                  ? verifyState.reason
+                  : "Accept the verified changes"
+              }
+              data-testid="agent-accept-changeset"
+            >
               <Check size={12} />
               Accept All
             </button>

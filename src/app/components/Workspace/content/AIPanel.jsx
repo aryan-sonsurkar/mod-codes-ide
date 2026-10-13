@@ -54,6 +54,7 @@ import AgentProgress from "./AgentProgress";
 import AISetup from "./AISetup";
 import { approvalRequestFor } from "../../../lib/ai/toolApproval";
 import { createActionHistory } from "../../../lib/ai/actionHistory";
+import { verifyChangesetAccept } from "../../../lib/project/receipts";
 import { useUsageTracker } from "../../../hooks/useUsageTracker";
 import UsageIndicator from "../../Ads/UsageIndicator";
 
@@ -215,9 +216,13 @@ export default function AIPanel({
   getContextData,
   externalPrompt = null,
   onApplyDiff = null,
+  onCheckpoint = null,
   onNavigate = null,
   onPromptConsumed = null,
   projectId = null,
+  receipts = [],
+  onRequestVerification = null,
+  verificationBusy = false,
 }) {
   const { settings, updateSetting } = useSettings();
   const [providerId, setProviderId] = useState(
@@ -254,6 +259,7 @@ export default function AIPanel({
   const [agentSnapshot, setAgentSnapshot] = useState(null);
   const [setupOverride, setSetupOverride] = useState(null);
   const orchestratorRef = useRef(null);
+  const [verifyRequest, setVerifyRequest] = useState(null);
 
   const sessionRef = useRef(null);
   const streamRef = useRef("");
@@ -273,6 +279,37 @@ export default function AIPanel({
   useEffect(() => {
     getContextDataRef.current = getContextData;
   }, [getContextData]);
+
+  const onCheckpointRef = useRef(onCheckpoint);
+  useEffect(() => {
+    onCheckpointRef.current = onCheckpoint;
+  });
+
+  const activeChangesetId = agentSnapshot?.changeset?.id || null;
+  const changesetVerify = useMemo(() => {
+    if (!agentSnapshot?.changeset) {
+      return null;
+    }
+    return verifyChangesetAccept({ changeset: agentSnapshot.changeset, receipts });
+  }, [agentSnapshot, receipts]);
+
+  // Verification is "in flight" only while the queued runs for THIS
+  // changeset are still running — derived, so no effect-driven setState.
+  const verifyActive = Boolean(
+    verifyRequest &&
+      activeChangesetId &&
+      verifyRequest.changesetId === activeChangesetId &&
+      verificationBusy
+  );
+
+  useEffect(() => {
+    if (!verifyRequest) {
+      return undefined;
+    }
+    // Safety net: never leave "Verifying…" stuck if a run produced no receipt.
+    const timer = window.setTimeout(() => setVerifyRequest(null), 15000);
+    return () => window.clearTimeout(timer);
+  }, [verifyRequest]);
 
   const cacheProvider = useMemo(
     () =>
@@ -771,6 +808,17 @@ export default function AIPanel({
         ]);
       }
       persistConversation([...messages, createMessage({ role: "assistant", content: "Agent task completed." })]);
+      const changedPaths = (snap.changeset?.operations || []).map((op) => op.path).filter(Boolean);
+      onCheckpointRef.current?.({
+        kind: "agent",
+        prompt: content,
+        summary: `state: ${snap.state}; files: ${changedPaths.join(", ") || "none"}`,
+        provider: providerId,
+        model: modelId,
+        tools: [...new Set((snap.observations || []).map((obs) => obs.tool).filter(Boolean))],
+        files: changedPaths,
+        status: snap.state === "completed" ? "complete" : String(snap.state),
+      });
     } catch (error) {
       const msg = error?.message || "Agent failed.";
       setMessages((current) => [
@@ -783,7 +831,7 @@ export default function AIPanel({
       setGenerationPhase(null);
       setToolActivity(null);
     }
-  }, [input, status, getContextData, messages, persistConversation]);
+  }, [input, status, getContextData, messages, persistConversation, providerId, modelId]);
 
   const handleAgentApprove = useCallback(() => {
     if (!orchestratorRef.current) return;
@@ -817,6 +865,10 @@ export default function AIPanel({
   const handleAgentAcceptChangeset = useCallback(() => {
     if (!orchestratorRef.current) return;
     const snap = orchestratorRef.current.getSnapshot();
+    const check = verifyChangesetAccept({ changeset: snap.changeset, receipts });
+    if (!check.ok) {
+      return;
+    }
     const ops = snap.changeset?.operations || [];
     for (const op of ops) {
       if (onApplyDiff && op.original != null && op.proposed != null) {
@@ -829,7 +881,19 @@ export default function AIPanel({
       ...current,
       createMessage({ role: "assistant", content: `Applied ${ops.length} file(s). Save to write to disk.` }),
     ]);
-  }, [onApplyDiff]);
+  }, [onApplyDiff, receipts]);
+
+  const handleVerifyChangeset = useCallback(() => {
+    if (!orchestratorRef.current || !onRequestVerification) return;
+    const snap = orchestratorRef.current.getSnapshot();
+    const changeset = snap.changeset;
+    const runs = (changeset?.operations || [])
+      .filter((op) => typeof op.proposed === "string")
+      .map((op) => ({ path: op.path, content: op.proposed }));
+    if (runs.length === 0) return;
+    setVerifyRequest({ changesetId: changeset?.id || null, at: Date.now() });
+    onRequestVerification({ changesetId: changeset?.id || null, runs });
+  }, [onRequestVerification]);
 
   const handleAgentRejectChangeset = useCallback(() => {
     if (!orchestratorRef.current) return;
@@ -1053,6 +1117,17 @@ export default function AIPanel({
           return next;
         });
         setGenerationState(CONVERSATION_STATES.complete);
+        onCheckpointRef.current?.({
+          kind: "chat",
+          prompt: content,
+          summary: result?.text || "",
+          provider: providerId,
+          model: modelId,
+          tools: Array.isArray(result?.toolCalls)
+            ? result.toolCalls.map((call) => call.toolName).filter(Boolean)
+            : [],
+          status: "complete",
+        });
       } catch (error) {
         const code = error && error.code;
         if (code === AI_ERRORS.cancelled) {
@@ -1428,6 +1503,9 @@ export default function AIPanel({
           onAcceptChangeset={handleAgentAcceptChangeset}
           onRejectChangeset={handleAgentRejectChangeset}
           onOpenFile={handleAgentOpenFile}
+          verifyState={changesetVerify}
+          verifyPending={verifyActive}
+          onVerify={handleVerifyChangeset}
         />
       )}
 

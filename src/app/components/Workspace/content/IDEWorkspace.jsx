@@ -36,6 +36,7 @@ import {
   applyImportedModcodes,
 } from "../../../lib/project/portability";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
+import { appendSessionCheckpoint } from "../../../lib/project/sessionCheckpoint";
 import { useAgentWorkspace } from "../../../hooks/useAgentWorkspace";
 import { createProjectLifecycleOrchestrator } from "../../../lib/project/lifecycle";
 import {
@@ -116,6 +117,11 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
   const [conflict, setConflict] = useState(null);
   const [aiPrompt, setAiPrompt] = useState(null);
   const [runToken, setRunToken] = useState(0);
+  const [runReceipts, setRunReceipts] = useState([]);
+  const [runOverride, setRunOverride] = useState(null);
+  const [verificationBusy, setVerificationBusy] = useState(false);
+  const runQueueRef = useRef([]);
+  const runOverrideRef = useRef(null);
   const monacoFocusRef = useRef(null);
   const monacoFindRef = useRef(null);
   const monacoSelectionRef = useRef(null);
@@ -124,6 +130,10 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
   const graphNeighborsRef = useRef(null);
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
   const [modcodesData, setModcodesData] = useState(null);
+  const modcodesRef = useRef(null);
+  useEffect(() => {
+    modcodesRef.current = modcodesData;
+  }, [modcodesData]);
   const [workspaceMode, setWorkspaceMode] = useState("code"); // code | research | prd | roadmap | agent | overview
   const [showContinue, setShowContinue] = useState(false);
   const { orchestrator: agentOrchestrator } = useAgentWorkspace();
@@ -1320,6 +1330,73 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     [setTabContent, toast]
   );
 
+  const startNextVerificationRun = useCallback(() => {
+    const next = runQueueRef.current.shift() || null;
+    runOverrideRef.current = next;
+    setRunOverride(next);
+    if (next) {
+      setRunToken((token) => token + 1);
+    } else {
+      setVerificationBusy(false);
+    }
+  }, []);
+
+  const handleRunComplete = useCallback(
+    (outcome) => {
+      const override = runOverrideRef.current;
+      setRunReceipts((current) =>
+        [
+          {
+            ...outcome,
+            proposed: Boolean(override),
+            changesetId: override?.changesetId || null,
+          },
+          ...current,
+        ].slice(0, 60)
+      );
+      startNextVerificationRun();
+    },
+    [startNextVerificationRun]
+  );
+
+  const handleRequestVerification = useCallback(
+    ({ changesetId, runs }) => {
+      const queue = (Array.isArray(runs) ? runs : [])
+        .filter((run) => run && typeof run.path === "string" && typeof run.content === "string")
+        .map((run) => ({
+          path: run.path,
+          content: run.content,
+          changesetId: typeof changesetId === "string" && changesetId ? changesetId : null,
+        }));
+      runQueueRef.current = queue;
+      if (queue.length === 0) {
+        return;
+      }
+      setVerificationBusy(true);
+      setLayout((current) => ({ ...current, terminalOpen: true, bottomTab: "run" }));
+      startNextVerificationRun();
+    },
+    [setLayout, startNextVerificationRun]
+  );
+
+  const handleAiCheckpoint = useCallback(
+    (checkpoint) => {
+      const data = modcodesRef.current;
+      if (!data || !tree?.name) {
+        return;
+      }
+      try {
+        const next = appendSessionCheckpoint({ modcodesData: data, checkpoint });
+        modcodesRef.current = next;
+        setModcodesData(next);
+        saveModcodes({ rootName: tree.name, data: next }).catch(() => {});
+      } catch {
+        // A failed checkpoint must never break the AI conversation.
+      }
+    },
+    [tree]
+  );
+
   useEffect(() => {
     window.__modcodesWriteFile = async (path, content) => {
       try {
@@ -1798,9 +1875,13 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
                         getContextData={getAiContext}
                         externalPrompt={aiPrompt}
                         onApplyDiff={handleApplyDiff}
+                        onCheckpoint={handleAiCheckpoint}
                         onNavigate={handleAiNavigate}
                         onPromptConsumed={handleAiPromptConsumed}
                         projectId={selectedProject?.id || null}
+                        receipts={runReceipts}
+                        onRequestVerification={handleRequestVerification}
+                        verificationBusy={verificationBusy}
                       />
                     ) : (
                       <ProblemsPanel
@@ -1882,8 +1963,9 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
               </div>
               {layout.bottomTab === "run" ? (
                 <RunPanel
-                  source={activeSource}
+                  source={runOverride || activeSource}
                   runToken={runToken}
+                  onRunComplete={handleRunComplete}
                   onClose={() =>
                     setLayout((current) => ({ ...current, terminalOpen: false }))
                   }

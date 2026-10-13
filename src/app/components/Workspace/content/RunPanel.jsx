@@ -10,14 +10,16 @@ import {
   isPythonRuntimeReady,
   formatSummary,
 } from "../../../lib/runtime";
+import { receiptFromRunOutcome } from "../../../lib/project/receipts";
 
 const MAX_ENTRIES = 400;
 
-export default function RunPanel({ source, runToken, onClose }) {
+export default function RunPanel({ source, runToken, onClose, onRunComplete = null }) {
   const { settings } = useSettings();
   const [entries, setEntries] = useState([]);
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState(null);
+  const [receipt, setReceipt] = useState(null);
   const [preview, setPreview] = useState(null);
   const [previewSandbox, setPreviewSandbox] = useState("allow-scripts");
   const [pane, setPane] = useState("output");
@@ -26,6 +28,11 @@ export default function RunPanel({ source, runToken, onClose }) {
   );
   const runSeqRef = useRef(0);
   const bodyRef = useRef(null);
+  const onRunCompleteRef = useRef(onRunComplete);
+
+  useEffect(() => {
+    onRunCompleteRef.current = onRunComplete;
+  });
 
   const language = useMemo(
     () => (source && source.path ? detectFile(source.path, source.content) : null),
@@ -61,9 +68,19 @@ export default function RunPanel({ source, runToken, onClose }) {
     runSeqRef.current += 1;
     const seq = runSeqRef.current;
     const detected = detectFile(source.path, source.content);
+    const outputLines = [];
+    const emitReceipt = (outcome) => {
+      if (runSeqRef.current !== seq) {
+        return;
+      }
+      const next = receiptFromRunOutcome({ path: source.path, ...outcome });
+      setReceipt(next);
+      onRunCompleteRef.current?.(next);
+    };
 
     setEntries([]);
     setSummary(null);
+    setReceipt(null);
     setPreview(null);
     setPane("output");
     setRunning(true);
@@ -78,12 +95,14 @@ export default function RunPanel({ source, runToken, onClose }) {
           reason: "not runnable",
         })
       );
+      emitReceipt({ ok: true, skipped: true, reason: detected.reason });
       setRunning(false);
       return;
     }
 
     if (detected.kind === "python" && !isPythonRuntimeSupported()) {
       pushEntry("err", "Python needs Web Workers, which this browser has disabled.");
+      emitReceipt({ ok: false, reason: "Python runtime unavailable in this browser" });
       setRunning(false);
       return;
     }
@@ -95,6 +114,9 @@ export default function RunPanel({ source, runToken, onClose }) {
         onOutput: (chunk) => {
           if (runSeqRef.current !== seq) {
             return;
+          }
+          if (chunk && typeof chunk.text === "string") {
+            outputLines.push(chunk.text);
           }
           pushEntry(chunk.type === "stderr" ? "err" : "out", chunk.text);
         },
@@ -122,9 +144,11 @@ export default function RunPanel({ source, runToken, onClose }) {
             reason: "preview rendered",
           })
         );
+        emitReceipt({ ok: true, exitCode: 0, durationMs: result.durationMs });
       } else {
         if (result.stderr) {
           pushEntry("err", result.stderr);
+          outputLines.push(result.stderr);
         }
         if (!result.stdout && !result.stderr && result.exitCode === 0) {
           pushEntry("sys", "(no output)");
@@ -136,9 +160,17 @@ export default function RunPanel({ source, runToken, onClose }) {
             durationMs: result.durationMs,
           })
         );
+        emitReceipt({
+          ok: result.exitCode === 0,
+          exitCode: result.exitCode,
+          durationMs: result.durationMs,
+          reason: result.exitCode === 0 ? null : result.stderr || `exit ${result.exitCode}`,
+          output: outputLines.join(""),
+        });
       }
     } catch (error) {
-      pushEntry("err", error && error.message ? error.message : String(error));
+      const message = error && error.message ? error.message : String(error);
+      pushEntry("err", message);
       setSummary(
         formatSummary({
           label: `${source.path} · ${detected.label}`,
@@ -147,6 +179,7 @@ export default function RunPanel({ source, runToken, onClose }) {
           reason: "failed to start",
         })
       );
+      emitReceipt({ ok: false, exitCode: 1, reason: message, output: outputLines.join("") });
     } finally {
       if (runSeqRef.current === seq) {
         setRunning(false);
@@ -154,16 +187,29 @@ export default function RunPanel({ source, runToken, onClose }) {
     }
   }, [running, source, pushEntry]);
 
+  // Always call the latest run() so token-triggered runs (including queued
+  // verification runs) pick up the freshest source and state.
+  const runRef = useRef(run);
   useEffect(() => {
-    if (!runToken) {
+    runRef.current = run;
+  });
+  const handledTokenRef = useRef(0);
+
+  useEffect(() => {
+    if (!runToken || runToken === handledTokenRef.current) {
       return undefined;
     }
+    if (running) {
+      // An in-flight run holds the token; this effect re-runs when the
+      // running state flips so the queued run is not dropped.
+      return undefined;
+    }
+    handledTokenRef.current = runToken;
     const timer = window.setTimeout(() => {
-      run();
+      runRef.current?.();
     }, 0);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runToken]);
+  }, [runToken, running]);
 
   const stop = () => {
     runSeqRef.current += 1;
@@ -175,6 +221,7 @@ export default function RunPanel({ source, runToken, onClose }) {
   const clear = () => {
     setEntries([]);
     setSummary(null);
+    setReceipt(null);
     setPreview(null);
     setPane("output");
   };
@@ -289,6 +336,16 @@ export default function RunPanel({ source, runToken, onClose }) {
         <span className="run-summary" data-testid="run-summary">
           {summary || (running ? "Running locally…" : "Idle")}
         </span>
+        {receipt ? (
+          <span
+            className={`run-receipt${receipt.ok ? " run-receipt-ok" : " run-receipt-failed"}`}
+            data-testid="run-receipt"
+            title={receipt.output || receipt.summary}
+          >
+            Receipt: {receipt.ok ? (receipt.skipped ? "nothing to run" : "passed") : "failed"}
+            {receipt.path ? ` · ${receipt.path}` : ""}
+          </span>
+        ) : null}
         <span className="run-hint">{language ? language.hint || "" : ""}</span>
       </footer>
     </section>
