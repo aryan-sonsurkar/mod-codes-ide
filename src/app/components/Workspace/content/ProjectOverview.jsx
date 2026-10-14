@@ -4,7 +4,7 @@ import { PHASE_LABELS, phaseProgress } from "../../../lib/project/state";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
 import "./ProjectOverview.css";
 
-export default function ProjectOverview({ modcodesData, codebaseSnapshot, onContinue, onReview, onOpen, onPhaseChange, onExportMemory, onImportMemory }) {
+export default function ProjectOverview({ modcodesData, codebaseSnapshot, onContinue, onReview, onOpen, onPhaseChange, onExportMemory, onImportMemory, onExportWorkspaceZip, onImportWorkspaceZip }) {
   const reconciliation = useMemo(() => reconcileProjectMemory({ modcodesData, codebaseSnapshot }), [modcodesData, codebaseSnapshot]);
   if (!modcodesData) {
     return (
@@ -95,6 +95,8 @@ export default function ProjectOverview({ modcodesData, codebaseSnapshot, onCont
         <button onClick={onOpen}>Open Project</button>
         {onExportMemory && <button onClick={onExportMemory}>Export .modcodes</button>}
         {onImportMemory && <button onClick={onImportMemory}>Import .modcodes</button>}
+        {onExportWorkspaceZip && <button onClick={onExportWorkspaceZip}>Export ZIP</button>}
+        {onImportWorkspaceZip && <button onClick={onImportWorkspaceZip}>Import ZIP</button>}
         <select value={phase} onChange={(e) => onPhaseChange && onPhaseChange(e.target.value)} aria-label="Change project phase">
           {Object.keys(PHASE_LABELS).map((k) => <option key={k} value={k}>{PHASE_LABELS[k]}</option>)}
         </select>

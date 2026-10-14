@@ -35,6 +35,10 @@ import {
   importModcodesFile,
   applyImportedModcodes,
 } from "../../../lib/project/portability";
+import {
+  downloadWorkspaceArchive,
+  parseWorkspaceArchiveFile,
+} from "../../../lib/project/workspaceArchive";
 import { reconcileProjectMemory } from "../../../lib/project/reconcile";
 import { appendSessionCheckpoint } from "../../../lib/project/sessionCheckpoint";
 import { useAgentWorkspace } from "../../../hooks/useAgentWorkspace";
@@ -126,6 +130,9 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
   const monacoFindRef = useRef(null);
   const monacoSelectionRef = useRef(null);
   const importInputRef = useRef(null);
+  const zipInputRef = useRef(null);
+  const [zipImportConfirm, setZipImportConfirm] = useState(null);
+  const zipImportRef = useRef(null);
   const contextCacheRef = useRef(createContextCache({ ttlMs: 2000 }));
   const graphNeighborsRef = useRef(null);
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
@@ -839,6 +846,111 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
     toast(`Imported project memory from ${file.name}`, "success");
   }
 
+  async function collectWorkspaceFiles() {
+    if (!tree) return [];
+    const rootName = tree.name || "";
+    const prefix = rootName ? `${rootName}/` : "";
+    const paths = Array.from(collectFilePaths(tree));
+    const files = [];
+    for (const fullPath of paths) {
+      const result = await readFile(fullPath);
+      if (result.ok && typeof result.content === "string") {
+        const path = prefix && fullPath.startsWith(prefix) ? fullPath.slice(prefix.length) : fullPath;
+        files.push({ path, content: result.content });
+      }
+    }
+    return files;
+  }
+
+  async function handleExportWorkspaceZip() {
+    const files = await collectWorkspaceFiles();
+    if (files.length === 0) {
+      toast("There are no files to export yet.", "info");
+      return;
+    }
+    const result = downloadWorkspaceArchive({
+      files,
+      projectName: selectedProject?.name || tree?.name,
+    });
+    if (result.ok) {
+      const skippedNote = result.skipped > 0 ? ` (${result.skipped} skipped)` : "";
+      toast(`Exported ${result.fileCount} file(s) to ${result.filename}${skippedNote}`, "success");
+    } else {
+      toast("This browser could not export the workspace ZIP.", "error");
+    }
+  }
+
+  async function handleImportWorkspaceZip(event) {
+    const input = event?.target;
+    const file = input?.files?.[0] || null;
+    if (input) {
+      input.value = "";
+    }
+    if (!file) return;
+    if (!tree?.name) {
+      toast("Open a project before importing a workspace ZIP.", "info");
+      return;
+    }
+    const parsed = await parseWorkspaceArchiveFile(file);
+    if (!parsed.ok) {
+      toast("That file could not be read as a workspace ZIP.", "error");
+      return;
+    }
+    zipImportRef.current = parsed.files;
+    setZipImportConfirm({ count: parsed.files.length, skipped: parsed.skipped, name: file.name });
+  }
+
+  async function applyZipImportFiles() {
+    const files = zipImportRef.current || [];
+    zipImportRef.current = null;
+    setZipImportConfirm(null);
+    const rootName = tree?.name || "";
+    const prefix = rootName ? `${rootName}/` : "";
+    let written = 0;
+    let failed = 0;
+    for (const entry of files) {
+      const fullPath = prefix ? `${prefix}${entry.path}` : entry.path;
+      const segments = fullPath.split("/");
+      const fileName = segments.pop();
+      // The first segment is the workspace root, which already exists.
+      let parentPath = segments[0] || "";
+      let dirFailed = false;
+      for (let i = 1; i < segments.length; i += 1) {
+        const segment = segments[i];
+        const nextPath = `${parentPath}/${segment}`;
+        const dirResult = await createDirectory(parentPath, segment);
+        if (!dirResult.ok && dirResult.status !== "exists") {
+          dirFailed = true;
+          break;
+        }
+        parentPath = nextPath;
+      }
+      if (dirFailed) {
+        failed += 1;
+        continue;
+      }
+      const writeResult = await writeFile(fullPath, entry.content);
+      if (writeResult.ok) {
+        written += 1;
+      } else {
+        const createResult = await createFile(parentPath, fileName);
+        if (createResult.ok) {
+          const retry = await writeFile(fullPath, entry.content);
+          if (retry.ok) written += 1;
+          else failed += 1;
+        } else {
+          failed += 1;
+        }
+      }
+    }
+    await handleRefresh();
+    if (failed > 0) {
+      toast(`Imported ${written} file(s) from ZIP; ${failed} failed.`, "error");
+    } else {
+      toast(`Imported ${written} file(s) from ZIP.`, "success");
+    }
+  }
+
   const commands = [
     {
       id: "save-file",
@@ -895,6 +1007,23 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
       opensDialog: true,
       execute: () => {
         importInputRef.current?.click();
+      },
+    },
+    {
+      id: "export-workspace-zip",
+      title: "Export Workspace as ZIP",
+      shortcut: "",
+      execute: () => {
+        handleExportWorkspaceZip();
+      },
+    },
+    {
+      id: "import-workspace-zip",
+      title: "Import Workspace from ZIP",
+      shortcut: "",
+      opensDialog: true,
+      execute: () => {
+        zipInputRef.current?.click();
       },
     },
     {
@@ -1597,6 +1726,8 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
           onOpen={()=>setShowContinue(false)}
           onExportMemory={handleExportMemory}
           onImportMemory={()=>importInputRef.current?.click()}
+          onExportWorkspaceZip={handleExportWorkspaceZip}
+          onImportWorkspaceZip={()=>zipInputRef.current?.click()}
           onPhaseChange={(next)=>{ const updated={...modcodesData, project:{...modcodesData.project, phase: next, updatedAt:new Date().toISOString()}}; setModcodesData(updated); saveModcodes({rootName: tree.name, data: updated});}}
         />
       )}
@@ -2156,6 +2287,39 @@ export default function IdeWorkspace({ selectedProject, registerAskHandler = nul
             aria-hidden="true"
             tabIndex={-1}
             onChange={handleImportMemory}
+          />
+
+          <input
+            ref={zipInputRef}
+            type="file"
+            accept=".zip,application/zip"
+            hidden
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={handleImportWorkspaceZip}
+          />
+
+          <ConfirmDialog
+            open={Boolean(zipImportConfirm)}
+            title="Import workspace ZIP"
+            message={
+              <>
+                Import {zipImportConfirm?.count} file
+                {zipImportConfirm?.count === 1 ? "" : "s"} from{" "}
+                {zipImportConfirm?.name}? Existing files with the same paths
+                will be overwritten.
+                {zipImportConfirm?.skipped > 0 &&
+                  ` ${zipImportConfirm.skipped} entr${
+                    zipImportConfirm.skipped === 1 ? "y" : "ies"
+                  } skipped as unsafe.`}
+              </>
+            }
+            confirmLabel="Import"
+            onConfirm={applyZipImportFiles}
+            onCancel={() => {
+              zipImportRef.current = null;
+              setZipImportConfirm(null);
+            }}
           />
 
           <ConfirmDialog
