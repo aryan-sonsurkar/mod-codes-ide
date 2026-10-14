@@ -51,9 +51,11 @@ import AIProviderCapabilities from "./AIProviderCapabilities";
 import AIActionHistory from "./AIActionHistory";
 import AgentWorkflowDemo from "./AgentWorkflowDemo";
 import AgentProgress from "./AgentProgress";
+import AITaskMeter from "./AITaskMeter";
 import AISetup from "./AISetup";
 import { approvalRequestFor } from "../../../lib/ai/toolApproval";
 import { createActionHistory } from "../../../lib/ai/actionHistory";
+import { describeAgentScope } from "../../../lib/ai/agentScoping";
 import { verifyChangesetAccept } from "../../../lib/project/receipts";
 import { useUsageTracker } from "../../../hooks/useUsageTracker";
 import UsageIndicator from "../../Ads/UsageIndicator";
@@ -321,6 +323,7 @@ export default function AIPanel({
 
   const { tracker, usage, trackUsage: recordUsage, checkLimit, getLimitStatus, refresh: refreshUsage } = useUsageTracker({
     limits: settings.ai?.usageLimits || {},
+    projectId,
   });
 
   useEffect(() => {
@@ -769,6 +772,7 @@ export default function AIPanel({
       ...current,
       createMessage({ role: "user", content: `[Agent] ${content}` }),
     ]);
+    const agentStartMs = Date.now();
     try {
       const context = getContextData ? getContextData() : {};
       await orchestratorRef.current.runAgentLoop({
@@ -790,6 +794,14 @@ export default function AIPanel({
         },
       });
       const snap = orchestratorRef.current.getSnapshot();
+      recordUsage({
+        provider: providerId,
+        model: modelId,
+        kind: "agent",
+        label: content,
+        durationMs: Date.now() - agentStartMs,
+        accounting: "unknown",
+      });
       if (snap.state === "awaitingApproval" || snap.state === "awaitingReview") {
         setMessages((current) => [
           ...current,
@@ -835,7 +847,7 @@ export default function AIPanel({
       setGenerationPhase(null);
       setToolActivity(null);
     }
-  }, [input, status, getContextData, messages, persistConversation, providerId, modelId]);
+  }, [input, status, getContextData, messages, persistConversation, providerId, modelId, recordUsage]);
 
   const handleAgentApprove = useCallback(() => {
     if (!orchestratorRef.current) return;
@@ -1109,6 +1121,10 @@ export default function AIPanel({
           const accounting = stats.outputTokens != null ? "actual" : "unknown";
           recordUsage({
             provider: providerId,
+            model: modelId,
+            kind: "chat",
+            label: content,
+            durationMs: typeof stats.durationMs === "number" ? stats.durationMs : null,
             inputTokens: null,
             outputTokens: stats.outputTokens ?? null,
             totalTokens: stats.outputTokens ?? null,
@@ -1117,6 +1133,9 @@ export default function AIPanel({
         } else {
           recordUsage({
             provider: providerId,
+            model: modelId,
+            kind: "chat",
+            label: content,
             accounting: "unknown",
           });
         }
@@ -1641,6 +1660,26 @@ export default function AIPanel({
           <ShieldCheck size={12} />
           <span>Tools: read + write (with approval)</span>
         </div>
+        {(() => {
+          const scope = describeAgentScope({
+            providerId,
+            ready: status === PROVIDER_STATES.ready,
+            online: typeof navigator !== "undefined" ? navigator.onLine : true,
+          });
+          return (
+            <div
+              className={`ai-agent-scope ai-agent-scope-${scope.mode}`}
+              data-testid="agent-scope"
+              title={[scope.headline, ...scope.hints].join("\n")}
+            >
+              <Zap size={12} />
+              <span>{scope.chip}</span>
+              {scope.honestLimit && (
+                <span className="ai-agent-scope-limit">{scope.honestLimit}</span>
+              )}
+            </div>
+          );
+        })()}
         {lastStats && (
           <div className="ai-stats">
             <span className="ai-stats-label">Last run</span>
@@ -1655,6 +1694,7 @@ export default function AIPanel({
             )}
           </div>
         )}
+        <AITaskMeter usage={usage} />
       </div>
 
       <div className="ai-input-row">

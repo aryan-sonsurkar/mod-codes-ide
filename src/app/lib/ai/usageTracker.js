@@ -9,6 +9,59 @@ const DEFAULT_LIMITS = {
   project: null,
 };
 
+const LOCAL_PROVIDERS = new Set(["browser-bonsai", "ollama"]);
+
+export function isLocalProvider(provider) {
+  return LOCAL_PROVIDERS.has(String(provider || ""));
+}
+
+export function describeUsageSpend(provider, accounting = "unknown") {
+  if (isLocalProvider(provider)) {
+    return "local, $0.00 — no meter to burn";
+  }
+  if (accounting === "actual") {
+    return "API usage — actual tokens, check your provider bill";
+  }
+  if (accounting === "estimated") {
+    return "API usage — estimated, check your provider bill";
+  }
+  return "API usage — accounting unknown, check your provider bill";
+}
+
+export function summarizeUsageLog(log = []) {
+  let turns = 0;
+  let knownTokens = 0;
+  let unknownAccounting = 0;
+  let local = 0;
+  for (const entry of log) {
+    turns += 1;
+    if (typeof entry.totalTokens === "number") knownTokens += entry.totalTokens;
+    if (!entry.known || entry.accounting === "unknown") unknownAccounting += 1;
+    if (isLocalProvider(entry.provider)) local += 1;
+  }
+  return { turns, knownTokens, unknownAccounting, local };
+}
+
+export function usageLogToCsv(log = []) {
+  const header = "time,provider,model,kind,inputTokens,outputTokens,totalTokens,accounting,durationMs,label";
+  const rows = log.map((entry) => {
+    const cells = [
+      new Date(entry.timestamp || 0).toISOString(),
+      entry.provider || "",
+      entry.model || "",
+      entry.kind || "chat",
+      entry.inputTokens ?? "",
+      entry.outputTokens ?? "",
+      entry.totalTokens ?? "",
+      entry.accounting || "unknown",
+      entry.durationMs ?? "",
+      String(entry.label || "").replace(/[\r\n]+/g, " "),
+    ];
+    return cells.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",");
+  });
+  return [header, ...rows].join("\n");
+}
+
 function todayKey() {
   return new Date().toISOString().split("T")[0];
 }
@@ -114,6 +167,10 @@ export function createUsageTracker({
 
   function trackUsage({
     provider,
+    model = null,
+    kind = "chat",
+    label = null,
+    durationMs = null,
     inputTokens,
     outputTokens,
     totalTokens,
@@ -137,6 +194,10 @@ export function createUsageTracker({
 
     const entry = {
       provider: String(provider || "unknown"),
+      model: model ? String(model) : null,
+      kind: kind === "agent" ? "agent" : "chat",
+      label: label ? String(label).slice(0, 80) : null,
+      durationMs: typeof durationMs === "number" && durationMs >= 0 ? Math.round(durationMs) : null,
       inputTokens: typeof inputTokens === "number" ? inputTokens : null,
       outputTokens: typeof outputTokens === "number" ? outputTokens : null,
       totalTokens: isKnown ? total : null,

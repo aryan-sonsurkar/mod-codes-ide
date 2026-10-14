@@ -22,9 +22,8 @@ function getOrCreateTracker(limits, projectId) {
 }
 
 export function useUsageTracker({ limits = {}, projectId = null } = {}) {
-  const [usageSnapshot, setUsageSnapshot] = useState(null);
-
   const tracker = getOrCreateTracker(limits, projectId);
+  const [usageSnapshot, setUsageSnapshot] = useState(() => tracker.getUsage());
 
   const refresh = useCallback(() => {
     const usage = tracker.getUsage();
