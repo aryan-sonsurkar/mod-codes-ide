@@ -1,67 +1,103 @@
-# Launch Readiness — MODCODES (M93)
+# Launch Readiness — MODCODES v0.1.0
 
-**Baseline:** `f8cced5` — 363 tests, 0 lint, build pass. Providers Ollama/Bonsai stub, agent orchestrator, diff/changeset, ranking, context budget/secret filtering.
+**Current:** tag `v0.1.0` — 1100 unit tests (94 files) · 176 Playwright e2e
+tests · ESLint 0 errors · production build clean · CI on every push.
+
+> This document supersedes the M93-era baseline (363 tests, stub providers).
+> Items below reflect the release candidate as verified against
+`docs/RELEASE_CHECKLIST.md`.
 
 ## Current architecture
 
-- **Routing/Layout:** Next.js App Router `/`, `/projects`, `/settings`; `Workspace.jsx` routes to `IdeWorkspace` or `ProjectsPage`; layout persistence `modcodes.ide.layout.v1`, workspace recovery `modcodes.ide.workspace.v2`.
-- **Projects:** localStorage `modcodes-projects`; file creation/delete/rename via File System Access API; explorer with breadcrumbs.
-- **Workspace/IDE:** `IDEWorkspace.jsx` ~1600 lines owns FS, tabs (`useTabs`→DocumentManager), diagnostics, layout, command palette, Monaco editor, search/replace.
-- **Filesystem:** `filesystem.js` (FileSystemDirectoryHandle/File, 2 MB cap, 8 depth, skips node_modules/.git); permission checks.
-- **Terminal:** `TerminalService` + `browserSimulationBackend` only (help/echo/pwd/ls); no OS shell.
-- **AI:** Provider contract → Session → Context Engine (budget, ranking cache) → Tool Registry (read only) → Diff/ChangeSet → DocumentManager → Save → Filesystem; `AIPanel` ~1100 lines, `BrowserAISection`.
-- **Settings/Persistence:** `settingsStorage` (editor/files/terminal/ai) + workspace + layout + conversations `modcodes.ai.conversations.v1`.
-- **Error handling:** `friendlyError`, `Toast`, `ConfirmDialog`, status `requesting/cancelled/unsupported/denied/error`.
-- **Responsive:** CSS grid + flex, breakpoints 768px.
-- **Security:** provider-local, Browser AI local, secret `isSecretPath`, context budget, permission `read` only, no shell.
+- **Routing/Layout:** Next.js App Router `/`, `/projects`, `/settings`;
+  `Workspace.jsx` routes to `IdeWorkspace` or `ProjectsPage`; layout
+  persistence `modcodes.ide.layout.v1`, workspace recovery
+  `modcodes.ide.workspace.v2`.
+- **Projects:** localStorage `modcodes-projects`; disk projects via File
+  System Access API, browser-storage projects via `virtualFS` (localStorage,
+  2 MB/file cap); onboarding overlay on first run.
+- **Workspace/IDE:** `IDEWorkspace.jsx` (~2360 lines) owns FS, tabs
+  (`useTabs`), diagnostics, layout, command palette, search/replace,
+  checkpoints, run queue, ZIP import/export.
+- **Filesystem:** facade over disk (`filesystem.js`) + browser storage
+  (`virtualFS.js`); both prefix tree paths with the workspace root name;
+  skips `node_modules`/`.git`; permission checks on every write.
+- **Terminal:** `TerminalService` with browser simulation backend by
+  default; optional localhost bridge (`tools/modcodes-bridge`,
+  127.0.0.1 + pairing token) for a real system shell.
+- **AI:** providers Ollama (local) + Bonsai (WebGPU, in-browser) → session →
+  context engine (budget, ranking, secret filtering) → tool registry
+  (read + approval-gated write) → verification receipts → changeset → save.
+  `AIPanel.jsx` (~1760 lines) plus extracted `AgentProgress`,
+  `AIToolApproval`, `AITaskMeter`, `AIActionHistory`.
+- **Trust layer (v0.1.0):** session checkpoints appended to `.modcodes`
+  Agent History; verification receipts required before agent Accept;
+  protected-path classification (env/manifest/database/migration/memory/git)
+  forces typed-confirmation approval; honest per-turn task meter with CSV
+  export; honest offline agent scoping; zip-slip-guarded workspace
+  ZIP export/import.
+- **Settings/Persistence:** `settingsStorage` + workspace + layout +
+  conversations `modcodes.ai.conversations.v1`; usage in
+  `modcodes-usage` / `modcodes-usage-session`.
+- **Error handling:** `friendlyError`, Toast, ConfirmDialog, distinct
+  folder-status messages (requesting/cancelled/unsupported/denied/error),
+  error boundary with recovery UI (e2e-covered).
+- **Security:** local-only providers, secret-path filtering, context
+  budget, security headers in `next.config.mjs`, CSP documented as deferred
+  (Monaco `eval()`), no hardcoded secrets (scanner-verified), health endpoint
+  falls back to `package.json` version on hosted runtimes.
 
-## P0 blockers
+## Resolved since M93
 
-1. **No onboarding** — new user has no guidance on filesystem permission or AI setup; must be able to skip AI.
-2. **Terminal is simulation only** — product claims "terminal" but cannot run system shell; need optional localhost bridge (M97) with localhost-only + pairing or must be honest fallback.
-3. **Oversized orchestration** — `AIPanel`/`IDEWorkspace` too large for launch risk; needs extraction (M94).
+1. **Onboarding** — overlay with skip on first run (unit + e2e covered).
+2. **Terminal honesty** — browser simulation labeled as such; optional
+   localhost-only bridge with pairing token ships under `tools/`.
+3. **Provider stubs** — Ollama and Bonsai are real implementations with
+   status states, model management, and offline fallback copy.
+4. **Ad posture** — ad-free by default; consent-gated AdSense infrastructure
+   exists but is intentionally unconfigured at launch.
 
-## P1 launch issues
+## Remaining risks (accepted for v0.1.0)
 
-- Ollama/Bonsai setup not discoverable (no copyable commands, WebGPU status not explained) — M96.
-- Error recovery for FS permission denied, folder cancel, save conflict, Ollama/Bonsai unavailable, bridge unavailable needs distinct retry UI — M99.
-- Performance: Monaco + AIPanel load unmeasured; duplicate FS scans on refresh/project switch — M100.
-- Accessibility: palette/focus/aria on dialogs already present but not audited across new AI panels — M101.
-
-## P2 post-launch
-
-- Multi-file diff `acceptAll` batch UX, workspace command ranking tuning, agent history persistence encryption, real modcodes-coder runtime.
+- **Component size** — `AIPanel` (~1760) and `IDEWorkspace` (~2360) remain
+  large; extraction is worthwhile before major feature work resumes.
+- **Browser support** — File System Access API is Chromium-only; Firefox and
+  Safari get browser-storage projects (fallback path is e2e-covered).
+- **WebGPU** — Bonsai requires Chrome/Edge desktop best case; elsewhere the
+  app guides users to Ollama or stays honest about unavailability.
+- **No admin dashboard** — observability logger ships, but error-rate
+  monitoring is manual (host logs) for v0.1.0.
+- **Domain** — `modcodes.dev` pending DNS; production is
+  `modcode.vercel.app` (metadata, robots, sitemap all point there).
 
 ## Known browser limitations
 
-- File System Access API: Chromium (Chrome/Edge) only; Firefox/Safari show `unsupported` status + fallback to projects list only.
-- WebGPU: Chrome/Edge desktop best; Firefox/Safari may show `unsupported` — Bonsai disabled, Ollama/fallback remains.
-- `navigator.deviceMemory` often `undefined`; tier shown as Unknown.
-- Cache Storage quota varies; large Bonsai download may hit quota → `normalizeStorageError`.
+- File System Access API: Chromium only; others show `unsupported` status
+  and fall back to browser-storage projects.
+- WebGPU: Chrome/Edge desktop preferred; Bonsai disabled gracefully.
+- `navigator.deviceMemory` often `undefined`; tier shows as Unknown.
+- Cache Storage quota varies; large Bonsai download may hit quota →
+  `normalizeStorageError`.
 
-## Security risks (pre-M97)
+## Performance
 
-- Simulated terminal has no OS access — safe.
-- Future system bridge, if bound to 0.0.0.0 or without auth, would expose shell — M97 must bind 127.0.0.1 + random token + user approval.
-- AI `execute` permission remains disabled; ensure `agentToolExecution` never calls `write`/`execute` without approval.
+- Context ranking for 100+ files: O(n log n), cached via
+  `createContextCache`; usage log capped (500 persisted / 1000 memory);
+  service worker precaches the app shell (54 assets).
+- Not yet instrumented in production: first AI response latency, Monaco
+  init, IDE open time. Worth measuring before memoizing further.
 
-## Performance risks
+## Manual QA before any release
 
-- Unmeasured: initial load, route transition, IDE open, folder scan, Monaco init, first AI response, context ranking. M100 must measure before memoizing.
-- Context ranking for 100+ files: O(n log n) 10–20 ms observed, acceptable; avoid recompute via `createContextCache`.
+- Chrome/Edge: folder picker, browser-storage project, Monaco, Bonsai
+  status, Ollama connect, bridge connect/disconnect, agent plan
+  approve/reject, verification run, protected-file typed approval, ZIP
+  export/import, conflict dialog, responsive breakpoints, keyboard nav,
+  reduced motion.
+- Firefox/Safari: browser-storage fallback path, graceful AI degradation.
 
-## UX issues
+## Deployment
 
-- Landing still mentions "terminal-ready architecture" without clarifying simulation vs system terminal — fix in M95/M96/M102.
-- Settings AI note duplicates but lacks cache/history clear visibility — add in M95.
-
-## Deployment requirements
-
-- `NEXT_PUBLIC_` env none required; `next build` must pass; static assets, `robots.txt` already; no `sitemap` needed; no credentials.
-
-## Manual QA required (M101–102)
-
-- Chrome/Edge: filesystem picker, Monaco, Bonsai status, Ollama connect, terminal bridge connect/disconnect, multiple sessions, agent plan approve/reject, diff accept/reject, save gate, conflict, responsive, keyboard nav, reduced motion.
-
-No feature added beyond launch-critical in M93.
-
+- `next build` must pass; no required `NEXT_PUBLIC_` env vars; no
+  credentials in the repo. Vercel auto-deploys on push to `main`;
+  verify `/api/health` reports `version: 0.1.0` after deploy.

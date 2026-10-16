@@ -27,9 +27,26 @@ single portable file.
 **v0.1.0 (current):** full project lifecycle (Research → PRD → Roadmap →
 Agent), `.modcodes` Markdown-first project memory, approval gates and save
 gates, in-browser runs, offline PWA, responsive desktop/tablet/mobile,
-AdSense with privacy consent.
+ad-free by default.
 
-**Quality gates:** 1030 Vitest unit tests · 168 Playwright e2e tests ·
+**The trust layer (what cloud IDEs can't copy):**
+
+- **No quota, no account, no server** — runs on locked-down machines and
+  fully offline; local AI providers mean no per-token bill to meter
+- **Task meter that can't lie** — every AI turn gets a receipt (provider,
+  model, tokens, local vs API spend) visible in-panel and exportable as CSV
+- **Verification receipts** — agent changesets only unlock Accept after the
+  proposed code actually ran and passed
+- **Session checkpoints** — every chat turn and agent task appends an audit
+  entry (asked/result/model/tools/files) to `.modcodes` Agent History
+- **Blast-radius walls** — protected paths (env files, manifests, databases,
+  `.modcodes`) force typed-confirmation approval before any agent access
+- **Honest agent scoping** — the panel states plainly when the offline model
+  is for mechanical tasks and complex work needs Ollama
+- **Workspace as a file** — export/import the whole project as a ZIP
+  (zip-slip guarded) plus the existing single-file `.modcodes` memory
+
+**Quality gates:** 1100 Vitest unit tests · 176 Playwright e2e tests ·
 ESLint clean · security scan clean · CI on every push.
 
 **Stack:** Next.js 16 · React 19 · Node ≥ 20.9 · Bonsai (WebGPU) · Ollama (local).
@@ -83,6 +100,7 @@ AI features enable when a provider is available.
 - ✅ Unique Project IDs
 - ✅ Browser-storage projects (no folder permission needed)
 - ✅ `.modcodes` export / import (portable project memory)
+- ✅ Workspace ZIP export / import (whole project as one file)
 
 ---
 
@@ -129,6 +147,12 @@ A complete AI-powered development environment for assisting developers throughou
 - ✅ Project Memory (.modcodes Markdown)
 - ✅ Research → PRD → Roadmap lifecycle
 - ✅ Approval-gated changesets
+- ✅ Session checkpoints in Agent History
+- ✅ Verification receipts gate agent Accept
+- ✅ Protected-path walls + typed tool-approval confirmations
+- ✅ Task meter (honest per-turn usage receipts, CSV export)
+- ✅ Honest offline agent scoping
+- ✅ Workspace ZIP export / import (zip-slip guarded)
 
 ### Planned
 
@@ -264,6 +288,18 @@ prioritized — and everything shipped is mine to explain.
 - ⏳ Theme Engine
 - ⏳ Plugin System
 - ⏳ Debugger
+
+---
+
+## Phase 5 — Agent Trust & Portability ✅
+
+- ✅ Session checkpoints (audit trail in Agent History)
+- ✅ Verification receipts (run-and-pass gate before Accept)
+- ✅ Protected paths (env / manifest / database / memory walls)
+- ✅ Working tool approval gate (typed confirm for protected files)
+- ✅ Task meter (honest per-turn usage receipts + CSV export)
+- ✅ Honest offline agent scoping
+- ✅ Workspace ZIP export / import
 
 ---
 

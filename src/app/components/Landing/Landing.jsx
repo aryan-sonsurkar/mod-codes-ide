@@ -63,6 +63,26 @@ const FEATURES = [
     title: "AI-Assisted Development",
     description: "Explain code, find bugs, and navigate references — all privacy-first.",
   },
+  {
+    title: "Verification receipts",
+    description:
+      "Agent edits can't be accepted until the proposed code actually ran and passed — the gate checks evidence, not vibes.",
+  },
+  {
+    title: "Task meter that can't lie",
+    description:
+      "Every AI turn records a receipt: provider, tokens, and whether it ran locally for $0.00 or on an API. Export it as CSV.",
+  },
+  {
+    title: "Protected files need typed approval",
+    description:
+      "Env files, manifests, databases, and project memory sit behind walls — the agent must ask, and you type the filename to confirm.",
+  },
+  {
+    title: "Whole workspace as one file",
+    description:
+      "Export every file into a ZIP and import it anywhere, with an audit trail of each agent decision kept in project memory.",
+  },
 ];
 
 const STEPS = [
@@ -134,9 +154,10 @@ export default function Landing() {
             A coding environment that runs in a tab, with local AI and no quota.
           </h1>
           <p className="landing-hero-subtitle">
-            Open MODCODES and start coding: no install, no account, no usage meter. Edit a
+            Open MODCODES and start coding: no install, no account, no quota. Edit a
             local folder or keep files in the browser, run JavaScript, Python and HTML, and
-            use an AI model that runs on your machine — online or off.
+            use an AI model that runs on your machine — online or off. Agent changes are
+            gated by verification receipts, and your usage receipts stay honest.
           </p>
           <div className="landing-hero-actions">
             <Link className="landing-cta landing-cta-primary" href="/projects">

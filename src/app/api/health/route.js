@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import packageJson from "../../../../package.json";
 
 export async function GET() {
-  const version = process.env.npm_package_version || "unknown";
+  const version = process.env.npm_package_version || packageJson.version || "unknown";
   const env = process.env.NODE_ENV || "development";
   const uptime = typeof process !== "undefined" ? Math.floor(process.uptime()) : 0;
 
