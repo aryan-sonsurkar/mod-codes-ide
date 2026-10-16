@@ -2,7 +2,7 @@
 
 **Status**: Design only — no implementation.
 **Date**: 2026-09-10
-**Version**: v0.1.0
+**Version**: v0.2.0
 
 ## Privacy Boundary
 
@@ -10,7 +10,7 @@ MODCODES is a local-first, privacy-first IDE. No user data leaves the browser wi
 
 ### What is COLLECTED (zero currently)
 
-Nothing. MODCODES v0.1.0 sends zero telemetry, analytics, or tracking data.
+Nothing. MODCODES v0.2.0 sends zero telemetry, analytics, or tracking data.
 
 ### What is PROHIBITED
 

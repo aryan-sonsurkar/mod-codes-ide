@@ -1,8 +1,8 @@
-# Release Checklist — MODCODES v0.1.0
+# Release Checklist — MODCODES v0.2.0
 
 Use this checklist before tagging a release.
 
-**Status: v0.1.0 verified and tagged.** Audits below were executed against the
+**Status: v0.2.0 verified and tagged.** Audits below were executed against the
 release commit; results and exceptions are recorded inline.
 
 ## Pre-Release
@@ -45,7 +45,7 @@ release commit; results and exceptions are recorded inline.
 ## Release
 
 - [x] Commit all changes
-- [x] Create git tag `v0.1.0`
+- [x] Create git tag `v0.2.0`
 - [x] Push to origin
 - [ ] Create GitHub Release — **manual step** (no `gh` CLI in release
   environment; create from the tag in the GitHub UI)

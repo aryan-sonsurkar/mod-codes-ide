@@ -1,6 +1,6 @@
-# Launch Readiness — MODCODES v0.1.0
+# Launch Readiness — MODCODES v0.2.0
 
-**Current:** tag `v0.1.0` — 1100 unit tests (94 files) · 176 Playwright e2e
+**Current:** tag `v0.2.0` — 1100 unit tests (94 files) · 176 Playwright e2e
 tests · ESLint 0 errors · production build clean · CI on every push.
 
 > This document supersedes the M93-era baseline (363 tests, stub providers).
@@ -30,7 +30,7 @@ tests · ESLint 0 errors · production build clean · CI on every push.
   (read + approval-gated write) → verification receipts → changeset → save.
   `AIPanel.jsx` (~1760 lines) plus extracted `AgentProgress`,
   `AIToolApproval`, `AITaskMeter`, `AIActionHistory`.
-- **Trust layer (v0.1.0):** session checkpoints appended to `.modcodes`
+- **Trust layer (v0.2.0):** session checkpoints appended to `.modcodes`
   Agent History; verification receipts required before agent Accept;
   protected-path classification (env/manifest/database/migration/memory/git)
   forces typed-confirmation approval; honest per-turn task meter with CSV
@@ -57,7 +57,7 @@ tests · ESLint 0 errors · production build clean · CI on every push.
 4. **Ad posture** — ad-free by default; consent-gated AdSense infrastructure
    exists but is intentionally unconfigured at launch.
 
-## Remaining risks (accepted for v0.1.0)
+## Remaining risks (accepted for v0.2.0)
 
 - **Component size** — `AIPanel` (~1760) and `IDEWorkspace` (~2360) remain
   large; extraction is worthwhile before major feature work resumes.
@@ -66,7 +66,7 @@ tests · ESLint 0 errors · production build clean · CI on every push.
 - **WebGPU** — Bonsai requires Chrome/Edge desktop best case; elsewhere the
   app guides users to Ollama or stays honest about unavailability.
 - **No admin dashboard** — observability logger ships, but error-rate
-  monitoring is manual (host logs) for v0.1.0.
+  monitoring is manual (host logs) for v0.2.0.
 - **Domain** — `modcodes.dev` pending DNS; production is
   `modcode.vercel.app` (metadata, robots, sitemap all point there).
 

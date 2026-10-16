@@ -1,6 +1,6 @@
 # MODCODES Operational Runbook
 
-**Version**: v0.1.0
+**Version**: v0.2.0
 **Date**: 2026-09-10
 
 ## "Something is wrong. What do I do?"
@@ -28,7 +28,7 @@ Expected response:
 ```json
 {
   "status": "ok",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "environment": "production",
   "timestamp": "...",
   "uptime": 123,

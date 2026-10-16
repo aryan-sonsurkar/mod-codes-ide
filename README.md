@@ -6,7 +6,7 @@
 
 **A local-first, AI-powered software engineering workspace.** Research → PRD → Roadmap → Agent lifecycle, project memory, and approval-gated changes — with Bonsai (WebGPU) and Ollama (local) as the sole AI providers. No cloud lock-in.
 
-🌐 **Live:** [modcode.vercel.app](https://modcode.vercel.app) · 📦 **Latest:** [v0.1.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.1.0)
+🌐 **Live:** [modcode.vercel.app](https://modcode.vercel.app) · 📦 **Latest:** [v0.2.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.2.0)
 
 ---
 
@@ -24,7 +24,7 @@ where no system shell is available). Projects can live in a real folder or
 kept in browser storage, and `.modcodes` project memory exports/imports as a
 single portable file.
 
-**v0.1.0 (current):** full project lifecycle (Research → PRD → Roadmap →
+**v0.2.0 (current):** full project lifecycle (Research → PRD → Roadmap →
 Agent), `.modcodes` Markdown-first project memory, approval gates and save
 gates, in-browser runs, offline PWA, responsive desktop/tablet/mobile,
 ad-free by default.

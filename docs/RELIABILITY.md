@@ -1,6 +1,6 @@
 # Reliability Matrix
 
-**Version**: v0.1.0
+**Version**: v0.2.0
 **Date**: 2026-09-10
 
 ## Subsystem Failure Modes
