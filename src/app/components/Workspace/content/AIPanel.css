@@ -217,12 +217,24 @@
 
 .ai-agent-scope {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
   gap: var(--sp-5);
   color: var(--muted-text);
   font-size: var(--text-xs);
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ai-agent-scope > svg {
+  flex-shrink: 0;
+}
+
+.ai-agent-scope > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ai-agent-scope-offline {
@@ -237,8 +249,9 @@
   display: flex;
   flex-direction: column;
   flex: 0 1 auto;
-  min-height: 0;
+  min-height: 32px;
   max-height: 50%;
+  overflow: hidden;
   gap: var(--sp-6);
 }
 
@@ -373,6 +386,40 @@
   gap: var(--sp-8);
 }
 
+.ai-task-meter-toggle {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: var(--sp-5);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ai-task-meter-chevron {
+  flex-shrink: 0;
+  color: var(--muted-text);
+  transition: transform var(--transition-base);
+}
+
+.ai-task-meter-chevron-open {
+  transform: rotate(180deg);
+}
+
+.ai-task-meter-summary {
+  margin-left: auto;
+  color: var(--muted-text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ai-task-meter-title {
   color: var(--secondary-text);
   font-size: var(--text-xs);
@@ -393,6 +440,8 @@
   flex-direction: column;
   gap: var(--sp-4);
   min-width: 0;
+  max-height: 180px;
+  overflow: auto;
 }
 
 .ai-task-meter-empty {

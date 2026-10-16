@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   describeUsageSpend,
   isLocalProvider,
@@ -25,6 +26,7 @@ function formatTime(timestamp) {
 }
 
 export default function AITaskMeter({ usage }) {
+  const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
   if (!usage) return null;
@@ -48,51 +50,70 @@ export default function AITaskMeter({ usage }) {
   return (
     <div className="ai-task-meter" data-testid="task-meter">
       <div className="ai-task-meter-header">
-        <span className="ai-task-meter-title">Task meter — honest by design</span>
+        <button
+          type="button"
+          className="ai-task-meter-toggle"
+          data-testid="task-meter-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <ChevronDown
+            size={12}
+            className={expanded ? "ai-task-meter-chevron ai-task-meter-chevron-open" : "ai-task-meter-chevron"}
+          />
+          <span className="ai-task-meter-title">Task meter — honest by design</span>
+          <span className="ai-task-meter-summary">
+            {summary.turns} turn{summary.turns === 1 ? "" : "s"}
+            {" · "}
+            {formatTokenCount(summary.knownTokens)} known
+          </span>
+        </button>
         <button
           type="button"
           className="ai-task-meter-copy"
           data-testid="task-meter-copy"
           onClick={handleCopy}
         >
-          {copied ? "Copied" : "Copy usage log"}
+          {copied ? "Copied" : "Copy CSV"}
         </button>
       </div>
-      <div className="ai-task-meter-body">
-        {recent.length === 0 ? (
-          <div className="ai-task-meter-empty">No AI turns recorded yet.</div>
-        ) : (
-          <ul className="ai-task-meter-rows">
-            {recent.map((entry, index) => (
-              <li key={`${entry.timestamp}-${index}`} className="ai-task-meter-row">
-                <span className="ai-task-meter-time">{formatTime(entry.timestamp)}</span>
-                <span className="ai-task-meter-provider">
-                  {entry.provider}
-                  {entry.model ? `/${entry.model}` : ""}
-                </span>
-                <span className="ai-task-meter-kind">{entry.kind === "agent" ? "agent" : "chat"}</span>
-                <span className="ai-task-meter-tokens">
-                  {entry.known ? formatTokenCount(entry.totalTokens) : "tokens unknown"}
-                </span>
-                <span className={`ai-task-meter-spend${isLocalProvider(entry.provider) ? " ai-task-meter-spend-local" : ""}`}>
-                  {describeUsageSpend(entry.provider, entry.accounting)}
-                </span>
-                {typeof entry.durationMs === "number" && (
-                  <span className="ai-task-meter-duration">{formatDurationMs(entry.durationMs)}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="ai-task-meter-totals" data-testid="task-meter-totals">
-          Session: {summary.turns} turn{summary.turns === 1 ? "" : "s"}
-          {" · "}
-          {formatTokenCount(summary.knownTokens)} known
-          {summary.unknownAccounting > 0 && ` · ${summary.unknownAccounting} unknown accounting`}
-          {" · "}
-          {formatTokenCount(sessionTotal)} total
+      {expanded && (
+        <div className="ai-task-meter-body">
+          {recent.length === 0 ? (
+            <div className="ai-task-meter-empty">No AI turns recorded yet.</div>
+          ) : (
+            <ul className="ai-task-meter-rows">
+              {recent.map((entry, index) => (
+                <li key={`${entry.timestamp}-${index}`} className="ai-task-meter-row">
+                  <span className="ai-task-meter-time">{formatTime(entry.timestamp)}</span>
+                  <span className="ai-task-meter-provider">
+                    {entry.provider}
+                    {entry.model ? `/${entry.model}` : ""}
+                  </span>
+                  <span className="ai-task-meter-kind">{entry.kind === "agent" ? "agent" : "chat"}</span>
+                  <span className="ai-task-meter-tokens">
+                    {entry.known ? formatTokenCount(entry.totalTokens) : "tokens unknown"}
+                  </span>
+                  <span className={`ai-task-meter-spend${isLocalProvider(entry.provider) ? " ai-task-meter-spend-local" : ""}`}>
+                    {describeUsageSpend(entry.provider, entry.accounting)}
+                  </span>
+                  {typeof entry.durationMs === "number" && (
+                    <span className="ai-task-meter-duration">{formatDurationMs(entry.durationMs)}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="ai-task-meter-totals" data-testid="task-meter-totals">
+            Session: {summary.turns} turn{summary.turns === 1 ? "" : "s"}
+            {" · "}
+            {formatTokenCount(summary.knownTokens)} known
+            {summary.unknownAccounting > 0 && ` · ${summary.unknownAccounting} unknown accounting`}
+            {" · "}
+            {formatTokenCount(sessionTotal)} total
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

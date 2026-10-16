@@ -99,6 +99,7 @@ test.describe("Honest meter, agent scoping, and workspace ZIP", () => {
     const meter = page.locator('[data-testid="task-meter"]');
     await expect(meter).toBeVisible({ timeout: 10000 });
     await expect(meter).toContainText("honest by design");
+    await page.locator('[data-testid="task-meter-toggle"]').click();
     await expect(meter).toContainText("ollama");
     await expect(meter).toContainText("1k tok");
     await expect(meter).toContainText("$0.00");
