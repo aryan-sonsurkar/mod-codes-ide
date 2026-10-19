@@ -303,16 +303,17 @@ prioritized — and everything shipped is mine to explain.
 
 ---
 
-## Phase 6 — Mesh (in design)
+## Phase 6 — Local Link & Mesh (in design)
 
-Turn any browser tab on any device into a permissioned window onto any
-Ollama instance — peer-to-peer, no cloud model, no server in the data path.
-The host tab on the Ollama machine becomes a WebRTC gateway; guest devices
-(phone, tablet, lab PC) pair with a short code and chat through it. Full
-architecture, security model, and phasing in [`docs/MESH.md`](docs/MESH.md).
+Make the deployed site talk to your own Ollama from any device — no daemon, no
+extension, no account. Phase 1 is the pure-frontend win: the deployed site
+reaches Ollama directly (Chrome 142's Local Network Access permission), with a
+guided one-time host grant and LAN address discovery via QR. Phase 2 adds a
+WebRTC mesh for cross-network and Safari users. Full architecture, security
+model, and phasing in [`docs/MESH.md`](docs/MESH.md).
 
-- ⏳ Phase 1 — Local Link: `OLLAMA_ORIGINS` detection + guided one-command fix
-- ⏳ Phase 2 — Mesh v1: signaling function, host/guest bridge, chat-only, LAN-first
+- ⏳ Phase 1 — Local Link: detection, per-OS grant wizard, LNA handling, LAN QR, direct transport
+- ⏳ Phase 2 — Mesh v1: signaling function, host/guest bridge, chat-only, safety phrase
 - ⏳ Phase 3 — Agent oracle: host-side agent + phone typed-approval remote
 - ⏳ Phase 4 — Multi-hop: desktop ← laptop ← phone model fog
 
