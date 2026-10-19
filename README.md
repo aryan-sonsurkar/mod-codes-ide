@@ -303,6 +303,21 @@ prioritized — and everything shipped is mine to explain.
 
 ---
 
+## Phase 6 — Mesh (in design)
+
+Turn any browser tab on any device into a permissioned window onto any
+Ollama instance — peer-to-peer, no cloud model, no server in the data path.
+The host tab on the Ollama machine becomes a WebRTC gateway; guest devices
+(phone, tablet, lab PC) pair with a short code and chat through it. Full
+architecture, security model, and phasing in [`docs/MESH.md`](docs/MESH.md).
+
+- ⏳ Phase 1 — Local Link: `OLLAMA_ORIGINS` detection + guided one-command fix
+- ⏳ Phase 2 — Mesh v1: signaling function, host/guest bridge, chat-only, LAN-first
+- ⏳ Phase 3 — Agent oracle: host-side agent + phone typed-approval remote
+- ⏳ Phase 4 — Multi-hop: desktop ← laptop ← phone model fog
+
+---
+
 # Learning Journal
 
 Every development session is documented inside **LEARNING.md**, where I record:

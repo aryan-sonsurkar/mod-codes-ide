@@ -1,9 +1,6 @@
 {
-  "buildId": "Lv4xAsgpZf76fkuP0Kamf",
+  "buildId": "x7m8luVuiT-J_jRxX0-Jr",
   "assets": [
-    "/_next/static/Lv4xAsgpZf76fkuP0Kamf/_buildManifest.js",
-    "/_next/static/Lv4xAsgpZf76fkuP0Kamf/_clientMiddlewareManifest.js",
-    "/_next/static/Lv4xAsgpZf76fkuP0Kamf/_ssgManifest.js",
     "/_next/static/chunks/03wna5-vbehid.js",
     "/_next/static/chunks/04ehxh-_4dd5h.css",
     "/_next/static/chunks/04tpb70n41chv.js",
@@ -54,6 +51,9 @@
     "/_next/static/media/bonsai.worker.1r7994jmow_3z.js",
     "/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2",
     "/_next/static/media/favicon.2vob68tjqpejf.ico",
-    "/_next/static/media/fef07dbb0973bf53-s.3p2_lha1f2xer.woff2"
+    "/_next/static/media/fef07dbb0973bf53-s.3p2_lha1f2xer.woff2",
+    "/_next/static/x7m8luVuiT-J_jRxX0-Jr/_buildManifest.js",
+    "/_next/static/x7m8luVuiT-J_jRxX0-Jr/_clientMiddlewareManifest.js",
+    "/_next/static/x7m8luVuiT-J_jRxX0-Jr/_ssgManifest.js"
   ]
 }
