@@ -1,6 +1,7 @@
 "use client";
 import { Copy, Check, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import LocalLink from "./LocalLink";
 
 function Copyable({ text }) {
   const [copied, setCopied] = useState(false);
@@ -21,7 +22,7 @@ function Copyable({ text }) {
   );
 }
 
-export default function AISetup({ providerId }) {
+export default function AISetup({ providerId, baseUrl, onUseBaseUrl }) {
   return (
     <div className="ai-setup" role="region" aria-label="AI setup">
       {providerId === "ollama" ? (
@@ -37,11 +38,9 @@ export default function AISetup({ providerId }) {
             <li>
               Pull a model <Copyable text="ollama pull qwen2.5-coder:7b" />
             </li>
-            <li>
-              Configure base URL in Settings → AI & Coder (default <code>http://127.0.0.1:11434</code>)
-            </li>
-            <li>Test connection in Settings, then select the model in the AI panel</li>
+            <li>Select the model in the AI panel once the connection is green</li>
           </ol>
+          <LocalLink baseUrl={baseUrl} onUseBaseUrl={onUseBaseUrl} />
           <p className="ai-setup-note">Ollama runs locally. No cloud proxy; your files stay on your machine.</p>
         </>
       ) : providerId === "browser-bonsai" ? (

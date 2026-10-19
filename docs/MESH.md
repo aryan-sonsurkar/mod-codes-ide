@@ -1,6 +1,6 @@
 # MESH — the browser harness for local models (design)
 
-**Status:** research / design. Not shipping in v0.2.0.
+**Status:** Phase 1 (Local Link) shipped in v0.2.0. Phases 2–4 research / design.
 **One line:** turn any browser tab on any device into a permissioned window onto
 any Ollama instance — no daemon, no extension, no server in the data path.
 
@@ -144,7 +144,7 @@ already owns*.
 
 | Phase | Deliverable | Why this order |
 | --- | --- | --- |
-| 1 — Local Link | Detection, per-OS grant wizard, LNA permission handling, LAN address discovery, QR, direct transport | Pure frontend; no infra; makes "deployed site + local AI" real this month. |
+| 1 — Local Link | Detection, per-OS grant wizard, LNA permission handling, LAN address discovery, direct transport | **Shipped in v0.2.0.** Pure frontend; no infra. QR deferred to a later patch. |
 | 2 — Mesh v1 | signaling fn, host/guest bridge, chat-only, safety phrase, meter integration | Cross-network + Safari parity. |
 | 3 — Agent oracle | host-side agent + phone typed-approval remote | The killer demo. Only after v1 permission UX is proven. |
 | 4 — Multi-hop | desktop (large GPU) ← laptop ← phone as a "model fog" | Protocol already relays; ship only if real users want it. |
@@ -163,8 +163,22 @@ already owns*.
 
 - A user on the deployed site runs the wizard, grants LNA, and chats with
   Ollama without touching a terminal — same device.
-- A phone scans a QR from the same Wi-Fi and chats through the laptop, with
-  one permission prompt and zero Ollama config on the phone (Chrome/Edge).
+- A phone on the same Wi-Fi is handed the host's LAN address (copyable today,
+  QR in a later patch) and chats through the laptop, with one permission
+  prompt and zero Ollama config on the phone (Chrome/Edge).
 - Every failure state names its cause and the exact next action.
 - The honest meter records mesh/direct turns as local `$0.00` with the same
   receipt format as in-tab inference.
+
+### What shipped (v0.2.0)
+
+- `src/app/lib/ai/localLink.js` — probe (`/api/version` with
+  `targetAddressSpace: "local"`), failure classification, per-OS grant
+  commands, LAN discovery from host ICE candidates (keeps `.local` mDNS names).
+- `src/app/components/Workspace/content/LocalLink.jsx` — the wizard inside the
+  AI panel's Ollama setup: probe, honest diagnosis, copyable per-OS commands,
+  LAN address discovery with copy / "Use" (writes `ai.baseUrl`).
+- `SettingsPage` connection test now uses the same probe off-localhost and no
+  longer claims Ollama is localhost-only.
+- Deviation from the design: QR codes are deferred (no QR dependency yet); the
+  LAN URL is shown as copyable text. Everything else matches the plan.

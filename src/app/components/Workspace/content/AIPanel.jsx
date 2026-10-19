@@ -1479,7 +1479,13 @@ export default function AIPanel({
         onReleaseModel={handleReleaseBrowserModel}
       />
 
-      {(status === PROVIDER_STATES.unavailable || status === PROVIDER_STATES.busy) && <AISetup providerId={providerId} />}
+      {(status === PROVIDER_STATES.unavailable || status === PROVIDER_STATES.busy) && (
+        <AISetup
+          providerId={providerId}
+          baseUrl={settings.ai?.baseUrl}
+          onUseBaseUrl={(url) => updateSetting("ai", "baseUrl", url)}
+        />
+      )}
 
       {contextPreview && (
         <div className="ai-context">

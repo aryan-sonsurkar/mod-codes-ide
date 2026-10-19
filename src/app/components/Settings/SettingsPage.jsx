@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useAdSense, CONSENT_STATES } from "../../contexts/AdSenseContext";
-import { createOllamaProvider } from "../../lib/ai";
 import { checkBridgeHealth, getBridgeToken, setBridgeToken } from "../../lib/terminal/backends/systemTerminalBackend";
+import { classifyLinkFailure, probeOllama } from "../../lib/ai/localLink";
 import DiagnosticsCenter from "../Diagnostics/DiagnosticsCenter";
 import "./SettingsPage.css";
 
@@ -120,36 +120,25 @@ function isLocalhost() {
 
 function ConnectionRow({ value }) {
   const [state, setState] = useState({ kind: "idle" });
-  const localhost = isLocalhost();
 
   const handleTest = async () => {
-    if (!localhost) {
-      setState({ kind: "error", message: "Local services (Ollama) are only reachable when the app runs on localhost. Run: npm run dev" });
-      return;
-    }
     setState({ kind: "checking" });
-    let provider;
-    try {
-      provider = createOllamaProvider({ baseUrl: value });
-    } catch {
-      setState({ kind: "error", message: "Invalid URL. Use http://…" });
-      return;
-    }
-    const result = await provider.testConnection();
+    const result = await probeOllama(value);
     if (result.ok) {
       setState({
         kind: "ok",
         message: result.version ? `Connected · v${result.version}` : "Connected",
       });
-    } else {
-      setState({
-        kind: "error",
-        message:
-          result.error && typeof result.error.message === "string"
-            ? result.error.message
-            : "Cannot reach Ollama. Is it running? Start with: ollama serve",
-      });
+      return;
     }
+    const diagnosis = classifyLinkFailure(result);
+    setState({
+      kind: "error",
+      message:
+        diagnosis.id === "unreachable"
+          ? "Blocked or unreachable — open the AI panel setup and use Local Link for the exact fix."
+          : diagnosis.title,
+    });
   };
 
   return (
@@ -157,9 +146,8 @@ function ConnectionRow({ value }) {
       <div className="settings-row-info">
         <span className="settings-row-label">Test connection</span>
         <span className="settings-row-description">
-          {localhost
-                ? "Checks that Ollama is reachable at the configured URL."
-                : "Ollama requires the app to run locally. Deployed apps cannot reach 127.0.0.1."}
+          Checks Ollama at the configured URL. Deployed sites can reach it after
+          a one-time local grant (AI panel setup → Local Link).
         </span>
       </div>
       <div className="settings-connection-control">
@@ -173,9 +161,9 @@ function ConnectionRow({ value }) {
           type="button"
           className="settings-connection-button"
           onClick={handleTest}
-          disabled={state.kind === "checking" || !localhost}
+          disabled={state.kind === "checking"}
         >
-          {state.kind === "checking" ? "Testing…" : localhost ? "Test" : "Local only"}
+          {state.kind === "checking" ? "Testing…" : "Test"}
         </button>
       </div>
     </div>
@@ -572,7 +560,7 @@ export default function SettingsPage() {
             <div className="settings-group">
               {!isLocalhost() && (
                 <div className="settings-remote-notice">
-                  <strong>Remote deployment detected.</strong> Ollama and the terminal bridge are local services only reachable from localhost. Run <code>npm run dev</code> locally to use them. Bonsai (in-browser AI) works from any deployment.
+                  <strong>Remote deployment detected.</strong> Bonsai works from any deployment. Ollama needs a one-time local grant before this site can reach it — open the AI panel setup and use <strong>Local Link</strong> for the exact commands. The terminal bridge stays localhost-only.
                 </div>
               )}
               <SelectRow
