@@ -1,6 +1,6 @@
 # MESH — the browser harness for local models (design)
 
-**Status:** Phase 1 (Local Link) shipped in v0.2.0. Phases 2–4 research / design.
+**Status:** Phase 1 (Local Link, incl. QR) shipped in v0.2.0. Phase 2 signaling design complete — see [`MESH_SIGNALING.md`](MESH_SIGNALING.md). Phases 3–4 research / design.
 **One line:** turn any browser tab on any device into a permissioned window onto
 any Ollama instance — no daemon, no extension, no server in the data path.
 
@@ -57,7 +57,7 @@ This is the path that needs no signaling server at all.
    obfuscates those as random `.local` mDNS names (resolvable on the LAN and
    explicitly LNA-exempt); other browsers expose the `192.168.x.x` literal
    (also LNA-exempt). Either form is a valid fetch target.
-3. Host shows a QR code + the address.
+3. Host shows a QR code + the address (shipped).
 4. Guest (phone, tablet, lab PC) scans it, the deployed site fetches
    `http://<host>:11434` → LNA prompt once → tokens stream directly
    device→device. No server sees prompts; works with the internet down as long
@@ -74,7 +74,9 @@ serverless function shuttles SDP/ICE only (TTL'd, single-use code). The host
 tab is the gateway to Ollama, so the guest never touches a LAN address and no
 mixed-content or LNA gate applies. Covers across-the-internet P2P and every
 browser with data channels. Same host grant as §2. This is the original Mesh
-design, retained for cross-network and non-Chromium guests.
+design, retained for cross-network and non-Chromium guests. Concrete protocol,
+room lifecycle, and the relay decision are in
+[`MESH_SIGNALING.md`](MESH_SIGNALING.md).
 
 ```
  ┌─────────────────────┐                        ┌─────────────────────┐
@@ -145,7 +147,7 @@ already owns*.
 | Phase | Deliverable | Why this order |
 | --- | --- | --- |
 | 1 — Local Link | Detection, per-OS grant wizard, LNA permission handling, LAN address discovery, direct transport | **Shipped in v0.2.0.** Pure frontend; no infra. QR deferred to a later patch. |
-| 2 — Mesh v1 | signaling fn, host/guest bridge, chat-only, safety phrase, meter integration | Cross-network + Safari parity. |
+| 2 — Mesh v1 | manual-pair first, then optional relay; host/guest bridge, chat-only, safety phrase, meter integration | Design complete in [`MESH_SIGNALING.md`](MESH_SIGNALING.md). Cross-network + Safari parity. |
 | 3 — Agent oracle | host-side agent + phone typed-approval remote | The killer demo. Only after v1 permission UX is proven. |
 | 4 — Multi-hop | desktop (large GPU) ← laptop ← phone as a "model fog" | Protocol already relays; ship only if real users want it. |
 
@@ -163,9 +165,9 @@ already owns*.
 
 - A user on the deployed site runs the wizard, grants LNA, and chats with
   Ollama without touching a terminal — same device.
-- A phone on the same Wi-Fi is handed the host's LAN address (copyable today,
-  QR in a later patch) and chats through the laptop, with one permission
-  prompt and zero Ollama config on the phone (Chrome/Edge).
+- A phone on the same Wi-Fi scans the host's QR (or copies the address) and
+  chats through the laptop, with one permission prompt and zero Ollama config
+  on the phone (Chrome/Edge).
 - Every failure state names its cause and the exact next action.
 - The honest meter records mesh/direct turns as local `$0.00` with the same
   receipt format as in-tab inference.
@@ -177,8 +179,9 @@ already owns*.
   commands, LAN discovery from host ICE candidates (keeps `.local` mDNS names).
 - `src/app/components/Workspace/content/LocalLink.jsx` — the wizard inside the
   AI panel's Ollama setup: probe, honest diagnosis, copyable per-OS commands,
-  LAN address discovery with copy / "Use" (writes `ai.baseUrl`).
+  LAN address discovery with copy / "Use" (writes `ai.baseUrl`), and a locally
+  rendered QR for the preferred address (`src/app/lib/qr.js`).
 - `SettingsPage` connection test now uses the same probe off-localhost and no
   longer claims Ollama is localhost-only.
-- Deviation from the design: QR codes are deferred (no QR dependency yet); the
-  LAN URL is shown as copyable text. Everything else matches the plan.
+- QR codes render locally via `qrcode-generator`; the payload never leaves the
+  machine. Everything in the Phase 1 plan now ships.

@@ -312,8 +312,8 @@ one-time host grant and LAN address discovery. Phase 2 adds a
 WebRTC mesh for cross-network and Safari users. Full architecture, security
 model, and phasing in [`docs/MESH.md`](docs/MESH.md).
 
-- ✅ Phase 1 — Local Link: probe + honest failure diagnosis, per-OS grant wizard, LNA guidance, LAN address discovery (copyable URL; QR still planned)
-- ⏳ Phase 2 — Mesh v1: signaling function, host/guest bridge, chat-only, safety phrase
+- ✅ Phase 1 — Local Link: probe + honest failure diagnosis, per-OS grant wizard, LNA guidance, LAN address discovery with locally rendered QR
+- ⏳ Phase 2 — Mesh v1: manual-pair first, then optional relay; chat-only, safety phrase ([signaling design](docs/MESH_SIGNALING.md))
 - ⏳ Phase 3 — Agent oracle: host-side agent + phone typed-approval remote
 - ⏳ Phase 4 — Multi-hop: desktop ← laptop ← phone model fog
 

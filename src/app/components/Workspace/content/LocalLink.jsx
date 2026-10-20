@@ -20,6 +20,7 @@ import {
   detectPlatform,
   probeOllama,
 } from "../../../lib/ai/localLink";
+import { buildQrMatrix, pickPreferredLanUrl, qrSvgPath } from "../../../lib/qr";
 
 function CopyButton({ text, label = "Copy", testId }) {
   const [copied, setCopied] = useState(false);
@@ -55,6 +56,33 @@ function CommandBlock({ command, testId }) {
   );
 }
 
+function LanQr({ url }) {
+  let code = null;
+  try {
+    code = qrSvgPath(buildQrMatrix(url));
+  } catch {
+    code = null;
+  }
+  if (!code) return null;
+
+  return (
+    <figure className="ai-local-link-qr">
+      <svg
+        viewBox={`0 0 ${code.size} ${code.size}`}
+        width="128"
+        height="128"
+        role="img"
+        aria-label={`QR code for ${url}`}
+        shapeRendering="crispEdges"
+      >
+        <rect width={code.size} height={code.size} fill="#ffffff" />
+        <path d={code.path} fill="#000000" />
+      </svg>
+      <figcaption>Scan on the other device</figcaption>
+    </figure>
+  );
+}
+
 function readEnvironment() {
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -86,6 +114,7 @@ export default function LocalLink({ baseUrl, onUseBaseUrl }) {
   const [showLan, setShowLan] = useState(false);
 
   const target = baseUrl || "http://127.0.0.1:11434";
+  const preferredLan = lan.kind === "done" ? pickPreferredLanUrl(lan.urls) : null;
   const commands = buildLinkCommands({
     platform: env.platform,
     origin: env.origin,
@@ -288,26 +317,33 @@ export default function LocalLink({ baseUrl, onUseBaseUrl }) {
             )}
 
             {lan.kind === "done" && lan.urls.length > 0 && (
-              <ul className="ai-local-link-urls" data-testid="local-link-lan-result">
-                {lan.urls.map((entry) => (
-                  <li key={entry.address}>
-                    <code>{entry.url}</code>
-                    <span className="ai-local-link-url-tag">
-                      {entry.kind === "mdns" ? "hostname" : entry.kind}
-                    </span>
-                    <CopyButton text={entry.url} label="Copy" />
-                    {typeof onUseBaseUrl === "function" && (
-                      <button
-                        type="button"
-                        className="ai-local-link-use"
-                        onClick={() => handleUse(entry.url)}
-                      >
-                        Use
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="ai-local-link-urls" data-testid="local-link-lan-result">
+                  {lan.urls.map((entry) => (
+                    <li key={entry.address}>
+                      <code>{entry.url}</code>
+                      <span className="ai-local-link-url-tag">
+                        {entry.kind === "mdns" ? "hostname" : entry.kind}
+                      </span>
+                      <CopyButton text={entry.url} label="Copy" />
+                      {typeof onUseBaseUrl === "function" && (
+                        <button
+                          type="button"
+                          className="ai-local-link-use"
+                          onClick={() => handleUse(entry.url)}
+                        >
+                          Use
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {preferredLan && (
+                  <div data-testid="local-link-qr">
+                    <LanQr url={preferredLan.url} />
+                  </div>
+                )}
+              </>
             )}
 
             <p className="ai-local-link-note">

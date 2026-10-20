@@ -620,6 +620,24 @@
   cursor: pointer;
 }
 
+.ai-local-link-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  margin: 0;
+}
+
+.ai-local-link-qr svg {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.ai-local-link-qr figcaption {
+  color: var(--muted-text);
+  font-size: 10px;
+}
+
 .ai-local-link-security {
   display: flex;
   align-items: center;

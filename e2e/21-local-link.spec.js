@@ -28,12 +28,41 @@ async function injectOllamaOffline(page) {
   });
 }
 
+// Deterministic LAN discovery: emit one host candidate, then end gathering.
+async function stubWebRtc(page) {
+  await page.addInitScript(() => {
+    class FakeRTCPeerConnection {
+      constructor() {
+        this.iceGatheringState = "gathering";
+      }
+      createDataChannel() {}
+      async createOffer() {
+        return { type: "offer", sdp: "v=0" };
+      }
+      async setLocalDescription() {
+        setTimeout(() => {
+          this.onicecandidate?.({
+            candidate: {
+              candidate:
+                "candidate:1 1 UDP 2122260223 192.168.1.50 51234 typ host",
+            },
+          });
+          this.onicecandidate?.({ candidate: null });
+        }, 0);
+      }
+      close() {}
+    }
+    window.RTCPeerConnection = FakeRTCPeerConnection;
+  });
+}
+
 test.describe("Local Link", () => {
   test.beforeEach(async ({ modcodesPage: page }) => {
     await clearLocalStorage(page);
     await injectOnboardingCompleted(page);
     await injectConsentAccepted(page);
     await injectOllamaOffline(page);
+    await stubWebRtc(page);
     await navigateToProjects(page);
     await page.waitForTimeout(1000);
     const project = uniqueProject();
@@ -83,9 +112,17 @@ test.describe("Local Link", () => {
 
     await page.locator('[data-testid="local-link-lan-toggle"]').click();
     await page.locator('[data-testid="local-link-find-lan"]').click();
-    await expect(page.locator('[data-testid="local-link-lan-result"]')).toBeVisible({
-      timeout: 20000,
-    });
+
+    const lanResult = page.locator('[data-testid="local-link-lan-result"]');
+    await expect(lanResult).toBeVisible({ timeout: 20000 });
+    await expect(lanResult).toContainText("192.168.1.50:11434");
+
+    const qr = page.locator('[data-testid="local-link-qr"] svg');
+    await expect(qr).toBeVisible();
+    await expect(qr).toHaveAttribute(
+      "aria-label",
+      /QR code for http:\/\/192\.168\.1\.50:11434/
+    );
   });
 
   test("settings stops claiming Ollama is localhost-only", async ({
