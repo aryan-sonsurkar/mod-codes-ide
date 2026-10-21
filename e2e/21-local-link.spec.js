@@ -1,6 +1,7 @@
 import {
   test,
   expect,
+  PROJECTS_URL,
   navigateToProjects,
   navigateToSettings,
   clearLocalStorage,
@@ -13,19 +14,20 @@ import {
 
 // Point Ollama at a dead port so the setup section renders even on machines
 // that happen to run a real Ollama. Nothing listens on 59999.
+const OFFLINE_BASE = "http://127.0.0.1:59999";
 async function injectOllamaOffline(page) {
-  await page.addInitScript(() => {
+  await page.addInitScript((offlineBase) => {
     try {
       const raw = localStorage.getItem("modcodes-settings");
       const parsed = raw ? JSON.parse(raw) : {};
       parsed.ai = {
         ...(parsed.ai || {}),
         provider: "ollama",
-        baseUrl: "http://127.0.0.1:59999",
+        baseUrl: offlineBase,
       };
       localStorage.setItem("modcodes-settings", JSON.stringify(parsed));
     } catch {}
-  });
+  }, OFFLINE_BASE);
 }
 
 // Deterministic LAN discovery: emit one host candidate, then end gathering.
@@ -121,8 +123,41 @@ test.describe("Local Link", () => {
     await expect(qr).toBeVisible();
     await expect(qr).toHaveAttribute(
       "aria-label",
-      /QR code for http:\/\/192\.168\.1\.50:11434/
+      /projects\?ollama=http%3A%2F%2F192\.168\.1\.50%3A11434/
     );
+  });
+
+  test("a join link sets the Ollama address and strips itself", async ({
+    modcodesPage: page,
+  }) => {
+    const readSettings = () =>
+      page.evaluate(() => {
+        try {
+          return JSON.parse(localStorage.getItem("modcodes-settings") || "{}");
+        } catch {
+          return {};
+        }
+      });
+
+    await page.goto(
+      `${PROJECTS_URL}?ollama=${encodeURIComponent("http://192.168.1.50:11434")}`
+    );
+    await page.waitForTimeout(2000);
+
+    const applied = await readSettings();
+    expect(applied.ai?.baseUrl).toBe("http://192.168.1.50:11434");
+    expect(applied.ai?.provider).toBe("ollama");
+    expect(page.url()).not.toContain("ollama=");
+
+    await page.goto(
+      `${PROJECTS_URL}?ollama=${encodeURIComponent("https://example.com")}`
+    );
+    await page.waitForTimeout(1500);
+
+    // The init script re-seeds the offline address on every navigation, so a
+    // rejected public target must leave that value untouched.
+    const rejected = await readSettings();
+    expect(rejected.ai?.baseUrl).toBe(OFFLINE_BASE);
   });
 
   test("settings stops claiming Ollama is localhost-only", async ({

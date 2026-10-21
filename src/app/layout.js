@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/Diagnostics/ErrorBoundary";
 import AdsProvider from "./components/Ads/AdsProvider";
 import AdSenseConfig from "./components/Ads/AdSenseConfig";
 import ObservabilityInit from "./components/Diagnostics/ObservabilityInit";
+import JoinLinkHandler from "./components/LocalLink/JoinLinkHandler";
 import ServiceWorkerRegister, {
   OfflineBanner,
 } from "./components/Offline/ServiceWorkerRegister";
@@ -85,6 +86,7 @@ export default function RootLayout({ children }) {
         <ErrorBoundary>
           <SettingsProvider>
             <ToastProvider>
+              <JoinLinkHandler />
               <AdSenseConfig />
               <AdsProvider>{children}</AdsProvider>
               <OfflineBanner />

@@ -184,4 +184,7 @@ already owns*.
 - `SettingsPage` connection test now uses the same probe off-localhost and no
   longer claims Ollama is localhost-only.
 - QR codes render locally via `qrcode-generator`; the payload never leaves the
-  machine. Everything in the Phase 1 plan now ships.
+  machine. The QR encodes a join link (`/projects?ollama=…`) so scanning opens
+  MODCODES with the address applied. Only private/loopback/mDNS targets are
+  accepted, and the parameter is stripped after use so a refresh cannot
+  re-apply a stale address. Everything in the Phase 1 plan now ships.

@@ -12,6 +12,7 @@ import {
   Wifi,
 } from "lucide-react";
 import {
+  buildJoinUrl,
   buildLanUrls,
   buildLinkCommands,
   classifyLinkFailure,
@@ -78,7 +79,7 @@ function LanQr({ url }) {
         <rect width={code.size} height={code.size} fill="#ffffff" />
         <path d={code.path} fill="#000000" />
       </svg>
-      <figcaption>Scan on the other device</figcaption>
+      <figcaption>Scan to open MODCODES with this Ollama</figcaption>
     </figure>
   );
 }
@@ -115,6 +116,9 @@ export default function LocalLink({ baseUrl, onUseBaseUrl }) {
 
   const target = baseUrl || "http://127.0.0.1:11434";
   const preferredLan = lan.kind === "done" ? pickPreferredLanUrl(lan.urls) : null;
+  const joinUrl = preferredLan
+    ? buildJoinUrl({ appOrigin: env.origin, ollamaUrl: preferredLan.url })
+    : null;
   const commands = buildLinkCommands({
     platform: env.platform,
     origin: env.origin,
@@ -338,10 +342,18 @@ export default function LocalLink({ baseUrl, onUseBaseUrl }) {
                     </li>
                   ))}
                 </ul>
-                {preferredLan && (
-                  <div data-testid="local-link-qr">
-                    <LanQr url={preferredLan.url} />
-                  </div>
+                {preferredLan && joinUrl && (
+                  <>
+                    <div data-testid="local-link-qr">
+                      <LanQr url={joinUrl} />
+                    </div>
+                    {!env.deployed && (
+                      <p className="ai-local-link-note">
+                        This QR points at this tab&apos;s origin. Open the
+                        deployed site before sharing with a phone.
+                      </p>
+                    )}
+                  </>
                 )}
               </>
             )}

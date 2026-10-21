@@ -90,6 +90,54 @@ export function normalizeProbeUrl(baseUrl) {
   return raw.replace(/\/+$/, "");
 }
 
+export const LOCAL_LINK_PARAM = "ollama";
+
+/**
+ * The QR must open the app, not raw Ollama. Only private/loopback/mDNS hosts
+ * are accepted: a shared link can pre-fill an address, but it can never point
+ * prompts at a public server.
+ */
+export function normalizeJoinTarget(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return null;
+  let url = null;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  if (url.username || url.password) return null;
+  if (!isPrivateHostname(url.hostname)) return null;
+  const path = url.pathname.replace(/\/+$/, "");
+  return `${url.origin}${path}`;
+}
+
+export function buildJoinUrl({ appOrigin, ollamaUrl } = {}) {
+  const origin =
+    typeof appOrigin === "string" ? appOrigin.trim().replace(/\/+$/, "") : "";
+  if (!origin) return null;
+  const target = normalizeJoinTarget(ollamaUrl);
+  if (!target) return null;
+  return `${origin}/projects?${LOCAL_LINK_PARAM}=${encodeURIComponent(target)}`;
+}
+
+export function parseJoinTarget(search) {
+  const raw = typeof search === "string" ? search : "";
+  if (!raw.trim()) return { ok: false };
+  let params = null;
+  try {
+    params = new URLSearchParams(raw);
+  } catch {
+    return { ok: false };
+  }
+  const value = params.get(LOCAL_LINK_PARAM);
+  if (!value) return { ok: false };
+  const url = normalizeJoinTarget(value);
+  if (!url) return { ok: false };
+  return { ok: true, url };
+}
+
 /**
  * Per-OS instructions that make the host machine reachable.
  * `lan: true` also binds Ollama to the network so other devices can connect.

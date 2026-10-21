@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   LOCAL_NETWORK_ACCESS_MIN_VERSION,
   OLLAMA_DEFAULT_PORT,
+  buildJoinUrl,
   buildLanUrls,
   buildLinkCommands,
   classifyLinkFailure,
@@ -11,8 +12,10 @@ import {
   detectPlatform,
   isLoopbackHostname,
   isPrivateHostname,
+  normalizeJoinTarget,
   normalizeProbeUrl,
   parseIceCandidate,
+  parseJoinTarget,
   probeOllama,
   supportsLocalNetworkAccess,
 } from "./localLink";
@@ -424,5 +427,47 @@ describe("buildLanUrls", () => {
 
   it("returns an empty list for non-array input", () => {
     expect(buildLanUrls(null)).toEqual([]);
+  });
+});
+
+describe("join links", () => {
+  it("builds a projects URL that opens the app with the private address", () => {
+    const join = buildJoinUrl({
+      appOrigin: "https://modcode.vercel.app/",
+      ollamaUrl: "http://192.168.1.50:11434/",
+    });
+    expect(join).toBe(
+      "https://modcode.vercel.app/projects?ollama=http%3A%2F%2F192.168.1.50%3A11434"
+    );
+  });
+
+  it("round-trips through parseJoinTarget", () => {
+    const join = buildJoinUrl({
+      appOrigin: "https://modcode.vercel.app",
+      ollamaUrl: "http://macbook.local:11434",
+    });
+    const search = new URL(join).search;
+    expect(parseJoinTarget(search)).toEqual({
+      ok: true,
+      url: "http://macbook.local:11434",
+    });
+  });
+
+  it("never lets a link point at a public host or a non-web scheme", () => {
+    expect(normalizeJoinTarget("https://example.com")).toBeNull();
+    expect(normalizeJoinTarget("http://203.0.113.9:11434")).toBeNull();
+    expect(normalizeJoinTarget("javascript:alert(1)")).toBeNull();
+    expect(normalizeJoinTarget("http://user:pass@192.168.1.2:11434")).toBeNull();
+    expect(normalizeJoinTarget("")).toBeNull();
+    expect(parseJoinTarget("?ollama=https%3A%2F%2Fexample.com")).toEqual({
+      ok: false,
+    });
+    expect(parseJoinTarget("")).toEqual({ ok: false });
+  });
+
+  it("drops query strings and fragments from the target", () => {
+    expect(
+      normalizeJoinTarget("http://192.168.1.50:11434/api?x=1#top")
+    ).toBe("http://192.168.1.50:11434/api");
   });
 });
