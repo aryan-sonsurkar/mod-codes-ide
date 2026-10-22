@@ -1,0 +1,311 @@
+.mesh-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-12);
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+.mesh-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  width: min(520px, 100%);
+  max-height: min(640px, 100%);
+  overflow-y: auto;
+  padding: var(--sp-10);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--workspace-40, #14161a);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  color: var(--primary-text);
+}
+
+.mesh-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  color: var(--accent-color);
+}
+
+.mesh-header h3 {
+  margin: 0;
+  color: var(--primary-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.mesh-badge {
+  padding: 1px var(--sp-5);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--muted-text);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mesh-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-text);
+  cursor: pointer;
+}
+
+.mesh-close:hover {
+  border-color: var(--border-color);
+  color: var(--primary-text);
+}
+
+.mesh-tabs {
+  display: flex;
+  gap: var(--sp-2);
+  padding: 2px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--workspace-60);
+}
+
+.mesh-tab {
+  flex: 1;
+  padding: var(--sp-4) var(--sp-5);
+  border: none;
+  border-radius: calc(var(--radius-sm) - 1px);
+  background: transparent;
+  color: var(--muted-text);
+  font-size: var(--fs-11);
+  cursor: pointer;
+}
+
+.mesh-tab-active {
+  background-color: var(--accent-15, rgba(99, 102, 241, 0.15));
+  color: var(--primary-text);
+}
+
+.mesh-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.mesh-hint,
+.mesh-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  margin: 0;
+  color: var(--muted-text);
+  font-size: var(--fs-11);
+  line-height: 1.55;
+}
+
+.mesh-step {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: var(--fs-10, 10px);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mesh-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  margin: 0;
+  padding: var(--sp-5);
+  border: 1px solid var(--warning-30, rgba(245, 158, 11, 0.3));
+  border-radius: var(--radius-sm);
+  background-color: var(--warning-06, rgba(245, 158, 11, 0.06));
+  color: var(--secondary-text);
+  font-size: var(--fs-11);
+  line-height: 1.5;
+}
+
+.mesh-copy-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.mesh-payload,
+.mesh-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--sp-5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--workspace-60);
+  color: var(--primary-text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-10, 10px);
+  line-height: 1.5;
+  resize: vertical;
+  word-break: break-all;
+}
+
+.mesh-input {
+  font-family: inherit;
+  font-size: var(--fs-11);
+  word-break: normal;
+}
+
+.mesh-payload:focus,
+.mesh-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.mesh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  align-self: flex-start;
+  padding: var(--sp-4) var(--sp-8);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--workspace-60);
+  color: var(--primary-text);
+  font-size: var(--fs-11);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.mesh-button:hover:not(:disabled) {
+  border-color: var(--accent-color);
+}
+
+.mesh-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mesh-button-primary {
+  border-color: var(--accent-30, rgba(99, 102, 241, 0.3));
+  background-color: var(--accent-15, rgba(99, 102, 241, 0.15));
+}
+
+.mesh-phrase {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-5);
+  padding: var(--sp-6);
+  border: 1px solid var(--accent-30, rgba(99, 102, 241, 0.3));
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-08, rgba(99, 102, 241, 0.08));
+  color: var(--accent-color);
+  font-size: var(--fs-11);
+}
+
+.mesh-phrase div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mesh-phrase span {
+  color: var(--muted-text);
+}
+
+.mesh-phrase strong {
+  color: var(--primary-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.5px;
+}
+
+.mesh-phrase-note {
+  font-size: var(--fs-10, 10px);
+}
+
+.mesh-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--sp-5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--workspace-60);
+}
+
+.mesh-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mesh-line p {
+  margin: 0;
+  color: var(--secondary-text);
+  font-size: var(--fs-11);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mesh-line-user p {
+  color: var(--primary-text);
+}
+
+.mesh-line-role {
+  color: var(--muted-text);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mesh-line-system p {
+  color: var(--warning-color, #f59e0b);
+}
+
+.mesh-model {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  color: var(--muted-text);
+  font-size: var(--fs-11);
+}
+
+.mesh-model select {
+  flex: 1;
+  padding: var(--sp-3) var(--sp-5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--workspace-60);
+  color: var(--primary-text);
+  font-size: var(--fs-11);
+}
+
+.mesh-compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.mesh-foot {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  margin: 0;
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--border-color);
+  color: var(--muted-text);
+  font-size: var(--fs-10, 10px);
+  line-height: 1.5;
+}
+
+.mesh-spin {
+  flex: none;
+  animation: ai-local-link-spin 0.9s linear infinite;
+}

@@ -74,8 +74,9 @@ serverless function shuttles SDP/ICE only (TTL'd, single-use code). The host
 tab is the gateway to Ollama, so the guest never touches a LAN address and no
 mixed-content or LNA gate applies. Covers across-the-internet P2P and every
 browser with data channels. Same host grant as §2. This is the original Mesh
-design, retained for cross-network and non-Chromium guests. Concrete protocol,
-room lifecycle, and the relay decision are in
+design, retained for cross-network and non-Chromium guests. v1 ships the manual
+copy/paste path only (no relay endpoint yet); the concrete protocol, room
+lifecycle, and the optional relay decision are in
 [`MESH_SIGNALING.md`](MESH_SIGNALING.md).
 
 ```
@@ -147,7 +148,7 @@ already owns*.
 | Phase | Deliverable | Why this order |
 | --- | --- | --- |
 | 1 — Local Link | Detection, per-OS grant wizard, LNA permission handling, LAN address discovery, direct transport | **Shipped in v0.2.0.** Pure frontend; no infra. QR deferred to a later patch. |
-| 2 — Mesh v1 | manual-pair first, then optional relay; host/guest bridge, chat-only, safety phrase, meter integration | Design complete in [`MESH_SIGNALING.md`](MESH_SIGNALING.md). Cross-network + Safari parity. |
+| 2 — Mesh v1 | manual-pair first, then optional relay; host/guest bridge, chat-only, safety phrase, meter integration | **Manual pairing ships now:** copy/paste offer/answer, DTLS phrase, model allowlist, chat-only bridge. Relay + meter receipt pass next. Cross-network + Safari parity. |
 | 3 — Agent oracle | host-side agent + phone typed-approval remote | The killer demo. Only after v1 permission UX is proven. |
 | 4 — Multi-hop | desktop (large GPU) ← laptop ← phone as a "model fog" | Protocol already relays; ship only if real users want it. |
 
@@ -188,3 +189,20 @@ already owns*.
   MODCODES with the address applied. Only private/loopback/mDNS targets are
   accepted, and the parameter is stripped after use so a refresh cannot
   re-apply a stale address. Everything in the Phase 1 plan now ships.
+
+### What shipped (Phase 2 v1 — manual pairing)
+
+- `src/app/lib/ai/meshProtocol.js` — pairing payload grammar
+  (`MODCODES1:` + JSON), DTLS fingerprint extraction, direction-aware channel
+  message validation (model list, chat request, chunk, done, error, stop) with
+  hard caps on messages, characters, and model names.
+- `src/app/lib/ai/meshSession.js` — host/guest WebRTC state machines over an
+  injected `RTCPeerConnection`: one-shot offer/answer, non-trickle ICE (4s cap),
+  room binding, deterministic safety phrase, data channel wiring, `send` guarded
+  by open state and direction.
+- `src/app/components/Workspace/content/MeshPanel.jsx` — dialog launched from
+  Local Link: host creates an offer and pastes the answer; guest pastes the
+  offer, copies the answer back, compares the phrase, then chats. The host
+  streams its own Ollama through the channel and only shares models it lists.
+- No signaling endpoint, no TURN, no persistence. The channel is chat-only; the
+  agent loop never crosses it.

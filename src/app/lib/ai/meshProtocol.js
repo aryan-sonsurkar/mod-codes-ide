@@ -18,6 +18,48 @@ export const SIGNAL_LIMITS = {
 
 export const SIGNAL_TYPES = ["offer", "answer", "candidate", "bye"];
 
+/**
+ * Manual pairing text. SDP is embedded as a JSON string so a single-line
+ * payload survives chat apps, email, and textareas that reflow newlines.
+ */
+export const PAIRING_PREFIX = "MODCODES1:";
+export const PAIRING_TYPES = ["offer", "answer"];
+
+export const CHANNEL_LABEL = "modcodes-mesh";
+
+export const CHANNEL_LIMITS = {
+  messages: 24,
+  messageChars: 12000,
+  totalChars: 24000,
+  text: 24000,
+  id: 64,
+  modelId: 200,
+  models: 60,
+  errorMessage: 500,
+};
+
+export const CHANNEL_TYPES = [
+  "models",
+  "chat",
+  "chunk",
+  "done",
+  "error",
+  "stop",
+];
+
+/** Which side may send which message over the data channel. */
+export const CHANNEL_DIRECTIONS = {
+  models: "host",
+  chat: "guest",
+  chunk: "host",
+  done: "host",
+  error: "host",
+  stop: "guest",
+};
+
+const CHAT_ROLES = ["user", "assistant"];
+
+
 const SAFETY_WORDS = [
   "amber", "anchor", "atlas", "bamboo", "basalt", "beacon", "birch", "bison",
   "cactus", "canyon", "cedar", "cobalt", "comet", "copper", "coral", "cosmos",
@@ -132,6 +174,196 @@ export function parseSignalMessage(text) {
     return { ok: false, error: "Message is not valid JSON" };
   }
   return validateSignalMessage(parsed);
+}
+
+export function extractFingerprint(sdp) {
+  if (typeof sdp !== "string" || sdp.length === 0) return null;
+  const match = sdp.match(/^a=fingerprint:sha-256\s+([0-9a-fA-F:]+)\s*$/m);
+  if (!match) return null;
+  return match[1].toUpperCase();
+}
+
+export function encodePairingPayload({ kind, room, sdp }) {
+  if (!PAIRING_TYPES.includes(kind)) {
+    throw new Error(`Unknown pairing kind: ${kind}`);
+  }
+  const check = validateSignalMessage({ v: SIGNAL_VERSION, type: kind, room, sdp });
+  if (!check.ok) {
+    throw new Error(check.error);
+  }
+  return `${PAIRING_PREFIX}${JSON.stringify({ v: SIGNAL_VERSION, kind, room, sdp })}`;
+}
+
+/**
+ * `expect` pins the direction: the host only takes an "answer", the guest only
+ * an "offer". Returns `{ ok: true, payload: { room, sdp } }` or an error.
+ */
+export function decodePairingPayload(text, { expect = null } = {}) {
+  if (typeof text !== "string" || text.trim().length === 0) {
+    return { ok: false, error: "Paste the pairing text from the other device" };
+  }
+  const trimmed = text.trim();
+  if (!trimmed.startsWith(PAIRING_PREFIX)) {
+    return { ok: false, error: "Not a MODCODES pairing link" };
+  }
+  if (trimmed.length > SIGNAL_LIMITS.sdp + 2000) {
+    return { ok: false, error: "Pairing text is too large" };
+  }
+  let payload = null;
+  try {
+    payload = JSON.parse(trimmed.slice(PAIRING_PREFIX.length));
+  } catch {
+    return { ok: false, error: "Pairing text is not valid JSON" };
+  }
+  if (!payload || typeof payload !== "object") {
+    return { ok: false, error: "Pairing text is empty" };
+  }
+  if (expect && payload.kind !== expect) {
+    return {
+      ok: false,
+      error: expect === "answer" ? "That is an offer, not an answer" : "That is an answer, not an offer",
+    };
+  }
+  const check = validateSignalMessage({
+    v: payload.v,
+    type: payload.kind,
+    room: payload.room,
+    sdp: payload.sdp,
+  });
+  if (!check.ok) {
+    return { ok: false, error: check.error };
+  }
+  return {
+    ok: true,
+    payload: { room: normalizeRoomCode(payload.room), sdp: payload.sdp },
+  };
+}
+
+export function validateChannelMessage(input, { from = null } = {}) {
+  if (!input || typeof input !== "object") {
+    return { ok: false, error: "Message must be an object" };
+  }
+  const type = input.t;
+  if (!CHANNEL_TYPES.includes(type)) {
+    return { ok: false, error: `Unknown channel message: ${type}` };
+  }
+  if (from && CHANNEL_DIRECTIONS[type] !== from) {
+    return { ok: false, error: `A ${from} cannot send "${type}"` };
+  }
+
+  if (type === "chat") {
+    if (typeof input.id !== "string" || input.id.length === 0 || input.id.length > CHANNEL_LIMITS.id) {
+      return { ok: false, error: "Missing request id" };
+    }
+    if (typeof input.model !== "string" || input.model.length === 0) {
+      return { ok: false, error: "Missing model" };
+    }
+    if (input.model.length > CHANNEL_LIMITS.modelId) {
+      return { ok: false, error: "Model name is too long" };
+    }
+    const messages = input.messages;
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return { ok: false, error: "Missing messages" };
+    }
+    if (messages.length > CHANNEL_LIMITS.messages) {
+      return { ok: false, error: "Too many messages" };
+    }
+    let total = 0;
+    for (const message of messages) {
+      if (!message || typeof message !== "object") {
+        return { ok: false, error: "Malformed message" };
+      }
+      if (!CHAT_ROLES.includes(message.role)) {
+        return { ok: false, error: "Unknown message role" };
+      }
+      if (typeof message.content !== "string") {
+        return { ok: false, error: "Missing message content" };
+      }
+      if (message.content.length > CHANNEL_LIMITS.messageChars) {
+        return { ok: false, error: "A message is too long" };
+      }
+      total += message.content.length;
+    }
+    if (total > CHANNEL_LIMITS.totalChars) {
+      return { ok: false, error: "Conversation is too long" };
+    }
+    return { ok: true };
+  }
+
+  if (type === "models") {
+    if (!Array.isArray(input.models) || input.models.length === 0) {
+      return { ok: false, error: "Host shared no models" };
+    }
+    if (input.models.length > CHANNEL_LIMITS.models) {
+      return { ok: false, error: "Too many models" };
+    }
+    for (const model of input.models) {
+      if (typeof model !== "string" || model.length === 0) {
+        return { ok: false, error: "Invalid model" };
+      }
+      if (model.length > CHANNEL_LIMITS.modelId) {
+        return { ok: false, error: "Model name is too long" };
+      }
+    }
+    return { ok: true };
+  }
+
+  if (type === "chunk") {
+    if (typeof input.id !== "string" || input.id.length === 0) {
+      return { ok: false, error: "Missing request id" };
+    }
+    if (typeof input.text !== "string" || input.text.length === 0) {
+      return { ok: false, error: "Empty chunk" };
+    }
+    if (input.text.length > CHANNEL_LIMITS.text) {
+      return { ok: false, error: "Chunk is too large" };
+    }
+    return { ok: true };
+  }
+
+  if (type === "error") {
+    if (typeof input.id !== "string" || input.id.length === 0) {
+      return { ok: false, error: "Missing request id" };
+    }
+    if (typeof input.message !== "string" || input.message.length === 0) {
+      return { ok: false, error: "Missing error message" };
+    }
+    if (input.message.length > CHANNEL_LIMITS.errorMessage) {
+      return { ok: false, error: "Error message is too long" };
+    }
+    return { ok: true };
+  }
+
+  // done / stop
+  if (typeof input.id !== "string" || input.id.length === 0) {
+    return { ok: false, error: "Missing request id" };
+  }
+  if (input.id.length > CHANNEL_LIMITS.id) {
+    return { ok: false, error: "Request id is too long" };
+  }
+  return { ok: true };
+}
+
+export function encodeChannelMessage(message) {
+  return JSON.stringify(message);
+}
+
+export function parseChannelMessage(text, { from = null } = {}) {
+  if (typeof text !== "string" || text.length === 0) {
+    return { ok: false, error: "Empty channel message" };
+  }
+  if (text.length > CHANNEL_LIMITS.totalChars + 4000) {
+    return { ok: false, error: "Channel message is too large" };
+  }
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "Channel message is not JSON" };
+  }
+  const check = validateChannelMessage(parsed, { from });
+  if (!check.ok) return check;
+  return { ok: true, message: parsed };
 }
 
 function fnv1a(text) {

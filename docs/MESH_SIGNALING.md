@@ -1,10 +1,11 @@
 # Mesh v1 — signaling design (Phase 2)
 
-**Status:** design complete, implementation blocked on one choice: which
-signaling transport to ship first. Everything below works with the current
-₹0 / no-account / no-server-in-the-data-path constraints.
-**Module:** `src/app/lib/ai/meshProtocol.js` (room codes, message grammar,
-safety phrases) — pure logic, already tested.
+**Status:** v1 manual pairing is implemented (no relay endpoint). Offer/answer
+text is copied between tabs; the data path is WebRTC. Relay C remains an
+optional later step, chosen only with real pairing numbers.
+**Modules:** `src/app/lib/ai/meshProtocol.js` (grammar, fingerprints, safety
+phrases), `src/app/lib/ai/meshSession.js` (host/guest state machines),
+`MeshPanel.jsx` (UI) — all unit tested except the UI.
 **Parent design:** [`MESH.md`](MESH.md) §4, §7.
 
 ## 1. What signaling is allowed to see
@@ -84,6 +85,28 @@ on both ends; the relay must reject anything failing `validateSignalMessage`.
 Codes use `23456789ABCDEFGHJKLMNPQRSTUVWXYZ` (no `0/O/1/I`) so a code read aloud
 or typed from a photo cannot be ambiguous.
 
+Manual pairing wraps the same signal in a copyable envelope:
+
+```text
+MODCODES1:{"v":1,"kind":"offer"|"answer","room":"AB23CD","sdp":"…"}
+```
+
+The host only accepts an `answer`; the guest only an `offer`. The room inside
+the payload must match the host room. ICE candidates are embedded in the SDP
+(non-trickle, 4s gathering cap), so there is no second paste step.
+
+Once the channel opens, frames are JSON with a direction lock:
+
+| Frame | Direction | Caps |
+| --- | --- | --- |
+| `{t:"models", models}` | host → guest | 60 models, 200 chars each |
+| `{t:"chat", id, model, messages}` | guest → host | 24 messages, 12k chars/message, 24k total, roles user/assistant |
+| `{t:"chunk", id, text}` | host → guest | 24k chars |
+| `{t:"done", id}` / `{t:"error", id, message}` | host → guest | error ≤ 500 chars |
+| `{t:"stop", id}` | guest → host | — |
+
+Invalid frames are dropped and surfaced in the UI, never executed.
+
 ## 6. Safety phrase
 
 Both peers derive 4 words from the sorted pair of DTLS fingerprints
@@ -116,13 +139,18 @@ They record `$0.00` in the same receipt format, tagged `transport: "mesh"` so
 the receipt is honest about where the tokens were produced. The guest's meter
 must say "inference on <host label>", never imply the guest ran the model.
 
+Not wired yet: the manual-pair increment does not touch the meter. The panel
+only labels where inference happens.
+
 ## 9. Build order
 
 1. `meshProtocol.js` (done) + tests.
-2. Manual-pair UI: create offer → copy text → paste answer → channel + phrase.
-3. Chat-only bridge: reuse the existing Ollama provider over an RPC shim; the
-   agent loop stays local to the host tab and is never exposed to the guest.
-4. Host allowlist + instant revoke.
+2. Manual-pair UI (done): create offer → copy text → paste answer → channel +
+   phrase, in `MeshPanel`.
+3. Chat-only bridge (done): reuses the existing Ollama provider on the host;
+   the agent loop stays local to the host tab and is never exposed to the guest.
+4. Host allowlist (done: only published models run) + revoke (partial: End
+   session closes the channel; no auto-reconnect).
 5. Only then decide on relay C, using real pairing numbers.
 
 ## 10. Open questions

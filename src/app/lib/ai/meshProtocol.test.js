@@ -1,14 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
+  CHANNEL_LIMITS,
+  PAIRING_PREFIX,
   ROOM_ALPHABET,
   ROOM_CODE_LENGTH,
   SIGNAL_LIMITS,
   SIGNAL_VERSION,
   createRoomCode,
+  decodePairingPayload,
   deriveSafetyPhrase,
+  encodePairingPayload,
+  extractFingerprint,
   isValidRoomCode,
   normalizeRoomCode,
+  parseChannelMessage,
   parseSignalMessage,
+  validateChannelMessage,
   validateSignalMessage,
 } from "./meshProtocol";
 
@@ -154,5 +161,133 @@ describe("safety phrase", () => {
     expect(deriveSafetyPhrase("", guest)).toBeNull();
     expect(deriveSafetyPhrase(host, null)).toBeNull();
     expect(deriveSafetyPhrase(undefined, undefined)).toBeNull();
+  });
+});
+
+describe("fingerprints", () => {
+  const sdp = [
+    "v=0",
+    "o=- 123 1 IN IP4 127.0.0.1",
+    "a=fingerprint:sha-256 AB:CD:EF:01:23",
+    "m=application 9 UDP/DTLS/SCTP webrtc-datachannel",
+  ].join("\r\n");
+
+  it("pulls the sha-256 fingerprint and normalizes case", () => {
+    expect(extractFingerprint(sdp)).toBe("AB:CD:EF:01:23");
+  });
+
+  it("returns null when there is no fingerprint", () => {
+    expect(extractFingerprint("v=0\r\n")).toBeNull();
+    expect(extractFingerprint(null)).toBeNull();
+  });
+});
+
+describe("pairing payload", () => {
+  const sdp =
+    "v=0\r\no=- 1 1 IN IP4 127.0.0.1\r\na=fingerprint:sha-256 AA:BB\r\n";
+
+  it("round-trips an offer with its room", () => {
+    const text = encodePairingPayload({ kind: "offer", room: ROOM, sdp });
+    expect(text.startsWith(PAIRING_PREFIX)).toBe(true);
+    expect(decodePairingPayload(text, { expect: "offer" })).toEqual({
+      ok: true,
+      payload: { room: ROOM, sdp },
+    });
+  });
+
+  it("refuses the wrong direction and bad rooms", () => {
+    const offerText = encodePairingPayload({ kind: "offer", room: ROOM, sdp });
+    expect(decodePairingPayload(offerText, { expect: "answer" }).error).toMatch(
+      /not an answer/i
+    );
+    expect(() =>
+      encodePairingPayload({ kind: "offer", room: "AB23C0", sdp })
+    ).toThrow(/room/i);
+  });
+
+  it("refuses junk, missing prefixes, and oversized input", () => {
+    expect(decodePairingPayload("").ok).toBe(false);
+    expect(decodePairingPayload("v=0").error).toMatch(/pairing link/i);
+    expect(decodePairingPayload(PAIRING_PREFIX + "{oops").error).toMatch(
+      /JSON/i
+    );
+    expect(
+      decodePairingPayload(
+        PAIRING_PREFIX + "x".repeat(SIGNAL_LIMITS.sdp + 3000)
+      ).error
+    ).toMatch(/too large/i);
+  });
+
+  it("refuses an unknown pairing kind", () => {
+    expect(() =>
+      encodePairingPayload({ kind: "candidate", room: ROOM, sdp })
+    ).toThrow(/unknown pairing kind/i);
+  });
+});
+
+describe("channel messages", () => {
+  const chat = {
+    t: "chat",
+    id: "r1",
+    model: "gemma3:4b",
+    messages: [{ role: "user", content: "hi" }],
+  };
+
+  it("enforces who may send what", () => {
+    expect(validateChannelMessage(chat, { from: "guest" })).toEqual({
+      ok: true,
+    });
+    expect(validateChannelMessage(chat, { from: "host" }).error).toMatch(
+      /host/i
+    );
+    expect(
+      validateChannelMessage(
+        { t: "chunk", id: "r1", text: "hi" },
+        { from: "guest" }
+      ).error
+    ).toMatch(/guest/i);
+    expect(
+      validateChannelMessage({ t: "models", models: ["a"] }, { from: "host" })
+    ).toEqual({ ok: true });
+  });
+
+  it("caps message count, length, and roles", () => {
+    const many = Array.from({ length: CHANNEL_LIMITS.messages + 1 }, () => ({
+      role: "user",
+      content: "x",
+    }));
+    expect(validateChannelMessage({ ...chat, messages: many }).error).toMatch(
+      /too many/i
+    );
+    expect(
+      validateChannelMessage({
+        ...chat,
+        messages: [
+          {
+            role: "user",
+            content: "x".repeat(CHANNEL_LIMITS.messageChars + 1),
+          },
+        ],
+      }).error
+    ).toMatch(/too long/i);
+    expect(
+      validateChannelMessage({
+        ...chat,
+        messages: [
+          { role: "system", content: "x" },
+          { role: "user", content: "y" },
+        ],
+      }).error
+    ).toMatch(/role/i);
+  });
+
+  it("parses channel JSON and rejects junk", () => {
+    expect(
+      parseChannelMessage(JSON.stringify(chat), { from: "guest" }).ok
+    ).toBe(true);
+    expect(parseChannelMessage("nope").error).toMatch(/JSON/i);
+    expect(
+      parseChannelMessage("x".repeat(CHANNEL_LIMITS.totalChars + 5000)).error
+    ).toMatch(/too large/i);
   });
 });

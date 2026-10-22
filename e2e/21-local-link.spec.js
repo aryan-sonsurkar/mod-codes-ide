@@ -160,6 +160,95 @@ test.describe("Local Link", () => {
     expect(rejected.ai?.baseUrl).toBe(OFFLINE_BASE);
   });
 
+  test("mesh dialog validates pairing text and builds an answer", async ({
+    modcodesPage: page,
+  }) => {
+    await openAIPanel(page);
+
+    const providerSelect = page.locator("#ai-provider-select");
+    await expect(providerSelect).toBeVisible({ timeout: 20000 });
+    await providerSelect.selectOption("ollama");
+
+    await page.locator('[data-testid="local-link-lan-toggle"]').click();
+    await page.locator('[data-testid="local-link-mesh"]').click();
+
+    const panel = page.locator('[data-testid="mesh-panel"]');
+    await expect(panel).toBeVisible();
+
+    // The host side must not offer to share when Ollama is unreachable.
+    const host = page.locator('[data-testid="mesh-host"]');
+    await expect(host).toContainText(/can't reach Ollama/i, { timeout: 20000 });
+    await expect(
+      page.locator('[data-testid="mesh-host-start"]')
+    ).toHaveCount(0);
+
+    await page.getByRole("tab", { name: /Use the other machine/i }).click();
+    const offerInput = page.locator('[data-testid="mesh-offer-input"]');
+    await offerInput.fill("hello there");
+    await page.locator('[data-testid="mesh-join-start"]').click();
+    await expect(page.locator('[data-testid="mesh-error"]')).toContainText(
+      /not a MODCODES pairing link/i
+    );
+
+    // Replace WebRTC with a deterministic peer so the answer step is offline.
+    await page.evaluate(() => {
+      class FakeMeshPeer {
+        constructor() {
+          this.iceGatheringState = "complete";
+          this.localDescription = null;
+          this.ondatachannel = null;
+        }
+        createDataChannel() {
+          return { readyState: "connecting", send() {}, close() {} };
+        }
+        async createOffer() {
+          return { type: "offer", sdp: "v=0" };
+        }
+        async createAnswer() {
+          return { type: "answer", sdp: "v=0" };
+        }
+        async setRemoteDescription() {}
+        async setLocalDescription(description) {
+          this.localDescription = {
+            type: description.type,
+            sdp: [
+              "v=0",
+              "o=- 1 1 IN IP4 127.0.0.1",
+              "a=fingerprint:sha-256 DD:EE:FF:00",
+              "",
+            ].join("\r\n"),
+          };
+        }
+        close() {}
+      }
+      window.RTCPeerConnection = FakeMeshPeer;
+    });
+
+    const offerSdp = [
+      "v=0",
+      "o=- 1 1 IN IP4 192.168.1.50",
+      "a=fingerprint:sha-256 AA:BB:CC:00",
+      "",
+    ].join("\r\n");
+    const offerText = `MODCODES1:${JSON.stringify({
+      v: 1,
+      kind: "offer",
+      room: "AB23CD",
+      sdp: offerSdp,
+    })}`;
+
+    await offerInput.fill(offerText);
+    await page.locator('[data-testid="mesh-join-start"]').click();
+
+    const answer = page.locator('[data-testid="mesh-answer"]');
+    await expect(answer).toBeVisible({ timeout: 20000 });
+    await expect(answer).toHaveValue(/^MODCODES1:.*"kind":"answer"/);
+    await expect(page.locator('[data-testid="mesh-phrase"]')).toContainText(
+      "AB23CD"
+    );
+    await expect(page.locator('[data-testid="mesh-phrase"] strong')).not.toBeEmpty();
+  });
+
   test("settings stops claiming Ollama is localhost-only", async ({
     modcodesPage: page,
   }) => {

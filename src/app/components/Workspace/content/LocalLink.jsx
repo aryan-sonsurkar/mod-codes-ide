@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Users,
   Wifi,
 } from "lucide-react";
 import {
@@ -22,6 +23,7 @@ import {
   probeOllama,
 } from "../../../lib/ai/localLink";
 import { buildQrMatrix, pickPreferredLanUrl, qrSvgPath } from "../../../lib/qr";
+import MeshPanel from "./MeshPanel";
 
 function CopyButton({ text, label = "Copy", testId }) {
   const [copied, setCopied] = useState(false);
@@ -113,6 +115,7 @@ export default function LocalLink({ baseUrl, onUseBaseUrl }) {
   const [bindLan, setBindLan] = useState(false);
   const [lan, setLan] = useState({ kind: "idle" });
   const [showLan, setShowLan] = useState(false);
+  const [meshOpen, setMeshOpen] = useState(false);
 
   const target = baseUrl || "http://127.0.0.1:11434";
   const preferredLan = lan.kind === "done" ? pickPreferredLanUrl(lan.urls) : null;
@@ -297,6 +300,18 @@ export default function LocalLink({ baseUrl, onUseBaseUrl }) {
             <button
               type="button"
               className="ai-local-link-action"
+              onClick={() => setMeshOpen(true)}
+              data-testid="local-link-mesh"
+            >
+              <Users size={11} /> Pair a device (Mesh)
+            </button>
+            <p className="ai-local-link-note">
+              No port and no address: two browsers swap prompts over an
+              encrypted channel. Chrome or Edge on both sides.
+            </p>
+            <button
+              type="button"
+              className="ai-local-link-action"
               onClick={handleDiscover}
               disabled={lan.kind === "checking"}
               data-testid="local-link-find-lan"
@@ -370,6 +385,10 @@ export default function LocalLink({ baseUrl, onUseBaseUrl }) {
         <ShieldCheck size={11} /> Only Ollama&apos;s API is exposed on that
         address — the site can list models and chat, nothing else.
       </p>
+
+      {meshOpen && (
+        <MeshPanel baseUrl={baseUrl} onClose={() => setMeshOpen(false)} />
+      )}
     </section>
   );
 }
