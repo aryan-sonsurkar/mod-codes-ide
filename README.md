@@ -1,12 +1,40 @@
+<div align="center">
+
 # MODCODES
 
-[![Release](https://img.shields.io/github/v/release/aryan-sonsurkar/mod-codes-ide)](https://github.com/aryan-sonsurkar/mod-codes-ide/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg](./LICENSE))
-[![Live Demo](https://img.shields.io/badge/demo-live-00d4ff)](https://modcode.vercel.app)
+**A local-first, AI-powered software engineering workspace.**
 
-**A local-first, AI-powered software engineering workspace.** Research → PRD → Roadmap → Agent lifecycle, project memory, and approval-gated changes — with Bonsai (WebGPU) and Ollama (local) as the sole AI providers. No cloud lock-in.
+[![Release](https://img.shields.io/github/v/release/aryan-sonsurkar/mod-codes-ide?style=for-the-badge)](https://github.com/aryan-sonsurkar/mod-codes-ide/releases)
+[![Tests](https://img.shields.io/badge/tests-1100_unit_·_176_e2e-3fb950?style=for-the-badge)](#quality-gates)
+[![Live Demo](https://img.shields.io/badge/🌐_live-modcode.vercel.app-00d4ff?style=for-the-badge)](https://modcode.vercel.app)
+[![License: MIT](https://img.shields.io/badge/license-MIT-black?style=for-the-badge)](./LICENSE)
 
-🌐 **Live:** [modcode.vercel.app](https://modcode.vercel.app) · 📦 **Latest:** [v0.2.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.2.0)
+*Research → PRD → Roadmap → Agent lifecycle, project memory, and approval-gated changes — with Bonsai (WebGPU) and Ollama (local) as the sole AI providers. No cloud lock-in.*
+
+</div>
+
+## Why I built this
+
+Every AI IDE I used had the same trade: your code goes to someone else's
+server, your usage goes behind a quota, and your understanding of what the
+AI actually did goes to zero.
+
+MODCODES is my answer — **built AI-assisted, in public**. AI accelerates
+drafting; I own the architecture, the debugging, and every shipped line.
+It runs entirely in the browser with local AI providers (Ollama, Bonsai on
+WebGPU), so it works on locked-down college machines, fully offline, with no
+account and no per-token bill.
+
+The part I'm proudest of is the **trust layer**: verification receipts that
+only unlock Accept after the agent's proposed code actually ran and passed,
+honest per-turn usage receipts, blast-radius walls on protected files, and
+session checkpoints. These are things cloud IDEs structurally can't offer —
+because their business model is the lock-in.
+
+This is built in public as part of my [3D portfolio district](https://arssystem.vercel.app) —
+MODCODES has its own building (and its own HQ) there. 🏙️
+
+**Live: [modcode.vercel.app](https://modcode.vercel.app)** · 📦 Latest: [v0.2.0 RC](https://github.com/aryan-sonsurkar/mod-codes-ide/releases/tag/v0.2.0)
 
 ---
 
@@ -321,7 +349,7 @@ model, and phasing in [`docs/MESH.md`](docs/MESH.md).
 
 # Learning Journal
 
-Every development session is documented inside **LEARNING.md**, where I record:
+Every development session is documented inside **Learning.md**, where I record:
 
 - Features built
 - Engineering concepts learned
